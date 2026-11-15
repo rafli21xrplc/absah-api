@@ -31,11 +31,32 @@ export async function withTenant<T>(
   if (ctx.userId !== null && !UUID_RE.test(ctx.userId)) throw new Error('withTenant: userId must be a UUID or null');
   if (!ROLE_RE.test(appRole)) throw new Error('withTenant: invalid app role name');
 
+  return scoped(db, appRole, ctx.schoolId, ctx.userId ?? '', fn);
+}
+
+/**
+ * Runs fn scoped to one user across schools (no active school). Only for lookups that must span
+ * schools before a school is chosen, e.g. listing a user's memberships for /me/context. RLS lets
+ * it read the user's own memberships and the schools they belong to, nothing else.
+ */
+export async function withUser<T>(
+  db: Db,
+  userId: string,
+  fn: (tx: Tx) => Promise<T>,
+  options: { appRole?: string } = {},
+): Promise<T> {
+  const appRole = options.appRole ?? DEFAULT_APP_ROLE;
+  if (!UUID_RE.test(userId)) throw new Error('withUser: userId must be a UUID');
+  if (!ROLE_RE.test(appRole)) throw new Error('withUser: invalid app role name');
+  return scoped(db, appRole, '', userId, fn);
+}
+
+function scoped<T>(db: Db, appRole: string, schoolId: string, userId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select
       set_config('role', ${appRole}, true),
-      set_config('app.school_id', ${ctx.schoolId}, true),
-      set_config('app.user_id', ${ctx.userId ?? ''}, true)`);
+      set_config('app.school_id', ${schoolId}, true),
+      set_config('app.user_id', ${userId}, true)`);
     return fn(tx);
   });
 }

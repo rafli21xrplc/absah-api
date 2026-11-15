@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@absah/capabilities": "workspace:*",
+    "@absah/contracts": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.23.1",
     "uuidv7": "^1.2.1"

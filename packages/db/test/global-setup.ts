@@ -1,5 +1,5 @@
 import { loadLocalEnv } from '../src/env';
-import { runMigrations } from '../scripts/migrate';
+import { runMigrations } from '../src/migrate';
 
 /** Integration tests need a real Postgres. They fail loudly instead of skipping. */
 export default async function setup(): Promise<void> {
