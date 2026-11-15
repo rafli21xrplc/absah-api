@@ -1,6 +1,7 @@
 import { PgBoss } from 'pg-boss';
 import { HEARTBEAT_QUEUE, heartbeatHandler } from '../modules/platform';
 import { loadConfig } from '../shared/config';
+import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { createLogger } from '../shared/logger';
 
@@ -8,6 +9,7 @@ const config = loadConfig();
 const logger = createLogger({ level: config.LOG_LEVEL, pretty: config.NODE_ENV === 'development' }).child({
   process: 'worker',
 });
+initCrypto(config);
 initDb(config);
 
 // pg-boss keeps its own schema (pgboss) in the same Postgres. Direct URL avoids pooler limits.

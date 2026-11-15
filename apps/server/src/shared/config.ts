@@ -1,4 +1,4 @@
-import { loadLocalEnv } from '@absah/db';
+import { loadLocalEnv, parseKeyring } from '@absah/db';
 import { z } from 'zod';
 
 function csv(fallback = '') {
@@ -24,6 +24,11 @@ const ConfigSchema = z.object({
   AUTH_RATE_LIMIT: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   /** Headers that carry the client IP for auth rate limiting. Behind Cloudflare: cf-connecting-ip. */
   AUTH_IP_HEADERS: csv('cf-connecting-ip'),
+  /** Column encryption keys "<id>:<base64 32 bytes>,..."; keep retired keys until data is rotated. */
+  ENCRYPTION_KEYS: z.string().min(1),
+  ENCRYPTION_ACTIVE_KEY_ID: z.string().min(1),
+  /** HMAC key for IP hashes and tracking codes. 32+ random characters per environment. */
+  HASH_KEY: z.string().min(32),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -31,7 +36,13 @@ export type Config = z.infer<typeof ConfigSchema>;
 /** Validates env once at startup; a bad env stops the process with a readable list of problems. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (env === process.env) loadLocalEnv();
-  const parsed = ConfigSchema.safeParse(env);
+  const parsed = ConfigSchema.superRefine((c, ctx) => {
+    try {
+      parseKeyring(c.ENCRYPTION_KEYS, c.ENCRYPTION_ACTIVE_KEY_ID);
+    } catch (e) {
+      ctx.addIssue({ code: 'custom', path: ['ENCRYPTION_KEYS'], message: (e as Error).message });
+    }
+  }).safeParse(env);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid environment: ${issues}`);

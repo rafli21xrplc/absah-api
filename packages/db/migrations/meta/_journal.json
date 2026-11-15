@@ -29,6 +29,20 @@
       "when": 1794772898140,
       "tag": "0003_memberships_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794774311439,
+      "tag": "0004_audit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794774311925,
+      "tag": "0005_audit_logs_rls",
+      "breakpoints": true
     }
   ]
 }

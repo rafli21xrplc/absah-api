@@ -5,21 +5,26 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
+import { clientIp } from './shared/client-ip';
 import { errorHandler, notFoundHandler } from './shared/http';
+import { serializeErr } from './shared/logger';
 import { requestId } from './shared/request-id';
 
 export interface AppDeps {
   logger: Logger;
   version: string;
   auth: Auth;
+  /** Trusted client IP headers (AUTH_IP_HEADERS). */
+  ipHeaders: readonly string[];
 }
 
-export function createApp({ logger, version, auth }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
 
   app.use(requestId());
+  app.use(clientIp(ipHeaders));
   app.use(helmet());
   app.use(
     pinoHttp({
@@ -30,6 +35,7 @@ export function createApp({ logger, version, auth }: AppDeps): Express {
       serializers: {
         req: (req: { method: string; url: string }) => ({ method: req.method, path: req.url.split('?')[0] }),
         res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+        err: serializeErr,
       },
     }),
   );

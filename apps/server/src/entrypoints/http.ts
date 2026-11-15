@@ -1,12 +1,14 @@
 import { createApp } from '../app';
 import { createAuth } from '../modules/platform';
 import { loadConfig } from '../shared/config';
+import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { createLogger } from '../shared/logger';
 import { FakeMessageSender } from '../shared/messaging/message-sender';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.LOG_LEVEL, pretty: config.NODE_ENV === 'development' });
+initCrypto(config);
 const { db } = initDb(config);
 
 if (config.NODE_ENV === 'production') {
@@ -22,7 +24,7 @@ const messageSender = new (class extends FakeMessageSender {
 })();
 const auth = createAuth({ db, config, messageSender });
 
-const app = createApp({ logger, version: config.APP_VERSION, auth });
+const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS });
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'http listening');
 });

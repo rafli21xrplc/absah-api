@@ -20,7 +20,10 @@ tidak pernah masuk repo (repo ini publik). Lokal: `.env.local` di root repo (git
 | `BETTER_AUTH_URL` | http | `http://localhost:3000` | URL web preview | URL web staging | URL web production |
 | `TRUSTED_ORIGINS` | http | `http://localhost:3000` | origin web preview | origin web staging | origin web production |
 | `AUTH_RATE_LIMIT` | http | `true` | `true` | `true` | `true` |
-| `AUTH_IP_HEADERS` | http | `cf-connecting-ip` | `cf-connecting-ip` | `cf-connecting-ip` | `cf-connecting-ip` |
+| `AUTH_IP_HEADERS` | http (rate limit, IP audit) | `cf-connecting-ip` | `cf-connecting-ip` | `cf-connecting-ip` | `cf-connecting-ip` |
+| `ENCRYPTION_KEYS` | http, worker | acak di `.env.local` | secret | secret | secret, beda tiap lingkungan |
+| `ENCRYPTION_ACTIVE_KEY_ID` | http, worker | `dev1` | id kunci aktif | id kunci aktif | id kunci aktif |
+| `HASH_KEY` | http, worker | acak di `.env.local` | secret | secret | secret, beda tiap lingkungan |
 
 `BETTER_AUTH_SECRET` mengenkripsi rahasia TOTP di tabel `two_factor`: menggantinya membuat 2FA semua
 admin tidak bisa dipakai. Rotasi butuh prosedur tersendiri. `BETTER_AUTH_URL` adalah origin yang
@@ -31,7 +34,19 @@ pakai `cf-connecting-ip`; jangan `x-forwarded-for` kecuali origin hanya menerima
 Production belum bisa dijalankan sampai adapter WhatsApp (prompt 3.2) ada: `http.ts` menolak start
 di `NODE_ENV=production` tanpa `MessageSender` sungguhan.
 
-Variabel yang menyusul di fase berikutnya: `ENCRYPTION_KEYS` (prompt 1.2),
+### Kunci enkripsi kolom
+
+- Format `ENCRYPTION_KEYS`: `<id>:<base64 32 byte>` dipisah koma, mis. `k2026a:...,k2025b:...`.
+  Buat dengan `openssl rand -base64 32`. Setiap ciphertext menyimpan id kuncinya.
+- **Rotasi:** tambahkan kunci baru, jadikan `ENCRYPTION_ACTIVE_KEY_ID`, deploy. Data lama tetap
+  terbaca. Jalankan re-enkripsi (job menyusul), baru hapus kunci lama. Menghapus kunci lebih awal
+  membuat data lama tidak bisa dibaca.
+- Kehilangan kunci = kehilangan data terenkripsi (catatan BK, UKS, TPPK, NIK, nomor penjemput).
+  Simpan salinan di pengelola rahasia terpisah dari database.
+- `HASH_KEY` dipakai untuk hash IP di audit log dan kode lacak TPPK. Menggantinya memutus pencocokan
+  hash lama.
+
+Variabel yang menyusul di fase berikutnya:
 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (Fase 2), dan `WHATSAPP_*` (Fase 3).
 
 ### Pooled dan direct
