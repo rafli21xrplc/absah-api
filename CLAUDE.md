@@ -45,6 +45,24 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - New tables get SELECT/INSERT/UPDATE/DELETE for absah_app via default privileges (migration 0001).
   Tables in a new schema (e.g. tppk) need explicit GRANTs in their migration.
 - RLS policies live in SQL migrations (drizzle-kit generate --custom). db:check-rls verifies them.
+- New policies use nullif(current_setting('app.school_id', true), '')::uuid so an unset value matches nothing.
+- withUser(userId, fn) is the ONLY exception to "always withTenant": cross-school reads for one user
+  before a school is chosen (memberships and their schools for /me/context). RLS limits it to the
+  user's own memberships. Do not use it for anything else.
+- absah_app has no access to Better Auth tables (user, session, account, verification, two_factor,
+  rate_limit). Names of a school's members come from the view school_member_directory.
+
+## Auth and request context (apps/server/src/modules/platform)
+- Better Auth at /api/auth/* (mounted before express.json). No public sign-up: accounts are created
+  with createStaffUser / createPhoneUser (invitations in prompt 1.5). Staff: email + password.
+  Parents and industry supervisors: WhatsApp OTP, only for phone numbers already on an account (E.164 +62).
+- Phone-only users get a placeholder email <digits>@phone.absah.invalid; never show or mail it.
+- resolveContext(auth, { school: 'required' | 'optional' }) fills req.ctx; X-School-Id must match an
+  ACTIVE membership (else 403, same answer for unknown schools). Admin/operator without TOTP get
+  403 TWO_FACTOR_REQUIRED once a school is selected.
+- Authorization lives in use cases: authorize(actor, policy) with policies in <module>/domain/policies.ts
+  built from shared/policy.ts (pure; domain/ may import it). Routes only call getActor(req).
+- Better Auth's internalAdapter.createUser drops plugin fields (phoneNumber); set them with updateUser.
 
 ## Non-negotiable rules
 1. Every tenant table has school_id uuid not null, an index starting with school_id, and an RLS policy.

@@ -16,12 +16,13 @@ module.exports = {
     },
     {
       name: 'domain-is-pure',
-      comment: 'domain/ has no I/O: only its own domain/, contracts, capabilities and zod.',
+      comment: 'domain/ has no I/O: only its own domain/, shared/policy.ts, contracts, capabilities and zod.',
       severity: 'error',
       from: { path: `${MODULES}([^/]+)/domain/` },
       to: {
         pathNot: [
           `${MODULES}$1/domain/`,
+          '^apps/server/src/shared/policy\\.ts$',
           '^packages/(contracts|capabilities)/',
           'node_modules/zod/',
         ],
@@ -39,6 +40,13 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/(contracts|capabilities)/src/', pathNot: '^packages/contracts/src/openapi\\.ts$' },
       to: { path: ['^packages/db/', '^apps/', 'node_modules/(pg|drizzle-orm|express|pg-boss)/'] },
+    },
+    {
+      name: 'policy-is-pure',
+      comment: 'shared/policy.ts is importable from domain/, so it must stay free of I/O.',
+      severity: 'error',
+      from: { path: '^apps/server/src/shared/policy\\.ts$' },
+      to: { pathNot: ['^packages/contracts/', 'node_modules/zod/'] },
     },
     {
       name: 'no-circular',

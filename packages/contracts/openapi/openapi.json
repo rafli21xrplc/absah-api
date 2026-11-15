@@ -10,6 +10,14 @@
     }
   ],
   "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "better-auth.session_token",
+        "description": "Session cookie from /api/auth/* (Better Auth)."
+      }
+    },
     "schemas": {
       "HealthResponse": {
         "type": "object",
@@ -75,6 +83,210 @@
           "RATE_LIMITED",
           "INTERNAL"
         ]
+      },
+      "MeContextResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phoneNumber": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "twoFactorEnabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "email",
+              "phoneNumber",
+              "twoFactorEnabled"
+            ]
+          },
+          "schools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeSchool"
+            }
+          },
+          "active": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "schoolId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              },
+              "capabilities": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "schoolId",
+              "roles",
+              "capabilities"
+            ]
+          }
+        },
+        "required": [
+          "user",
+          "schools",
+          "active"
+        ]
+      },
+      "MeSchool": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/SchoolLevel"
+          },
+          "isMadrasah": {
+            "type": "boolean"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "level",
+          "isMadrasah",
+          "timezone",
+          "roles"
+        ]
+      },
+      "SchoolLevel": {
+        "type": "string",
+        "enum": [
+          "sd",
+          "smp",
+          "sma",
+          "smk"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "operator",
+          "kepsek",
+          "wakasek",
+          "wali_kelas",
+          "guru",
+          "piket",
+          "petugas_uks",
+          "tppk",
+          "pembina",
+          "humas_pkl",
+          "pembimbing_pkl",
+          "pembimbing_industri",
+          "orang_tua",
+          "siswa"
+        ]
+      },
+      "SchoolMembersResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchoolMember"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SchoolMember": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "invited",
+              "suspended"
+            ]
+          },
+          "academicYearId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "membershipId",
+          "userId",
+          "name",
+          "email",
+          "role",
+          "status",
+          "academicYearId"
+        ]
       }
     },
     "parameters": {}
@@ -99,6 +311,141 @@
           },
           "500": {
             "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/context": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Current user, their schools, and roles in the active school",
+        "description": "X-School-Id is optional here. Admin/operator without TOTP get 403 TWO_FACTOR_REQUIRED when a school is selected.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeContextResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/members": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Members of the active school (admin, operator, kepsek, wakasek)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolMembersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {
