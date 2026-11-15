@@ -1,5 +1,13 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { NextFunction, Request, Response } from 'express';
 import { uuidv7 } from 'uuidv7';
+
+const scope = new AsyncLocalStorage<{ requestId: string }>();
+
+/** Request id of the HTTP request this code runs for, if any (used as outbox trace id). */
+export function currentRequestId(): string | undefined {
+  return scope.getStore()?.requestId;
+}
 
 const INCOMING_ID = /^[A-Za-z0-9._-]{8,128}$/;
 
@@ -15,6 +23,6 @@ export function requestId() {
     const incoming = req.get('x-request-id');
     req.requestId = incoming && INCOMING_ID.test(incoming) ? incoming : uuidv7();
     res.setHeader('X-Request-Id', req.requestId);
-    next();
+    scope.run({ requestId: req.requestId }, next);
   };
 }

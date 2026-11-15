@@ -57,6 +57,20 @@
       "when": 1794774838611,
       "tag": "0007_idempotency_keys_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794775274444,
+      "tag": "0008_outbox_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794775274997,
+      "tag": "0009_outbox_inbox_rls",
+      "breakpoints": true
     }
   ]
 }

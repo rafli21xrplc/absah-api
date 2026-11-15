@@ -104,6 +104,21 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   Never use .returning() on it. Anonymous TPPK flows pass { omitIp: true }.
 - Test phone numbers/emails must be unique per run (testPhone(), uuid emails) so reruns never collide.
 
+## Outbox, consumers and inbox (PLT-13, apps/server/src/shared/outbox)
+- emit(tx, type, payload) inside the use case's withTenant transaction, next to audit(). The school
+  comes from the transaction; the request id becomes trace_id. Event types and payload schemas live
+  in shared/outbox/events.ts: ids and states only, no personal data. Never change a payload shape;
+  add a new type.
+- The worker relay moves unpublished events to pg-boss (one queue per consumer:
+  evt.<type>.<consumer>) and marks published_at in the same transaction (FOR UPDATE SKIP LOCKED).
+- Consumers: defineConsumer({ name, event, handle(tx, event) }) and add it to the worker's list.
+  handle runs in withTenant(event.schoolId, user null) together with an outbox_consumptions mark,
+  so redeliveries are skipped. External calls in a handler must be idempotent per event.id.
+  Queue policy: 5 retries with backoff, then outbox.dead.
+- The app role can only INSERT outbox_events (no read back, no .returning()).
+- Incoming webhooks: recordWebhook(provider, externalId, payload) (dedup on the provider id), process
+  in a job, then markWebhookProcessed(id). inbox_webhooks is a platform table (withPlatform only).
+
 ## Testing expectations
 - Domain rules: Vitest unit tests next to the code.
 - Repositories and RLS: integration tests against Postgres (TEST_DATABASE_URL).

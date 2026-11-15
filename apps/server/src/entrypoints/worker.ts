@@ -8,6 +8,7 @@ import {
 import { loadConfig } from '../shared/config';
 import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
+import { deleteOldOutboxRows, OUTBOX_RETENTION_QUEUE, startOutbox, type Consumer } from '../shared/outbox';
 import { createLogger } from '../shared/logger';
 
 const config = loadConfig();
@@ -28,6 +29,15 @@ await boss.schedule(HEARTBEAT_QUEUE, '*/5 * * * *', null, { tz: 'Asia/Jakarta' }
 await boss.createQueue(IDEMPOTENCY_CLEANUP_QUEUE);
 await boss.work(IDEMPOTENCY_CLEANUP_QUEUE, idempotencyCleanupHandler(logger));
 await boss.schedule(IDEMPOTENCY_CLEANUP_QUEUE, '17 * * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(OUTBOX_RETENTION_QUEUE);
+await boss.work(OUTBOX_RETENTION_QUEUE, async () => {
+  logger.info({ deleted: await deleteOldOutboxRows(), queue: OUTBOX_RETENTION_QUEUE }, 'old outbox rows deleted');
+});
+await boss.schedule(OUTBOX_RETENTION_QUEUE, '30 2 * * *', null, { tz: 'Asia/Jakarta' });
+
+// Outbox consumers from every module. None yet: notifications arrive with prompt 3.2.
+const consumers: Consumer[] = [];
+const outbox = await startOutbox(boss, consumers, logger);
 logger.info('worker started');
 
 let stopping = false;
@@ -36,6 +46,7 @@ async function shutdown(signal: string): Promise<void> {
   stopping = true;
   logger.info({ signal }, 'worker shutting down');
   try {
+    await outbox.stop();
     await boss.stop({ graceful: true, timeout: 10_000 });
     await closeDb();
     process.exit(0);
