@@ -1,5 +1,10 @@
 import { PgBoss } from 'pg-boss';
-import { HEARTBEAT_QUEUE, heartbeatHandler } from '../modules/platform';
+import {
+  HEARTBEAT_QUEUE,
+  IDEMPOTENCY_CLEANUP_QUEUE,
+  heartbeatHandler,
+  idempotencyCleanupHandler,
+} from '../modules/platform';
 import { loadConfig } from '../shared/config';
 import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
@@ -20,6 +25,9 @@ await boss.start();
 await boss.createQueue(HEARTBEAT_QUEUE);
 await boss.work(HEARTBEAT_QUEUE, heartbeatHandler(logger));
 await boss.schedule(HEARTBEAT_QUEUE, '*/5 * * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(IDEMPOTENCY_CLEANUP_QUEUE);
+await boss.work(IDEMPOTENCY_CLEANUP_QUEUE, idempotencyCleanupHandler(logger));
+await boss.schedule(IDEMPOTENCY_CLEANUP_QUEUE, '17 * * * *', null, { tz: 'Asia/Jakarta' });
 logger.info('worker started');
 
 let stopping = false;

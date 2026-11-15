@@ -1,5 +1,6 @@
 import {
   createDb,
+  withPlatform as withPlatformOn,
   withTenant as withTenantOn,
   withUser as withUserOn,
   type DbHandle,
@@ -31,6 +32,14 @@ export function withTenant<T>(ctx: TenantContext, fn: (tx: Tx) => Promise<T>): P
 /** Cross-school lookups for one user before a school is chosen (/me/context only). */
 export function withUser<T>(userId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return withUserOn(getDb().db, userId, fn, { appRole });
+}
+
+/**
+ * Login role, no RLS scoping. Only for platform tables and cross-school maintenance jobs
+ * (expiry, outbox relay, webhook inbox). Never for request handling. See CLAUDE.md.
+ */
+export function withPlatform<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return withPlatformOn(getDb().db, fn);
 }
 
 export async function closeDb(): Promise<void> {

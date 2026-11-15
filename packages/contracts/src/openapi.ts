@@ -2,7 +2,7 @@
 // bundles that import contracts do not pull in the generator.
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { ErrorBody } from './common';
-import { MeContextResponse, SchoolMembersResponse } from './platform/context';
+import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
 
 export const API_BASE_PATH = '/api/v1';
@@ -34,6 +34,13 @@ function buildRegistry(): OpenAPIRegistry {
     description: 'Active school (workspace). Must be a school where the user has an active membership.',
     schema: { type: 'string' as const, format: 'uuid' },
   };
+  const idempotencyHeader = {
+    name: 'Idempotency-Key',
+    in: 'header' as const,
+    required: true,
+    description: 'One key per user action, reused on retry. Same key with a different body gives 422.',
+    schema: { type: 'string' as const, pattern: '^[A-Za-z0-9_\\-:.]{8,128}$' },
+  };
 
   registry.registerPath({
     method: 'get',
@@ -62,6 +69,27 @@ function buildRegistry(): OpenAPIRegistry {
     },
   });
 
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/school/members/{membershipId}`,
+    tags: ['platform'],
+    summary: 'Activate or suspend a membership (admin)',
+    description: 'Idempotent: send Idempotency-Key. Admins cannot change their own membership.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: {
+      params: MembershipIdParam,
+      body: { content: { 'application/json': { schema: UpdateMembershipStatusRequest } } },
+    },
+    responses: {
+      200: {
+        description: 'Updated membership. Replays carry Idempotent-Replayed: true.',
+        content: { 'application/json': { schema: SchoolMember } },
+      },
+      ...errors(400, 401, 403, 404, 409, 422),
+    },
+  });
+
   registry.registerComponent('securitySchemes', 'session', {
     type: 'apiKey',
     in: 'cookie',
@@ -76,6 +104,9 @@ const ERROR_DESCRIPTIONS: Record<number, string> = {
   400: 'Validation failed (VALIDATION_FAILED)',
   401: 'No session (UNAUTHENTICATED)',
   403: 'Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)',
+  404: 'Not found (NOT_FOUND)',
+  409: 'Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)',
+  422: 'Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)',
 };
 
 export function generateOpenApiDocument(version = '0.0.0') {

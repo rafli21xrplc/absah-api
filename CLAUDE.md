@@ -49,6 +49,9 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - withUser(userId, fn) is the ONLY exception to "always withTenant": cross-school reads for one user
   before a school is chosen (memberships and their schools for /me/context). RLS limits it to the
   user's own memberships. Do not use it for anything else.
+- withPlatform(fn) runs as the login role with no RLS scoping. Only for platform tables and
+  cross-school maintenance jobs (idempotency cleanup, outbox relay, webhook inbox). Never in request
+  handling of tenant data; every call site says why.
 - absah_app has no access to Better Auth tables (user, session, account, verification, two_factor,
   rate_limit). Names of a school's members come from the view school_member_directory.
 
@@ -68,6 +71,11 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 1. Every tenant table has school_id uuid not null, an index starting with school_id, and an RLS policy.
    Never add BYPASSRLS, never query outside withTenant(ctx, fn). Run db:check-rls after migrations.
 2. Every write endpoint accepts Idempotency-Key. Kiosk, PKL check-in and payment endpoints require it.
+   Mount idempotent() (shared/idempotency.ts) after resolveContext({ school: 'required' }). It stores
+   responses < 500 for 24 h (encrypted), replays them with Idempotent-Replayed: true, 422 on a reused
+   key with another body, 409 while the first is running; a 5xx frees the key. If the process dies
+   between commit and storing the response, a retry can run again after 60 s: keep use cases
+   naturally idempotent too (state checks, unique constraints).
 3. Never call WhatsApp, payment or email from a request handler. Write an outbox event in the same
    transaction; the worker performs the side effect.
 4. Never branch on school level (no if level === 'sd'). Read capabilities from req.ctx.caps and
