@@ -25,6 +25,19 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class UnauthenticatedError extends AppError {
+  constructor(message = 'Silakan masuk terlebih dahulu.') {
+    super('UNAUTHENTICATED', 401, message);
+  }
+}
+
+/** Admin and operator must enable TOTP before acting in a school (PLT-01). */
+export class TwoFactorRequiredError extends AppError {
+  constructor() {
+    super('TWO_FACTOR_REQUIRED', 403, 'Aktifkan verifikasi dua langkah untuk melanjutkan.');
+  }
+}
+
 export class ForbiddenError extends AppError {
   constructor(message = 'Anda tidak memiliki akses.') {
     super('FORBIDDEN', 403, message);

@@ -1,4 +1,11 @@
-import { createDb, withTenant as withTenantOn, type DbHandle, type TenantContext, type Tx } from '@absah/db';
+import {
+  createDb,
+  withTenant as withTenantOn,
+  withUser as withUserOn,
+  type DbHandle,
+  type TenantContext,
+  type Tx,
+} from '@absah/db';
 import type { Config } from './config';
 
 let handle: DbHandle | undefined;
@@ -19,6 +26,11 @@ export function getDb(): DbHandle {
 /** The only way request and job code should touch tenant data (CLAUDE.md rule 1). */
 export function withTenant<T>(ctx: TenantContext, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return withTenantOn(getDb().db, ctx, fn, { appRole });
+}
+
+/** Cross-school lookups for one user before a school is chosen (/me/context only). */
+export function withUser<T>(userId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return withUserOn(getDb().db, userId, fn, { appRole });
 }
 
 export async function closeDb(): Promise<void> {

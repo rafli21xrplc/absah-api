@@ -16,8 +16,22 @@ tidak pernah masuk repo (repo ini publik). Lokal: `.env.local` di root repo (git
 | `DATABASE_URL_DIRECT` | migrasi, `db:check-rls`, seed, pg-boss | Neon dev, **direct** | branch PR, direct | staging, direct | prod, direct |
 | `DB_APP_ROLE` | `withTenant` | `absah_app` | `absah_app` | `absah_app` | `absah_app` |
 | `TEST_DATABASE_URL` | uji integrasi | Postgres lokal | – (CI pakai service) | – | – |
+| `BETTER_AUTH_SECRET` | http (cookie, rahasia TOTP) | acak di `.env.local` | secret | secret | secret, beda tiap lingkungan |
+| `BETTER_AUTH_URL` | http | `http://localhost:3000` | URL web preview | URL web staging | URL web production |
+| `TRUSTED_ORIGINS` | http | `http://localhost:3000` | origin web preview | origin web staging | origin web production |
+| `AUTH_RATE_LIMIT` | http | `true` | `true` | `true` | `true` |
+| `AUTH_IP_HEADERS` | http | `cf-connecting-ip` | `cf-connecting-ip` | `cf-connecting-ip` | `cf-connecting-ip` |
 
-Variabel yang menyusul di fase berikutnya: `BETTER_AUTH_SECRET`, `ENCRYPTION_KEYS` (Fase 1),
+`BETTER_AUTH_SECRET` mengenkripsi rahasia TOTP di tabel `two_factor`: menggantinya membuat 2FA semua
+admin tidak bisa dipakai. Rotasi butuh prosedur tersendiri. `BETTER_AUTH_URL` adalah origin yang
+dilihat browser (web absah-app, yang meneruskan `/api/*` ke API), bukan URL API langsung.
+`AUTH_IP_HEADERS` hanya boleh berisi header yang tidak bisa dipalsukan klien. Di belakang Cloudflare
+pakai `cf-connecting-ip`; jangan `x-forwarded-for` kecuali origin hanya menerima trafik Cloudflare.
+
+Production belum bisa dijalankan sampai adapter WhatsApp (prompt 3.2) ada: `http.ts` menolak start
+di `NODE_ENV=production` tanpa `MessageSender` sungguhan.
+
+Variabel yang menyusul di fase berikutnya: `ENCRYPTION_KEYS` (prompt 1.2),
 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (Fase 2), dan `WHATSAPP_*` (Fase 3).
 
 ### Pooled dan direct
@@ -27,6 +41,7 @@ Variabel yang menyusul di fase berikutnya: `BETTER_AUTH_SECRET`, `ENCRYPTION_KEY
 - **Direct** (host tanpa `-pooler`): dipakai DDL/migrasi, `db:check-rls`, seed, dan pg-boss
   (pg-boss butuh sesi yang stabil untuk maintenance).
 - Pakai `sslmode=verify-full` (node-postgres memperlakukan `require` sebagai `verify-full` dan memberi peringatan).
+  Untuk `psql` tambahkan `&sslrootcert=system` agar sertifikat diverifikasi dengan CA sistem.
 
 ### Role database
 

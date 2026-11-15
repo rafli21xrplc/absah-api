@@ -1,4 +1,6 @@
-import { unitPreset } from '@absah/config/vitest';
+import { integrationPreset } from '@absah/config/vitest';
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig({ test: { ...unitPreset, include: ['src/**/*.test.ts', 'test/**/*.test.ts'] } });
+export default defineConfig({
+  test: { ...integrationPreset, globalSetup: ['./test/global-setup.ts'] },
+});

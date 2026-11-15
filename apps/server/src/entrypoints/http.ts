@@ -1,13 +1,28 @@
 import { createApp } from '../app';
+import { createAuth } from '../modules/platform';
 import { loadConfig } from '../shared/config';
 import { closeDb, initDb } from '../shared/db';
 import { createLogger } from '../shared/logger';
+import { FakeMessageSender } from '../shared/messaging/message-sender';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.LOG_LEVEL, pretty: config.NODE_ENV === 'development' });
-initDb(config);
+const { db } = initDb(config);
 
-const app = createApp({ logger, version: config.APP_VERSION });
+if (config.NODE_ENV === 'production') {
+  // The WhatsApp provider adapter arrives with prompt 3.2; refuse to run production without it.
+  throw new Error('No production MessageSender configured yet (prompt 3.2)');
+}
+// Dev: OTP codes are kept in memory and logged at debug level for local testing only.
+const messageSender = new (class extends FakeMessageSender {
+  override async sendOtp(input: { to: string; code: string; purpose: 'login' }): Promise<void> {
+    await super.sendOtp(input);
+    logger.debug({ devOtp: input.code }, 'dev OTP generated (FakeMessageSender)');
+  }
+})();
+const auth = createAuth({ db, config, messageSender });
+
+const app = createApp({ logger, version: config.APP_VERSION, auth });
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'http listening');
 });
