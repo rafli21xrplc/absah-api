@@ -1,0 +1,14 @@
+{
+  "name": "@absah/capabilities",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Capability catalog and school-level presets. Pure data, no I/O. Consumed by absah-api and absah-app.",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src"],
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@absah/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Zod contracts per endpoint. Consumed by absah-api (server) and absah-app (web, kiosk).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi": "./src/openapi.ts",
+    "./openapi.json": "./openapi/openapi.json"
+  },
+  "files": ["src", "openapi"],
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "openapi": "tsx scripts/generate-openapi.ts"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "zod": "^4.6.7"
+  }
+}

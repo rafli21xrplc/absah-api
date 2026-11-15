@@ -1,0 +1,50 @@
+# Optional: a Neon branch per PR with migrations applied. Runs only when the repo has the
+# NEON_API_KEY secret and NEON_PROJECT_ID variable configured (Settings > Secrets and variables).
+name: Preview database
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: preview-db-${{ github.event.number }}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create:
+    if: github.event.action != 'closed' && vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: preview/pr-${{ github.event.number }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Migrate preview branch
+        env:
+          DATABASE_URL_DIRECT: ${{ steps.branch.outputs.db_url }}
+          DATABASE_URL: ${{ steps.branch.outputs.db_url_pooled }}
+        run: |
+          pnpm db:migrate
+          pnpm db:check-rls
+
+  delete:
+    if: github.event.action == 'closed' && vars.NEON_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/pr-${{ github.event.number }}
+          api_key: ${{ secrets.NEON_API_KEY }}
