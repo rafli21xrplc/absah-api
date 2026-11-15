@@ -43,6 +43,20 @@
       "when": 1794774311925,
       "tag": "0005_audit_logs_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794774838056,
+      "tag": "0006_idempotency_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794774838611,
+      "tag": "0007_idempotency_keys_rls",
+      "breakpoints": true
     }
   ]
 }

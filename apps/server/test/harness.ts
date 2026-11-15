@@ -68,7 +68,12 @@ export function buildTestApp() {
       return { id, phoneNumber };
     },
     async member(schoolId: string, userId: string, role: Role, status: 'active' | 'invited' | 'suspended' = 'active') {
-      await getDb().db.insert(schema.memberships).values({ schoolId, userId, role, status });
+      const [row] = await getDb()
+        .db.insert(schema.memberships)
+        .values({ schoolId, userId, role, status })
+        .returning({ id: schema.memberships.id });
+      if (!row) throw new Error('membership insert returned nothing');
+      return row.id;
     },
     async cleanup() {
       const { db } = getDb();
