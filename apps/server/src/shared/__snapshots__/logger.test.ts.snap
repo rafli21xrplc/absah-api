@@ -1,0 +1,62 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`log redaction (snapshot) > never writes names, phone numbers, NISN, NIK, emails, IPs or encrypted column contents 1`] = `
+[
+  {
+    "guardian": {
+      "email": "[redacted]",
+      "phoneNumber": "[redacted]",
+    },
+    "level": 30,
+    "msg": "domain event",
+    "req": {
+      "headers": {
+        "authorization": "[redacted]",
+        "cf-connecting-ip": "[redacted]",
+        "cookie": "[redacted]",
+      },
+    },
+    "requestId": "req-1",
+    "row": {
+      "id": "r1",
+      "uksNote": "[redacted]",
+    },
+    "schoolId": "0190a2b4-0000-7000-8000-000000000000",
+    "service": "absah-api",
+    "student": {
+      "name": "[redacted]",
+      "nik": "[redacted]",
+      "nisn": "[redacted]",
+    },
+    "visit": {
+      "note": "[redacted]",
+      "outcome": "dipulangkan",
+    },
+  },
+  {
+    "err": {
+      "cause": {
+        "code": "23505",
+        "message": "duplicate key value violates unique constraint "[redacted]"",
+        "type": "Error",
+      },
+      "message": "Failed query (parameters omitted)",
+      "query": "insert into "students" ("name", "nisn", "phone") values ($1, $2, $3)",
+      "type": "Error",
+    },
+    "level": 50,
+    "msg": "request failed",
+    "requestId": "req-2",
+    "service": "absah-api",
+  },
+  {
+    "err": {
+      "message": "invalid input syntax for type uuid: "[redacted]"",
+      "type": "Error",
+    },
+    "level": 50,
+    "msg": "request failed",
+    "service": "absah-api",
+  },
+]
+`;

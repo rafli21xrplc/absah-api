@@ -4,3 +4,4 @@ export { findRlsViolations, type RlsViolation } from './rls';
 export * as schema from './schema';
 export { MIGRATIONS_FOLDER, runMigrations } from './migrate';
 export { DEFAULT_APP_ROLE, withTenant, withUser, type TenantContext } from './tenant';
+export * from './crypto';

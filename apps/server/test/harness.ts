@@ -9,11 +9,14 @@ import { uuidv7 } from 'uuidv7';
 import { createApp } from '../src/app';
 import { createAuth, createPhoneUser, createStaffUser } from '../src/modules/platform';
 import { loadConfig } from '../src/shared/config';
+import { initCrypto } from '../src/shared/crypto';
 import { closeDb, getDb, initDb } from '../src/shared/db';
 import { FakeMessageSender } from '../src/shared/messaging/message-sender';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
 export const PASSWORD = 'kata-sandi-uji-123';
+/** Fixed test-only key (32 zero-ish bytes); never used outside tests. */
+export const TEST_ENCRYPTION_KEYS = `test1:${Buffer.alloc(32, 7).toString('base64')}`;
 
 export function buildTestApp() {
   const url = process.env.TEST_DATABASE_URL;
@@ -25,11 +28,15 @@ export function buildTestApp() {
     BETTER_AUTH_URL: TEST_ORIGIN,
     AUTH_RATE_LIMIT: 'true',
     AUTH_IP_HEADERS: 'cf-connecting-ip',
+    ENCRYPTION_KEYS: TEST_ENCRYPTION_KEYS,
+    ENCRYPTION_ACTIVE_KEY_ID: 'test1',
+    HASH_KEY: 'test-hash-key-test-hash-key-test-hash-key',
   });
+  initCrypto(config);
   const { db } = initDb(config);
   const messageSender = new FakeMessageSender();
   const auth = createAuth({ db, config, messageSender });
-  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth });
+  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS });
 
   const created = { schools: [] as string[], users: [] as string[] };
 
@@ -74,6 +81,11 @@ export function buildTestApp() {
 
 export type TestApp = ReturnType<typeof buildTestApp>;
 export type Agent = ReturnType<TestApp['agent']>;
+
+/** Unique Indonesian mobile number per call, so reruns never collide with leftovers. */
+export function testPhone(): string {
+  return `+62812${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`;
+}
 
 function rnd() {
   return Math.floor(Math.random() * 250) + 1;

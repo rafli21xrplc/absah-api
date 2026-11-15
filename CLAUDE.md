@@ -77,9 +77,24 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 6. Validate every request and response with the Zod contract from packages/contracts (sendContract).
 7. No any, no ts-ignore, no disabled tests to make CI green. If blocked, stop and explain.
 8. Dates: timestamptz in UTC; school_date computed in the school timezone (default Asia/Jakarta).
-9. Personal data: no names, phone numbers or NISN in logs (shared/logger.ts REDACT_PATHS). Sensitive
-   text columns (TPPK, BK, UKS notes, pickup phone) are encrypted with the crypto helper in shared/crypto.
+9. Personal data: no names, phone numbers or NISN in logs (shared/logger.ts REDACT_PATHS + serializeErr,
+   which drops SQL parameters and quoted values from DB errors). Sensitive text columns (TPPK, BK, UKS
+   notes, pickup phone, NIK) use encryptedText(name, '<table>.<column>') from @absah/db.
 10. The tppk schema is readable only by TPPK members; support access never includes it.
+
+## Encryption and audit (PLT-04, PLT-05)
+- encryptedText columns read as SensitiveText: it prints "[redacted]" in JSON/logs; call .reveal() only
+  where the plaintext is really needed (e.g. building a response the caller may see). Write with
+  sensitive(value). The context string is the AAD: never rename it once data exists.
+- Keys: ENCRYPTION_KEYS "<id>:<base64 32B>,..." + ENCRYPTION_ACTIVE_KEY_ID. To rotate: add a new key,
+  make it active, re-encrypt rows with rotate() (job, later), then remove the old key.
+- Values matched but never read back (IP, tracking codes) use hashValue() (HMAC with HASH_KEY).
+- Every state-changing use case calls audit(tx, auditContext(req, actor), 'entity.verb', {type, id},
+  {before, after}) inside the same withTenant transaction. Diffs are sanitised (sensitive keys and
+  SensitiveText redacted, size capped); still pass only the fields that changed.
+- audit_logs is append-only (no UPDATE/DELETE for absah_app) and readable only by active admins.
+  Never use .returning() on it. Anonymous TPPK flows pass { omitIp: true }.
+- Test phone numbers/emails must be unique per run (testPhone(), uuid emails) so reruns never collide.
 
 ## Testing expectations
 - Domain rules: Vitest unit tests next to the code.

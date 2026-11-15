@@ -1,6 +1,6 @@
 import { ErrorBody, MeContextResponse } from '@absah/contracts';
 import { afterAll, describe, expect, it } from 'vitest';
-import { buildTestApp, enableTotp, signIn, signInWithTotp } from './harness';
+import { buildTestApp, enableTotp, signIn, signInWithTotp, testPhone } from './harness';
 
 const t = buildTestApp();
 afterAll(() => t.cleanup());
@@ -82,7 +82,7 @@ describe('two-factor is mandatory for admin and operator (PLT-01)', () => {
 describe('WhatsApp OTP login for parents', () => {
   it('sends a code to a known number and signs in with it', async () => {
     const school = await t.school('sd', 'SD OTP');
-    const parent = await t.parent('+6281234500001');
+    const parent = await t.parent(testPhone());
     await t.member(school, parent.id, 'orang_tua');
     const agent = t.agent();
 
@@ -98,7 +98,7 @@ describe('WhatsApp OTP login for parents', () => {
 
   it('gives an unknown number the same answer, sends nothing and creates no account', async () => {
     const agent = t.agent();
-    const unknown = '+6281299999999';
+    const unknown = testPhone();
     await agent.post('/api/auth/phone-number/send-otp').send({ phoneNumber: unknown }).expect(200);
     expect(t.messageSender.lastCodeFor(unknown)).toBeUndefined();
     const verify = await agent.post('/api/auth/phone-number/verify').send({ phoneNumber: unknown, code: '000000' });
