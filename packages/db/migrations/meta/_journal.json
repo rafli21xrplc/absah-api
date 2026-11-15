@@ -15,6 +15,20 @@
       "when": 1794771931511,
       "tag": "0001_app_role_and_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794772897644,
+      "tag": "0002_auth_and_memberships",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794772898140,
+      "tag": "0003_memberships_rls",
+      "breakpoints": true
     }
   ]
 }
