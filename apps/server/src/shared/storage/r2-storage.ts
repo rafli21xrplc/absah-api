@@ -31,6 +31,13 @@ export class R2ObjectStorage implements ObjectStorage {
     return { url, method: 'PUT', headers: { 'Content-Type': contentType }, expiresAt: new Date(Date.now() + PRESIGN_TTL_SECONDS * 1000) };
   }
 
+  async presignDownload({ key, contentType }: { key: string; contentType: string }): Promise<{ url: string; expiresAt: Date }> {
+    assertStorageKey(key);
+    const command = new GetObjectCommand({ Bucket: this.options.bucket, Key: key, ResponseContentType: contentType, ResponseContentDisposition: 'inline' });
+    const url = await getSignedUrl(this.client, command, { expiresIn: PRESIGN_TTL_SECONDS });
+    return { url, expiresAt: new Date(Date.now() + PRESIGN_TTL_SECONDS * 1000) };
+  }
+
   async read(key: string): Promise<Buffer | null> {
     assertStorageKey(key);
     try {

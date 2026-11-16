@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { correctionsRouter, sessionsRouter } from './modules/attendance';
+import { leaveRouter } from './modules/leave';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
@@ -63,6 +64,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage }:
   v1.use(learningGroupsRouter(auth));
   v1.use(sessionsRouter(auth));
   v1.use(correctionsRouter(auth));
+  v1.use(leaveRouter(auth, storage));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });
