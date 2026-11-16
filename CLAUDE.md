@@ -182,6 +182,17 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   fingerprint) and commit (re-plan under lock, 409 stale_preview / has_errors; replaces every
   lesson of the rombel in the file, creates missing subjects, deletes the file).
 
+## Attendance (PRS, modules/attendance, packages/db/src/schema/attendance.ts)
+- attendance_sessions (school_date, mode per_period|daily|activity|pkl, owner_type
+  class|group|activity|placement + owner_id, slot_id, teacher_id, status open|submitted|missed|locked),
+  attendance_records (one row per session x enrollment: current status + source + source_ref),
+  daily_attendance (one row per enrollment per school date), correction_requests,
+  attendance_days (per school date: generated_at / skipped_reason / locked_at, the job markers).
+- Source priority (domain/status-rules.ts SOURCE_PRIORITY): manual > leave > uks > pkl_confirm >
+  teacher > gate; a source may overwrite itself. Every write goes through shouldReplace.
+- computeDailyStatus: present in any session -> H (T if any T); absent all day -> most frequent of
+  S/I/A, ties S > I > A. isSchoolDay: calendar_days first, then weekdays with jam pelajaran, else Mon-Fri.
+
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
   read, remove. R2ObjectStorage in production (STORAGE_DRIVER=r2 is enforced), FsObjectStorage in

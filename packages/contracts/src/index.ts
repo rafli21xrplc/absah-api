@@ -10,3 +10,4 @@ export * from './academic/registry';
 export * from './academic/schedule';
 export * from './academic/learning-groups';
 export * from './academic/schedule-import';
+export * from './attendance/enums';
