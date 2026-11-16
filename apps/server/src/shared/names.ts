@@ -1,4 +1,4 @@
-/** "ADITYA PRATAMA" -> "Aditya": the only part of a name the kiosk shows. */
+/** "ADITYA PRATAMA" -> "Aditya": the only part of a name the kiosk and WhatsApp messages show. */
 export function firstName(name: string): string {
   const first = name.trim().split(/\s+/)[0] ?? '';
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
