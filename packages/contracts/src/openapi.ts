@@ -1,6 +1,12 @@
 // OpenAPI document built from the Zod contracts. Kept out of index.ts so web/kiosk
 // bundles that import contracts do not pull in the generator.
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import {
+  SchoolCapabilitiesResponse,
+  SchoolProfileResponse,
+  UpdateSchoolCapabilitiesRequest,
+  UpdateSchoolProfileRequest,
+} from './academic/school-settings';
 import { ErrorBody } from './common';
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
@@ -87,6 +93,36 @@ function buildRegistry(): OpenAPIRegistry {
         content: { 'application/json': { schema: SchoolMember } },
       },
       ...errors(400, 401, 403, 404, 409, 422),
+    },
+  });
+
+  const adminWrite = (summary: string, path: string, method: 'patch' | 'put', body: typeof UpdateSchoolProfileRequest | typeof UpdateSchoolCapabilitiesRequest, response: typeof SchoolProfileResponse | typeof SchoolCapabilitiesResponse) =>
+    registry.registerPath({
+      method,
+      path: `${API_BASE_PATH}${path}`,
+      tags: ['academic'],
+      summary,
+      description: 'Admin only. Idempotent: send Idempotency-Key. attendance.mode changes apply from tomorrow (school timezone).',
+      security: [{ session: [] }],
+      parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+      request: { body: { content: { 'application/json': { schema: body } } } },
+      responses: {
+        200: { description: 'Saved', content: { 'application/json': { schema: response } } },
+        ...errors(400, 401, 403, 409, 422),
+      },
+    });
+  adminWrite('Change the school level / madrasah profile', '/school/profile', 'patch', UpdateSchoolProfileRequest, SchoolProfileResponse);
+  adminWrite('Override capabilities of the school', '/school/capabilities', 'put', UpdateSchoolCapabilitiesRequest, SchoolCapabilitiesResponse);
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/school/capabilities`,
+    tags: ['academic'],
+    summary: 'Capability settings of the active school (admin)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: {
+      200: { description: 'Settings', content: { 'application/json': { schema: SchoolCapabilitiesResponse } } },
+      ...errors(400, 401, 403),
     },
   });
 
