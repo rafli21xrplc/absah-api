@@ -16,3 +16,5 @@ export * from './attendance/corrections';
 export * from './leave/leave-requests';
 export * from './gate/card-token';
 export * from './gate/enums';
+export * from './gate/kiosks';
+export * from './gate/cards';

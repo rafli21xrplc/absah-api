@@ -245,6 +245,15 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   ids>.<30 s window>.<HMAC>. schoolDayKey = HMAC(secret, date) goes to kiosks (offline checks),
   deviceDayKey = HMAC(dayKey, deviceId) only to the bound phone, so tokens for another device id
   cannot be made; +-2 windows of clock skew. Never change the format without a new prefix.
+- Kiosks (application/kiosks.ts): admin/operator POST /gate/kiosks/pairings -> code
+  "<schoolId>.<secret>" (10 min, single use, shown as QR + text); the kiosk POST /kiosk/pair gets
+  a device token "<schoolId>.<kioskId>.<secret>" (hash stored) and sends `Authorization: Kiosk
+  <token>`. kioskContext() authenticates and requires gate.enabled; kiosk Idempotency-Keys are
+  scoped to the device (kioskIdempotencyScope; idempotent(scopeOf) takes any scope). Heartbeat
+  every minute (queue size, version); online = heartbeat < 150 s. Revoke = 401 at once.
+- Cards (application/cards.ts): holder from card.holder (student: students.user_id; parent:
+  guardians.user_id). POST /cards/devices binds the caller's phone (previous phone revoked) and
+  returns 7 days of device keys; GET /cards/devices/{id}/keys refreshes them while still bound.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

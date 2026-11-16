@@ -32,7 +32,16 @@ type Claim =
  * double-apply also need a natural guard (unique constraint or state check), as membership
  * status changes have.
  */
-export function idempotent(): RequestHandler {
+/** The caller an Idempotency-Key belongs to: the signed-in user by default. */
+export type IdempotencyScopeOf = (req: Request) => Scope;
+const userScope: IdempotencyScopeOf = (req) => {
+  const ctx = getCtx(req);
+  if (!ctx.schoolId) throw new Error('idempotent() must run after resolveContext with a school');
+  return { schoolId: ctx.schoolId, userId: ctx.userId };
+};
+
+/** scopeOf: who owns the keys, e.g. a kiosk device (kioskIdempotencyScope) instead of a user. */
+export function idempotent(scopeOf: IdempotencyScopeOf = userScope): RequestHandler {
   return async (req, res, next) => {
     try {
       const raw = req.get(IDEMPOTENCY_KEY_HEADER);
@@ -44,9 +53,7 @@ export function idempotent(): RequestHandler {
         throw new ValidationError([{ path: IDEMPOTENCY_KEY_HEADER, message: 'Format tidak valid.' }]);
       }
 
-      const ctx = getCtx(req);
-      if (!ctx.schoolId) throw new Error('idempotent() must run after resolveContext with a school');
-      const scope: Scope = { schoolId: ctx.schoolId, userId: ctx.userId };
+      const scope = scopeOf(req);
       const claim = await claimKey(scope, parsed.data, requestHash(req));
 
       if (claim.kind === 'replay') {
