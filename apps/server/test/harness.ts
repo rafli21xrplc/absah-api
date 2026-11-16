@@ -12,6 +12,10 @@ import { loadConfig } from '../src/shared/config';
 import { initCrypto } from '../src/shared/crypto';
 import { closeDb, getDb, initDb } from '../src/shared/db';
 import { FakeMessageSender } from '../src/shared/messaging/message-sender';
+import { FsObjectStorage } from '../src/shared/storage';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
 export const PASSWORD = 'kata-sandi-uji-123';
@@ -36,7 +40,8 @@ export function buildTestApp() {
   const { db } = initDb(config);
   const messageSender = new FakeMessageSender();
   const auth = createAuth({ db, config, messageSender });
-  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL });
+  const storage = new FsObjectStorage(mkdtempSync(path.join(tmpdir(), 'absah-storage-')), TEST_ORIGIN, 'test-storage-secret');
+  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage });
 
   const created = { schools: [] as string[], users: [] as string[] };
 
@@ -44,6 +49,7 @@ export function buildTestApp() {
     app,
     auth,
     messageSender,
+    storage,
     /** A cookie-keeping client from its own IP, so auth rate limits do not leak between tests. */
     agent(ip = `10.${rnd()}.${rnd()}.${rnd()}`) {
       const agent = request.agent(app);

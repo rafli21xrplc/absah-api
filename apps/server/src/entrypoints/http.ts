@@ -5,6 +5,7 @@ import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { createLogger } from '../shared/logger';
 import { FakeMessageSender } from '../shared/messaging/message-sender';
+import { createObjectStorage } from '../shared/storage';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.LOG_LEVEL, pretty: config.NODE_ENV === 'development' });
@@ -24,7 +25,7 @@ const messageSender = new (class extends FakeMessageSender {
 })();
 const auth = createAuth({ db, config, messageSender });
 
-const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL });
+const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage: createObjectStorage(config) });
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'http listening');
 });

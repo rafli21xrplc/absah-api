@@ -28,4 +28,10 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...BASE, ENCRYPTION_ACTIVE_KEY_ID: 'k2' })).toThrow(/ENCRYPTION_KEYS/);
     expect(() => loadConfig({ ...BASE, ENCRYPTION_KEYS: `k1:${Buffer.alloc(8).toString('base64')}` })).toThrow(/32 bytes/);
   });
+
+  it('requires R2 storage in production, with all R2 settings', () => {
+    expect(loadConfig(BASE).STORAGE_DRIVER).toBe('fs');
+    expect(() => loadConfig({ ...BASE, NODE_ENV: 'production' })).toThrow(/STORAGE_DRIVER/);
+    expect(() => loadConfig({ ...BASE, STORAGE_DRIVER: 'r2', R2_BUCKET: 'absah' })).toThrow(/R2_ACCOUNT_ID/);
+  });
 });

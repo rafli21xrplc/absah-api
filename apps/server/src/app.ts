@@ -10,6 +10,7 @@ import { clientIp } from './shared/client-ip';
 import { errorHandler, notFoundHandler } from './shared/http';
 import { serializeErr } from './shared/logger';
 import { requestId } from './shared/request-id';
+import { FsObjectStorage, fsUploadRouter, type ObjectStorage } from './shared/storage';
 
 export interface AppDeps {
   logger: Logger;
@@ -19,9 +20,10 @@ export interface AppDeps {
   ipHeaders: readonly string[];
   /** Web origin for links in API responses (BETTER_AUTH_URL). */
   appUrl: string;
+  storage: ObjectStorage;
 }
 
-export function createApp({ logger, version, auth, ipHeaders, appUrl }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders, appUrl, storage }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
@@ -44,6 +46,8 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl }: AppDeps)
   );
   // Better Auth reads the raw body itself, so it is mounted before express.json().
   app.all('/api/auth/{*splat}', toNodeHandler(auth));
+  // Dev/test stand-in for R2 presigned uploads; also reads the raw body, so before express.json().
+  if (storage instanceof FsObjectStorage) app.use('/api/v1', fsUploadRouter(storage));
   app.use(express.json({ limit: '1mb' }));
 
   const openapi = generateOpenApiDocument(version);
