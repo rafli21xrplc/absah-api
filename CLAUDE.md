@@ -187,11 +187,15 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 ## Attendance (PRS, modules/attendance, packages/db/src/schema/attendance.ts)
 - attendance_sessions (school_date, mode per_period|daily|activity|pkl, owner_type
   class|group|activity|placement + owner_id, slot_id, teacher_id, status open|submitted|missed|locked),
-  attendance_records (one row per session x enrollment: current status + source + source_ref),
+  attendance_marks (one row per session x enrollment x source: that source's latest word),
+  attendance_records (one row per session x enrollment: the winning mark),
   daily_attendance (one row per enrollment per school date), correction_requests,
   attendance_days (per school date: generated_at / skipped_reason / locked_at, the job markers).
 - Source priority (domain/status-rules.ts SOURCE_PRIORITY): manual > leave > uks > pkl_confirm >
-  teacher > gate; a source may overwrite itself. Every write goes through shouldReplace.
+  teacher > gate. Statuses change ONLY through changeMarks (application/marks.ts): write or remove
+  marks (removeRef drops every mark of one source_ref, e.g. a cancelled izin), re-resolve records
+  (resolveMarks), recompute daily_attendance, emit attendance.absent_marked on a change to A.
+  Removing the winner brings the next source back; no mark left = no record.
 - computeDailyStatus: present in any session -> H (T if any T); absent all day -> most frequent of
   S/I/A, ties S > I > A. isSchoolDay: calendar_days first, then weekdays with jam pelajaran, else Mon-Fri.
 - Jobs (jobs/session-jobs.ts) prs.generate-sessions / prs.remind-unfilled / prs.lock-sessions run

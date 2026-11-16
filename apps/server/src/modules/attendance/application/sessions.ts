@@ -2,12 +2,11 @@ import type { SessionDetail, SessionSummary, SubmitSessionRequest, TodayResponse
 import type { Tx } from '@absah/db';
 import { withTenant } from '../../../shared/db';
 import { ForbiddenError, NotFoundError, SessionLockedError, ValidationError } from '../../../shared/errors';
-import { emit } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
 import { canSeeAllSessions, mayFillSession, mayViewSession } from '../domain/policies';
-import { SOURCE_PRIORITY, shouldReplace } from '../domain/status-rules';
-import { listSessions, lockSessionRow, markSubmitted, recordsOf, roster, upsertRecords, type SessionRow } from '../infrastructure/attendance-repo';
-import { recomputeDaily } from '../infrastructure/session-repo';
+import { SOURCE_PRIORITY, teacherCanSet } from '../domain/status-rules';
+import { listSessions, lockSessionRow, markSubmitted, recordsOf, roster, type SessionRow } from '../infrastructure/attendance-repo';
+import { changeMarks } from './marks';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '');
@@ -54,7 +53,7 @@ export function getSession(actor: Actor, sessionId: string): Promise<SessionDeta
 
 /**
  * "Semua hadir kecuali...": the listed students get their status, everyone else on the roster H,
- * all as source teacher, never over izin, UKS or a correction (shouldReplace). Sending the same
+ * all as source teacher, never over izin, UKS or a correction (teacherCanSet). Sending the same
  * list again changes nothing; attendance.absent_marked fires only when a student becomes A.
  */
 export async function submitSession(actor: Actor, sessionId: string, input: SubmitSessionRequest): Promise<SessionDetail> {
@@ -73,20 +72,18 @@ export async function submitSession(actor: Actor, sessionId: string, input: Subm
     if ([...exceptions.keys()].some((id) => !onRoster.has(id))) issues.push({ path: 'exceptions', message: 'Ada siswa yang tidak terdaftar di sesi ini.' });
     if (issues.length) throw new ValidationError(issues);
 
+    // The teacher's word is kept as a mark under higher sources too, but only students the teacher
+    // can set (nothing higher marked) are written: fixed rows were never shown as choices.
     const existing = new Map((await recordsOf(tx, sessionId)).map((r) => [r.enrollmentId, r]));
-    const writes = students.flatMap((st) => {
-      const incoming = { status: exceptions.get(st.enrollmentId) ?? ('H' as const), source: 'teacher' as const };
+    const write = students.flatMap((st) => {
+      const status = exceptions.get(st.enrollmentId) ?? ('H' as const);
       const current = existing.get(st.enrollmentId);
-      if (!shouldReplace(current, incoming)) return [];
-      if (current?.status === incoming.status && current.source === incoming.source) return [];
-      return [{ schoolId: actor.schoolId, sessionId, enrollmentId: st.enrollmentId, ...incoming, sourceRef: null, recordedBy: actor.userId }];
+      if (!teacherCanSet(current)) return [];
+      if (current?.status === status && current.source === 'teacher') return [];
+      return [{ sessionId, enrollmentId: st.enrollmentId, source: 'teacher' as const, status, recordedBy: actor.userId }];
     });
-    await upsertRecords(tx, writes);
+    await changeMarks(tx, actor.schoolId, { write, touch: students.map((st) => ({ sessionId, enrollmentId: st.enrollmentId })) });
     await markSubmitted(tx, sessionId, actor.userId);
-    await recomputeDaily(tx, actor.schoolId, session.schoolDate, students.map((st) => st.enrollmentId));
-    for (const w of writes) {
-      if (w.status === 'A') await emit(tx, 'attendance.absent_marked', { sessionId, enrollmentId: w.enrollmentId });
-    }
     return detail(tx, actor, sessionId);
   });
 }

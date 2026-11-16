@@ -176,6 +176,20 @@
       "when": 1794828553942,
       "tag": "0024_attendance_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794830938492,
+      "tag": "0025_attendance_marks",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794830939083,
+      "tag": "0026_attendance_marks_rls",
+      "breakpoints": true
     }
   ]
 }
