@@ -19,10 +19,16 @@ import { readCapabilityRows, resolveFromRows } from '../../../shared/capability'
 import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
+import { isUniqueViolation } from '../../../shared/pg-errors';
 import { addDays, schoolDate } from '../../../shared/school-date';
-import { describeSettings, pinsForProfileChange, planOverride } from '../domain/capability-settings';
+import { describeSettings, pinsForProfileChange, planOverride, type OverridePlan } from '../domain/capability-settings';
 import { canManageSchoolSettings } from '../domain/policies';
-import { lockSchoolProfile, saveOverride, updateSchoolProfile as storeProfile } from '../infrastructure/school-settings-repo';
+import {
+  lockSchoolProfile,
+  saveOverride,
+  updateSchoolProfile as storeProfile,
+  type StoredProfile,
+} from '../infrastructure/school-settings-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 
@@ -100,8 +106,9 @@ function validateValues(values: Record<string, boolean | string | null>): [Capab
 }
 
 /**
- * Changes level / madrasah. Presets are re-applied, school overrides stay, and a deferred
- * capability that would switch today because of the preset is pinned until tomorrow.
+ * Updates the school profile. Identity fields (name, NPSN/NSM, timezone) change as given.
+ * A level/madrasah change re-applies presets, keeps school overrides, and pins a deferred
+ * capability that would switch today because of the preset until tomorrow.
  */
 export async function updateSchoolProfile(
   actor: Actor,
@@ -110,27 +117,44 @@ export async function updateSchoolProfile(
 ): Promise<SchoolProfileResponse> {
   authorize(actor, canManageSchoolSettings);
 
-  return withTenant(scope(actor), async (tx) => {
-    const { profile, rows, today, tomorrow } = await load(tx, actor.schoolId);
-    const next = { level: input.level ?? profile.level, isMadrasah: input.isMadrasah ?? profile.isMadrasah };
+  try {
+    return await withTenant(scope(actor), async (tx) => {
+      const { profile, rows, today, tomorrow } = await load(tx, actor.schoolId);
+      const patch = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) as Partial<StoredProfile>;
+      const next: StoredProfile = { ...profile, ...patch };
+      const changed = (Object.keys(patch) as (keyof StoredProfile)[]).filter((k) => profile[k] !== next[k]);
 
-    if (next.level !== profile.level || next.isMadrasah !== profile.isMadrasah) {
-      const pins = pinsForProfileChange(
-        resolveFromRows(profile, rows, today),
-        resolveFromRows(next, rows, today),
-        new Map(rows.overrides.map((r) => [r.key, r])),
-        today,
-        tomorrow,
-      );
-      await storeProfile(tx, actor.schoolId, next);
-      for (const [key, plan] of pins) await saveOverride(tx, actor.schoolId, key, plan, actor.userId);
-      await audit(tx, auditCtx, 'school.profile_updated', { type: 'school', id: actor.schoolId }, {
-        before: { level: profile.level, isMadrasah: profile.isMadrasah },
-        after: { ...next, pinned: Object.fromEntries(pins) },
-      });
-    }
+      let pins = new Map<CapabilityKey, NonNullable<OverridePlan>>();
+      if (changed.length > 0) {
+        if (next.level !== profile.level || next.isMadrasah !== profile.isMadrasah) {
+          pins = pinsForProfileChange(
+            resolveFromRows(profile, rows, today),
+            resolveFromRows(next, rows, today),
+            new Map(rows.overrides.map((r) => [r.key, r])),
+            today,
+            tomorrow,
+          );
+          for (const [key, plan] of pins) {
+            await saveOverride(tx, actor.schoolId, key, plan, actor.userId);
+          }
+        }
+        await storeProfile(tx, actor.schoolId, patch);
+        await audit(tx, auditCtx, 'school.profile_updated', { type: 'school', id: actor.schoolId }, {
+          before: pick(profile, changed),
+          after: { ...pick(next, changed), ...(pins.size > 0 ? { pinned: Object.fromEntries(pins) } : {}) },
+        });
+      }
 
-    const after = await load(tx, actor.schoolId);
-    return { ...next, capabilities: resolveFromRows(after.profile, after.rows, after.today) };
-  });
+      const after = await load(tx, actor.schoolId);
+      return { ...after.profile, capabilities: resolveFromRows(after.profile, after.rows, after.today) };
+    });
+  } catch (err) {
+    if (isUniqueViolation(err, 'schools_npsn_key')) throw new ConflictError('NPSN sudah dipakai sekolah lain.');
+    if (isUniqueViolation(err, 'schools_nsm_key')) throw new ConflictError('NSM sudah dipakai sekolah lain.');
+    throw err;
+  }
+}
+
+function pick(profile: StoredProfile, keys: (keyof StoredProfile)[]): Record<string, unknown> {
+  return Object.fromEntries(keys.map((k) => [k, profile[k]]));
 }

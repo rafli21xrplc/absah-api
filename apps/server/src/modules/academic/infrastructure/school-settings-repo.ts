@@ -4,15 +4,25 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { OverridePlan } from '../domain/capability-settings';
 
 export interface StoredProfile {
+  name: string;
+  npsn: string | null;
+  nsm: string | null;
+  timezone: string;
   level: Level;
   isMadrasah: boolean;
-  timezone: string;
 }
 
 /** Profile of the active school. RLS also shows other schools of the user, so filter by id. */
 export async function lockSchoolProfile(tx: Tx, schoolId: string): Promise<StoredProfile | undefined> {
   const [row] = await tx
-    .select({ level: schema.schools.level, isMadrasah: schema.schools.isMadrasah, timezone: schema.schools.timezone })
+    .select({
+      name: schema.schools.name,
+      npsn: schema.schools.npsn,
+      nsm: schema.schools.nsm,
+      timezone: schema.schools.timezone,
+      level: schema.schools.level,
+      isMadrasah: schema.schools.isMadrasah,
+    })
     .from(schema.schools)
     .where(eq(schema.schools.id, schoolId))
     .for('update');
@@ -22,7 +32,7 @@ export async function lockSchoolProfile(tx: Tx, schoolId: string): Promise<Store
 export async function updateSchoolProfile(
   tx: Tx,
   schoolId: string,
-  profile: { level: Level; isMadrasah: boolean },
+  profile: Partial<StoredProfile>,
 ): Promise<void> {
   await tx.update(schema.schools).set(profile).where(eq(schema.schools.id, schoolId));
 }
@@ -44,4 +54,21 @@ export async function saveOverride(
     .insert(t)
     .values({ schoolId, key, ...row })
     .onConflictDoUpdate({ target: [t.schoolId, t.key], set: row });
+}
+
+export async function readSetup(tx: Tx, schoolId: string) {
+  const [row] = await tx.select().from(schema.schoolSetup).where(eq(schema.schoolSetup.schoolId, schoolId));
+  return row;
+}
+
+export async function saveSetup(
+  tx: Tx,
+  schoolId: string,
+  patch: { steps?: Record<string, 'done' | 'skipped'>; completedAt?: Date },
+): Promise<void> {
+  const set = { ...patch, updatedAt: sql`now()` };
+  await tx
+    .insert(schema.schoolSetup)
+    .values({ schoolId, steps: patch.steps ?? {}, completedAt: patch.completedAt })
+    .onConflictDoUpdate({ target: schema.schoolSetup.schoolId, set });
 }
