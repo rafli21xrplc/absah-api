@@ -19,6 +19,8 @@ export const EVENTS = {
     invitationId: z.uuid(),
     channel: z.enum(['email', 'whatsapp']),
   }),
+  /** The file of a student import is uploaded; academic parses it into a preview. */
+  'student_import.uploaded': z.object({ importId: z.uuid() }),
 } as const;
 
 export type EventType = keyof typeof EVENTS;

@@ -143,6 +143,11 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   infrastructure/importers/<source>; importerFor(source) picks one. Parsers read only the columns
   Absah needs. Matching is pure (domain/student-matching.ts): NISN, then NIK hash, then name +
   birth date; blanks never erase stored values; students missing from the file are "calon keluar".
+- Import flow: POST /imports/dapodik (presigned PUT, key from the actor's school) -> browser PUTs
+  the file -> POST /imports/{id}/parse emits student_import.uploaded -> consumer
+  academic_parse_student_import (worker) parses and stores the preview -> GET /imports/{id}.
+  student_imports.preview is one encrypted JSON document (rows incl. NIK + preview lines); counts
+  are plain. A bad file sets status failed with a message for staff; other errors retry.
 - Test files: anonymous Dapodik exports in packages/db/fixtures/dapodik (generate.ts, fake NIK
   region 990101); import them with dapodikFixture() from '@absah/db/fixtures'. Never real data.
 
