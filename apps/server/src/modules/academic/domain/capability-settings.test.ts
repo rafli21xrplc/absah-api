@@ -48,6 +48,19 @@ describe('planOverride', () => {
   });
 });
 
+describe('during setup (tomorrow = null)', () => {
+  it('applies deferred keys at once and pins nothing', () => {
+    expect(planOverride('attendance.mode', undefined, 'daily', 'per_period', today, null)).toEqual({
+      value: 'daily',
+      previousValue: null,
+      effectiveFrom: null,
+    });
+    const sma = resolveCapabilities({ level: 'sma', isMadrasah: false });
+    const sd = resolveCapabilities({ level: 'sd', isMadrasah: false });
+    expect(pinsForProfileChange(sma, sd, new Map(), today, null).size).toBe(0);
+  });
+});
+
 describe('pinsForProfileChange', () => {
   const sma = resolveCapabilities({ level: 'sma', isMadrasah: false });
   const sd = resolveCapabilities({ level: 'sd', isMadrasah: false });
