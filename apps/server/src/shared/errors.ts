@@ -64,6 +64,13 @@ export class ScheduleConflictError extends AppError {
   }
 }
 
+/** The session is locked (after 23.59): changes go through a correction request (PRS-05). */
+export class SessionLockedError extends AppError {
+  constructor() {
+    super('SESSION_LOCKED', 409, 'Sesi sudah dikunci. Ajukan koreksi untuk mengubahnya.');
+  }
+}
+
 /** Same Idempotency-Key, different request (PLT-13). */
 export class IdempotencyKeyReusedError extends AppError {
   constructor() {
