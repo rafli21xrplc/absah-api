@@ -1,18 +1,21 @@
 import type { TemplateCode } from '@absah/contracts';
 import { sensitive, type Tx } from '@absah/db';
+import { mintActionLink } from '../../../shared/action-links';
 import { emit } from '../../../shared/outbox';
 import { schoolMinutes } from '../../../shared/school-date';
 import { releaseTime } from '../domain/messages';
-import { insertNotifications, markReleased } from '../infrastructure/notify-repo';
+import { insertNotifications, markReleased, usedDedupKeys } from '../infrastructure/notify-repo';
 
 export interface Recipient {
   guardianId: string;
+  studentId: string;
   phone: string;
 }
 
 /**
  * Creates one notification per recipient (skipping dedup keys already used) and releases the
  * due ones at once with a notification.queued event; quiet-hour ones wait for the release job.
+ * Each recipient gets an own action link (ORT-01) as the `link` param, minted only for new messages.
  */
 export async function queueMessages(
   tx: Tx,
@@ -25,14 +28,18 @@ export async function queueMessages(
     recipients: Recipient[];
     dedupKey: (r: Recipient) => string;
     params: Record<string, string>;
+    /** Web origin for the action link; the `link` param is filled per recipient. */
+    appUrl: string;
     now?: Date;
   },
 ): Promise<number> {
   const now = input.now ?? new Date();
   const scheduledFor = releaseTime(now, schoolMinutes(input.timezone, now));
-  const created = await insertNotifications(
-    tx,
-    input.recipients.map((r) => ({
+  const used = await usedDedupKeys(tx, input.recipients.map(input.dedupKey));
+  const rows = [];
+  for (const r of input.recipients.filter((x) => !used.has(input.dedupKey(x)))) {
+    const link = await mintActionLink(tx, { schoolId: input.schoolId, guardianId: r.guardianId, studentId: r.studentId, appUrl: input.appUrl, now });
+    rows.push({
       schoolId: input.schoolId,
       dedupKey: input.dedupKey(r),
       eventId: input.eventId,
@@ -40,10 +47,11 @@ export async function queueMessages(
       enrollmentId: input.enrollmentId,
       templateCode: input.templateCode,
       toPhone: sensitive(r.phone),
-      params: sensitive(JSON.stringify(input.params)),
+      params: sensitive(JSON.stringify({ ...input.params, link })),
       scheduledFor,
-    })),
-  );
+    });
+  }
+  const created = await insertNotifications(tx, rows);
   const due = created.filter((c) => c.scheduledFor <= now).map((c) => c.id);
   await markReleased(tx, due, now);
   for (const notificationId of due) await emit(tx, 'notification.queued', { notificationId });

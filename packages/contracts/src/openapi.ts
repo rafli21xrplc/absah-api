@@ -71,6 +71,7 @@ import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
 import { NotificationOverview } from './notify/notifications';
+import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest } from './portal/links';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
 import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
@@ -796,6 +797,40 @@ function buildRegistry(): OpenAPIRegistry {
     summary: 'Message status webhook (WhatsApp Cloud API format), signed with X-Hub-Signature-256',
     description: 'Stored once per message id + status and applied by the worker; ranks make the final status right in any order.',
     responses: { 200: { description: 'Stored' }, ...errors(401, 404) },
+  });
+  registry.registerComponent('securitySchemes', 'actionLink', {
+    type: 'apiKey',
+    in: 'header',
+    name: 'Authorization',
+    description: 'Link <token> from the action link in a WhatsApp message (the web page reads it from /t/<token>)',
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/links/context`,
+    tags: ['portal'],
+    summary: "Action link: the student's day (first name only), recent izin and what the link can still do",
+    security: [{ actionLink: [] }],
+    responses: { 200: json(ActionLinkContext, 'Context'), ...errors(401, 410) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/links/leave`,
+    tags: ['portal'],
+    summary: "Action link: the link's one write, an izin request pending for the wali kelas",
+    description: '409 reason link_used once spent; a request refused with 400 does not spend it.',
+    security: [{ actionLink: [] }],
+    request: { body: { content: { 'application/json': { schema: ActionLinkLeaveRequest } } } },
+    responses: { 201: json(ActionLinkLeave, 'Pending izin'), ...errors(400, 401, 409, 410) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/links/card`,
+    tags: ['portal'],
+    summary: "Action link: day keys for the student's card on this phone (gate.enabled)",
+    description: '409 reason bound_elsewhere while the card is active on another phone, unless replace is true.',
+    security: [{ actionLink: [] }],
+    request: { body: { content: { 'application/json': { schema: ActionLinkCardRequest } } } },
+    responses: { 200: json(CardDeviceKeys, 'Card keys'), ...errors(401, 404, 409, 410) },
   });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',

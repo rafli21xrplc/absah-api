@@ -72,6 +72,13 @@ export class SessionLockedError extends AppError {
 }
 
 /** Same Idempotency-Key, different request (PLT-13). */
+/** An action link past its 7 days (ORT-01); the page tells the parent to wait for a new message. */
+export class LinkExpiredError extends AppError {
+  constructor() {
+    super('LINK_EXPIRED', 410, 'Tautan sudah kedaluwarsa. Tautan baru dikirim bersama pesan berikutnya dari sekolah.');
+  }
+}
+
 export class IdempotencyKeyReusedError extends AppError {
   constructor() {
     super('IDEMPOTENCY_KEY_REUSED', 422, 'Idempotency-Key sudah dipakai untuk permintaan lain.');
