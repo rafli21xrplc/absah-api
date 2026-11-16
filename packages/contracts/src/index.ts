@@ -13,3 +13,4 @@ export * from './academic/schedule-import';
 export * from './attendance/enums';
 export * from './attendance/sessions';
 export * from './attendance/corrections';
+export * from './leave/leave-requests';

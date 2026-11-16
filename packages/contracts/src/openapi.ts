@@ -69,6 +69,18 @@ import {
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import {
+  CreateLeaveAttachmentRequest,
+  CreateLeaveAttachmentResponse,
+  CreateLeaveRequest,
+  DecideLeaveRequest,
+  LeaveAttachmentLink,
+  LeaveRequest,
+  LeaveRequestIdParam,
+  LeaveRequestList,
+  LeaveRequestListQuery,
+  LeaveStudentList,
+} from './leave/leave-requests';
+import {
   AcceptInvitationRequest,
   AcceptInvitationResponse,
   CreateInvitationRequest,
@@ -545,6 +557,89 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: CorrectionIdParam, body: { content: { 'application/json': { schema: DecideCorrectionRequest } } } },
     responses: { 200: json(Correction, 'Decided'), ...errors(400, 401, 403, 404, 409) },
+  });
+
+  const leaveParams = [{ ...schoolHeader, required: true }];
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/leave-requests/students`,
+    tags: ['leave'],
+    summary: 'Students the caller may request izin for (children, rombel, or all for wakasek/kepsek)',
+    security: [{ session: [] }],
+    parameters: leaveParams,
+    responses: { 200: json(LeaveStudentList, 'Students'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/leave-requests/attachments`,
+    tags: ['leave'],
+    summary: 'Presigned upload for a letter or photo (5 MB, JPEG/PNG/WebP/PDF)',
+    security: [{ session: [] }],
+    parameters: [...leaveParams, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateLeaveAttachmentRequest } } } },
+    responses: { 200: json(CreateLeaveAttachmentResponse, 'Upload'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/leave-requests`,
+    tags: ['leave'],
+    summary: 'Request izin: a parent (pending) or the wali kelas / wakasek / kepsek (approved at once)',
+    description: 'At most 30 days, starting at most 7 days back. 409 overlap when the student already has izin on one of the days.',
+    security: [{ session: [] }],
+    parameters: [...leaveParams, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateLeaveRequest } } } },
+    responses: { 200: json(LeaveRequest, 'Created'), ...errors(400, 401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/leave-requests`,
+    tags: ['leave'],
+    summary: 'Izin: all for wakasek/kepsek; own, rombel or children for others',
+    security: [{ session: [] }],
+    parameters: leaveParams,
+    request: { query: LeaveRequestListQuery },
+    responses: { 200: json(LeaveRequestList, 'Requests'), ...errors(400, 401) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/leave-requests/{leaveRequestId}`,
+    tags: ['leave'],
+    summary: 'One izin',
+    security: [{ session: [] }],
+    parameters: leaveParams,
+    request: { params: LeaveRequestIdParam },
+    responses: { 200: json(LeaveRequest, 'Request'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/leave-requests/{leaveRequestId}/attachment`,
+    tags: ['leave'],
+    summary: 'A 5-minute link to view the attachment',
+    security: [{ session: [] }],
+    parameters: leaveParams,
+    request: { params: LeaveRequestIdParam },
+    responses: { 200: json(LeaveAttachmentLink, 'Link'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/leave-requests/{leaveRequestId}/decide`,
+    tags: ['leave'],
+    summary: 'Approve or reject a pending izin (wali kelas, wakasek, kepsek)',
+    description: 'Approval fills the sessions in the range with S (sakit) or I (izin), also sessions created later.',
+    security: [{ session: [] }],
+    parameters: [...leaveParams, idempotencyHeader],
+    request: { params: LeaveRequestIdParam, body: { content: { 'application/json': { schema: DecideLeaveRequest } } } },
+    responses: { 200: json(LeaveRequest, 'Decided'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/leave-requests/{leaveRequestId}/cancel`,
+    tags: ['leave'],
+    summary: 'Cancel a pending or approved izin (requester or wali kelas); attendance falls back to the next source',
+    security: [{ session: [] }],
+    parameters: [...leaveParams, idempotencyHeader],
+    request: { params: LeaveRequestIdParam },
+    responses: { 200: json(LeaveRequest, 'Cancelled'), ...errors(401, 403, 404, 409) },
   });
 
   registry.registerComponent('securitySchemes', 'session', {

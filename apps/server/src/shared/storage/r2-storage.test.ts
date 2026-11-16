@@ -15,3 +15,15 @@ describe('R2ObjectStorage.presignUpload', () => {
     expect(up.headers['Content-Type']).toContain('spreadsheetml');
   });
 });
+
+describe('R2ObjectStorage.presignDownload', () => {
+  it('signs a 5-minute inline GET with the stored content type', async () => {
+    const r2 = new R2ObjectStorage({ accountId: 'acc', accessKeyId: 'AKIDEXAMPLE', secretAccessKey: 'secret', bucket: 'absah' });
+    const key = 'schools/0190f6a0-0000-7000-8000-000000000001/leave/0190f6a0-0000-7000-8000-000000000003';
+    const url = new URL((await r2.presignDownload({ key, contentType: 'image/jpeg' })).url);
+    expect(url.pathname).toBe(`/${key}`);
+    expect(url.searchParams.get('X-Amz-Expires')).toBe('300');
+    expect(url.searchParams.get('response-content-type')).toBe('image/jpeg');
+    expect(url.searchParams.get('response-content-disposition')).toBe('inline');
+  });
+});

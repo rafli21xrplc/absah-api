@@ -13,6 +13,11 @@ export interface PresignedUpload {
 
 export interface ObjectStorage {
   presignUpload(input: { key: string; contentType: string; contentLength: number }): Promise<PresignedUpload>;
+  /**
+   * A 5-minute GET for showing a stored file in the browser (e.g. an izin attachment). The response
+   * carries contentType and is shown inline. Callers authorize before presigning.
+   */
+  presignDownload(input: { key: string; contentType: string }): Promise<{ url: string; expiresAt: Date }>;
   /** null when the object does not exist (not uploaded yet). */
   read(key: string): Promise<Buffer | null>;
   remove(key: string): Promise<void>;

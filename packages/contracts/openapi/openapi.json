@@ -2676,6 +2676,320 @@
           "approve"
         ],
         "additionalProperties": false
+      },
+      "LeaveStudentList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "name",
+                "className"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateLeaveAttachmentResponse": {
+        "type": "object",
+        "properties": {
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/PresignedUpload"
+          }
+        },
+        "required": [
+          "attachmentId",
+          "upload"
+        ]
+      },
+      "CreateLeaveAttachmentRequest": {
+        "type": "object",
+        "properties": {
+          "fileSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 5242880
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/LeaveAttachmentType"
+          }
+        },
+        "required": [
+          "fileSize",
+          "contentType"
+        ],
+        "additionalProperties": false
+      },
+      "LeaveAttachmentType": {
+        "type": "string",
+        "enum": [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/pdf"
+        ]
+      },
+      "LeaveRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "enrollmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "enrollmentId",
+              "name",
+              "className"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LeaveKind"
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "hasAttachment": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LeaveStatus"
+          },
+          "requestedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "decidedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "decisionNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancelledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "student",
+          "kind",
+          "startsOn",
+          "endsOn",
+          "reason",
+          "hasAttachment",
+          "status",
+          "requestedBy",
+          "decidedBy",
+          "decidedAt",
+          "decisionNote",
+          "cancelledAt",
+          "createdAt"
+        ]
+      },
+      "LeaveKind": {
+        "type": "string",
+        "enum": [
+          "sakit",
+          "izin"
+        ]
+      },
+      "LeaveStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "cancelled"
+        ]
+      },
+      "CreateLeaveRequest": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LeaveKind"
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "attachment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "contentType": {
+                "$ref": "#/components/schemas/LeaveAttachmentType"
+              }
+            },
+            "required": [
+              "id",
+              "contentType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "kind",
+          "startsOn",
+          "endsOn",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "LeaveRequestList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeaveRequest"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "LeaveAttachmentLink": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ]
+      },
+      "DecideLeaveRequest": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "approve"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -6686,6 +7000,661 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests/students": {
+      "get": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "Students the caller may request izin for (children, rombel, or all for wakasek/kepsek)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Students",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveStudentList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests/attachments": {
+      "post": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "Presigned upload for a letter or photo (5 MB, JPEG/PNG/WebP/PDF)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLeaveAttachmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLeaveAttachmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests": {
+      "post": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "Request izin: a parent (pending) or the wali kelas / wakasek / kepsek (approved at once)",
+        "description": "At most 30 days, starting at most 7 days back. 409 overlap when the student already has izin on one of the days.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLeaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "Izin: all for wakasek/kepsek; own, rombel or children for others",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "cancelled",
+                "all"
+              ],
+              "default": "pending"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveRequestList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests/{leaveRequestId}": {
+      "get": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "One izin",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "leaveRequestId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests/{leaveRequestId}/attachment": {
+      "get": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "A 5-minute link to view the attachment",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "leaveRequestId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveAttachmentLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests/{leaveRequestId}/decide": {
+      "post": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "Approve or reject a pending izin (wali kelas, wakasek, kepsek)",
+        "description": "Approval fills the sessions in the range with S (sakit) or I (izin), also sessions created later.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "leaveRequestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideLeaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leave-requests/{leaveRequestId}/cancel": {
+      "post": {
+        "tags": [
+          "leave"
+        ],
+        "summary": "Cancel a pending or approved izin (requester or wali kelas); attendance falls back to the next source",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "leaveRequestId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveRequest"
                 }
               }
             }
