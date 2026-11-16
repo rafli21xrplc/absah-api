@@ -130,6 +130,16 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   'pkl.enabled', 'false', null, 'incident #12'); a per-school row beats the global row. The app role
   can only read global rows and its own school's.
 
+## Academic data (AKD, packages/db/src/schema/academic.ts)
+- academic_years (one active per school), semesters (1, 2), calendar_days (exceptions only:
+  holiday or extra school_day), classes (rombel: grade 1-13, stream for SMA/MA), students,
+  enrollments (student x class x year; one active per year; missing_since = "calon keluar"),
+  guardians + student_guardians, consents. All tenant tables with RLS; TRUNCATE revoked.
+- students.nik and guardians.phone are encryptedText; match them through nik_hash / phone_hash
+  (hashValue). Never select NIK into list responses.
+- Enum values live in packages/contracts/src/academic/enums.ts and feed the pgEnums.
+- memberships live in schema/memberships.ts (FK to academic_years) to avoid an import cycle.
+
 ## Outbox, consumers and inbox (PLT-13, apps/server/src/shared/outbox)
 - emit(tx, type, payload) inside the use case's withTenant transaction, next to audit(). The school
   comes from the transaction; the request id becomes trace_id. Event types and payload schemas live

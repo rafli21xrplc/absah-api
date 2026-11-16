@@ -113,6 +113,20 @@
       "when": 1794809409534,
       "tag": "0015_invitations_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794817820648,
+      "tag": "0016_academic",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794817828439,
+      "tag": "0017_academic_rls",
+      "breakpoints": true
     }
   ]
 }

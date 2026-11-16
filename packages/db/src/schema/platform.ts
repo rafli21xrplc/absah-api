@@ -1,8 +1,7 @@
 import { LEVELS } from '@absah/capabilities';
 import { MEMBERSHIP_STATUSES, ROLES } from '@absah/contracts';
-import { boolean, index, pgEnum, pgTable, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import { createdAt, id, schoolId } from './_shared';
-import { user } from './auth';
+import { boolean, index, pgEnum, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { createdAt, id } from './_shared';
 
 export const schoolLevel = pgEnum('school_level', LEVELS);
 export const membershipRole = pgEnum('membership_role', ROLES);
@@ -36,31 +35,5 @@ export const schools = pgTable(
     index('schools_collection_id_idx').on(t.collectionId),
     uniqueIndex('schools_npsn_key').on(t.npsn),
     uniqueIndex('schools_nsm_key').on(t.nsm),
-  ],
-);
-
-/**
- * A user's role in a school. Teaching roles carry academic_year_id so last year's homeroom
- * teacher does not keep access (FK to academic_years arrives with prompt 2.1).
- */
-export const memberships = pgTable(
-  'memberships',
-  {
-    id: id(),
-    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    role: membershipRole('role').notNull(),
-    academicYearId: uuid('academic_year_id'),
-    status: membershipStatus('status').notNull().default('active'),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    index('memberships_school_id_user_id_idx').on(t.schoolId, t.userId),
-    index('memberships_user_id_idx').on(t.userId),
-    unique('memberships_school_user_role_year_key')
-      .on(t.schoolId, t.userId, t.role, t.academicYearId)
-      .nullsNotDistinct(),
   ],
 );
