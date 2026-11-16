@@ -1,6 +1,7 @@
 import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, id, schoolId } from './_shared';
-import { memberships, schools } from './platform';
+import { memberships } from './memberships';
+import { schools } from './platform';
 
 /**
  * Invitation links for invited memberships (PLT-12). The token is "<schoolId>.<secret>"; only an
