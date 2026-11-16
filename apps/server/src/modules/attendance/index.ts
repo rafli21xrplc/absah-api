@@ -10,3 +10,4 @@ export {
   remindUnfilled,
 } from './jobs/session-jobs';
 export { sessionsRouter } from './http/sessions';
+export { correctionsRouter } from './http/corrections';

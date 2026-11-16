@@ -203,6 +203,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sources: those students come back fixed=true). Teacher, wali kelas (daily) or admin/operator/
   wakasek/piket may fill (domain/policies.ts). Locked -> 409 SESSION_LOCKED. Unchanged rows are not
   rewritten, so attendance.absent_marked fires only on a change to A. "Today" uses the school timezone.
+- Corrections (PRS-05, application/corrections.ts): POST /sessions/{id}/corrections (locked
+  sessions only, one pending per student), GET /corrections (wakasek/kepsek all, others own),
+  POST /corrections/{id}/decide (wakasek/kepsek, never their own request). Approval writes
+  source manual (final), recomputes the day, audits attendance.corrected.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
