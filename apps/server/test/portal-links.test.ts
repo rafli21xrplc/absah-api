@@ -69,7 +69,9 @@ beforeAll(async () => {
 
   // The alpa message carries the link, as the parent receives it.
   const sender = new FakeMessageSender();
-  const consumers = new Map(notifyConsumers({ sender, appUrl: 'https://absah.test' }).map((c) => [c.name, c]));
+  // 10.00 WIB, outside the quiet hours, whenever the suite runs.
+  const daytime = new Date(`${today}T03:00:00Z`);
+  const consumers = new Map(notifyConsumers({ sender, appUrl: 'https://absah.test', now: () => daytime }).map((c) => [c.name, c]));
   await runConsumer(consumers.get('notify_absent_marked') as Consumer, envelope('attendance.absent_marked', { sessionId, enrollmentId: enrollment }));
   const [queued] = await getDb().db.select().from(schema.outboxEvents).where(and(eq(schema.outboxEvents.schoolId, school), eq(schema.outboxEvents.type, 'notification.queued')));
   await runConsumer(consumers.get('notify_send') as Consumer, { ...envelope('notification.queued', queued?.payload as object), id: queued?.id ?? '' });
