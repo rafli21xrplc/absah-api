@@ -34,4 +34,10 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...BASE, NODE_ENV: 'production' })).toThrow(/STORAGE_DRIVER/);
     expect(() => loadConfig({ ...BASE, STORAGE_DRIVER: 'r2', R2_BUCKET: 'absah' })).toThrow(/R2_ACCOUNT_ID/);
   });
+
+  it('requires a real WhatsApp provider in production, with its credentials', () => {
+    expect(loadConfig(BASE).WHATSAPP_PROVIDER).toBe('fake');
+    expect(() => loadConfig({ ...BASE, NODE_ENV: 'production' })).toThrow(/WHATSAPP_PROVIDER/);
+    expect(() => loadConfig({ ...BASE, WHATSAPP_PROVIDER: 'meta_cloud', WHATSAPP_PHONE_NUMBER_ID: '1' })).toThrow(/WHATSAPP_ACCESS_TOKEN/);
+  });
 });
