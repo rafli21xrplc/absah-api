@@ -269,6 +269,20 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Load: test/kiosk-load.test.ts (900 scans, 3 kiosks, resent batches, CI) and
   load/kiosk-scans.k6.js with `gate:load-fixture --school <id>` (dev/staging only).
 
+## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
+- message_templates: platform rows (code, language, body with {{name}} placeholders, params order,
+  provider_name, approval draft|pending|approved|rejected); the app role only reads them, the Absah
+  team updates approval with the owner role once the provider approves a template.
+- notifications: one message to one recipient; unique (school_id, dedup_key); to_phone and params
+  encryptedText; status queued -> sent -> delivered -> read, or failed (NOTIFICATION_STATUS_RANK:
+  a lower rank never overwrites a higher one).
+- Senders (shared/messaging): MessageSender.sendTemplate / sendOtp; FakeMessageSender (dev/test,
+  in memory, dev logs at debug) and MetaCloudSender (WhatsApp Cloud API). WHATSAPP_PROVIDER picks
+  one; production requires meta_cloud with WHATSAPP_* credentials from env only. SendError.retryable
+  separates network/429/5xx from final errors. Never log phone numbers or message text.
+- Exception to rule 3: the login OTP is sent inline from Better Auth's sendOTP (user waiting, no
+  school for a tenant outbox, route rate limited). Everything else goes through the worker.
+
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
   presignDownload (5-minute inline GET with a fixed content type), read, remove. R2ObjectStorage in

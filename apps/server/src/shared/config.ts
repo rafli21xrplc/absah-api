@@ -41,6 +41,16 @@ const ConfigSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
+  /** fake = in memory (dev/test); meta_cloud = WhatsApp Business Platform Cloud API (required in production). */
+  WHATSAPP_PROVIDER: z.enum(['fake', 'meta_cloud']).default('fake'),
+  WHATSAPP_API_URL: z.url().default('https://graph.facebook.com/v21.0'),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  /** App secret: verifies X-Hub-Signature-256 on status webhooks. */
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  /** Echoed once when the webhook URL is registered (hub.verify_token). */
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WHATSAPP_OTP_TEMPLATE: z.string().default('absah_login_otp_v1'),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -56,6 +66,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }
     if (c.NODE_ENV === 'production' && c.STORAGE_DRIVER !== 'r2') {
       ctx.addIssue({ code: 'custom', path: ['STORAGE_DRIVER'], message: 'must be r2 in production' });
+    }
+    if (c.NODE_ENV === 'production' && c.WHATSAPP_PROVIDER === 'fake') {
+      ctx.addIssue({ code: 'custom', path: ['WHATSAPP_PROVIDER'], message: 'must be a real provider in production' });
+    }
+    if (c.WHATSAPP_PROVIDER === 'meta_cloud') {
+      for (const k of ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_APP_SECRET', 'WHATSAPP_VERIFY_TOKEN'] as const) {
+        if (!c[k]) ctx.addIssue({ code: 'custom', path: [k], message: 'required when WHATSAPP_PROVIDER=meta_cloud' });
+      }
     }
     if (c.STORAGE_DRIVER === 'r2') {
       for (const k of ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const) {

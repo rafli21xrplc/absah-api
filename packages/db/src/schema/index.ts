@@ -13,3 +13,4 @@ export * from './outbox';
 export * from './platform';
 export * from './schedule';
 export * from './setup';
+export * from './notify';
