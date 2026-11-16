@@ -76,8 +76,8 @@ beforeAll(async () => {
   const [queued] = await getDb().db.select().from(schema.outboxEvents).where(and(eq(schema.outboxEvents.schoolId, school), eq(schema.outboxEvents.type, 'notification.queued')));
   await runConsumer(consumers.get('notify_send') as Consumer, { ...envelope('notification.queued', queued?.payload as object), id: queued?.id ?? '' });
   const url = sender.messages[0]?.params.at(-1) ?? '';
-  expect(url).toMatch(/^https:\/\/absah\.test\/t\/[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/);
-  token = url.split('/t/')[1] ?? '';
+  expect(url).toMatch(/^https:\/\/absah\.test\/t#[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/);
+  token = url.split('/t#')[1] ?? '';
 });
 
 describe('action links (ORT-01)', () => {

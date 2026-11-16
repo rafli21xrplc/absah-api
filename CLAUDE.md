@@ -300,7 +300,7 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Dashboard: GET /notifications/overview (admin, operator): today's counts by status, failures of the
   last 7 days with masked number (maskPhone) and first name.
 - Each queued message mints its own action link per guardian (shared/action-links.ts, only for
-  dedup keys not used yet) and passes it as the `link` param: `${appUrl}/t/<schoolId>.<secret>`.
+  dedup keys not used yet) and passes it as the `link` param: `${appUrl}/t#<schoolId>.<secret>` (fragment: never in a web server log).
 - Consumers get (tx, event, delivery); Consumer.retryLimit overrides the queue's retry policy.
 - Links point to /portal until prompt 3.3 adds tokenized action links. Staff (wali kelas, teacher
   reminders) get push in NTF-06 (prompt 5.7): their phone numbers live in Better Auth tables.
@@ -357,7 +357,7 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 ## Action links (modules/portal, ORT-01)
 - Token "<schoolId>.<secret>" minted by notify through shared/action-links.ts (notify depends on no
   module); only HMAC(`action-link:<secret>`) is stored in action_links (tenant table, RLS). 7 days.
-- The web page /t/<token> calls GET /links/context, POST /links/leave, POST /links/card with
+- The web page /t (token in the fragment) calls GET /links/context, POST /links/leave, POST /links/card with
   `Authorization: Link <token>` (never the token in an API URL). Unknown 401, expired 410 LINK_EXPIRED.
 - One write per link: POST /links/leave locks the link row, creates a pending izin through
   leave.requestLeaveAsGuardian (requested_by null, requested_by_guardian_id set) and spends the
@@ -365,3 +365,16 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Card: gate.linkCardKeys keeps the link's own device (holder parent, user_id null); a card active
   on another phone answers 409 bound_elsewhere unless `replace`.
 - Context shows the first name only (links get forwarded); no reason, no phone, no full name.
+- e2e reads a link with the dev CLI `notify:last-link --school <id>` (refuses production).
+
+## Portal logins and contacts (ORT-02)
+- PUT /students/{id}/contacts (admin, operator, the student's wali kelas; others 404): guardian
+  numbers (guardians.phone encrypted + phone_hash) and the student's login number. The login is
+  created through Better Auth first (own connection), then the tenant transaction links
+  students.user_id and sets an active `siswa` membership (platform.setPortalMembership; no
+  invitation, the OTP is the proof). null suspends it. A number owned by another account → 409
+  phone_taken. Audit records which numbers changed, never the numbers; responses mask them.
+- Parent logins (orang_tua with guardians.user_id) come with the parent portal (prompt 5.7); the
+  portal endpoints already serve them.
+- GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
+  the last 30 days of daily_attendance with counts.

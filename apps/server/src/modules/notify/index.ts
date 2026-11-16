@@ -5,3 +5,4 @@ export { processStatusWebhooks } from './application/webhooks';
 export { notificationsRouter } from './http/notifications';
 export { whatsappWebhookRouter, validSignature, type WhatsappWebhookConfig } from './http/whatsapp-webhook';
 export { NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, webhookHandler } from './jobs/webhook-job';
+export { lastActionLink } from './application/dev-tools';

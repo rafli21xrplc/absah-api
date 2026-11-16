@@ -81,7 +81,7 @@ export async function createPhoneUser(
 }
 
 /** createUser drops plugin fields such as phoneNumber, so set it the way Better Auth itself does. */
-async function setPhoneNumber(auth: Auth, userId: string, phoneNumber: string): Promise<void> {
+export async function setPhoneNumber(auth: Auth, userId: string, phoneNumber: string): Promise<void> {
   const ctx = await auth.$context;
   const updated = await ctx.internalAdapter.updateUser(userId, { phoneNumber, phoneNumberVerified: false });
   if (!updated) throw new Error('setPhoneNumber: user not found');

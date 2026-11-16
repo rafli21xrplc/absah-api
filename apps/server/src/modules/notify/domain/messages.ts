@@ -51,7 +51,4 @@ export function releaseTime(now: Date, minutes: number): Date {
   return new Date(Math.floor(now.getTime() / 60_000) * 60_000 + wait);
 }
 
-/** "+6281234567890" -> "+62812****7890", for the admin dashboard. */
-export function maskPhone(phone: string): string {
-  return phone.length <= 8 ? '****' : `${phone.slice(0, 6)}****${phone.slice(-4)}`;
-}
+export { maskPhone } from '@absah/contracts';

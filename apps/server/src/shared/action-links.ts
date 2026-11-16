@@ -29,5 +29,6 @@ export async function mintActionLink(tx: Tx, input: { schoolId: string; guardian
     tokenHash: actionLinkHash(secret),
     expiresAt: new Date(now.getTime() + ACTION_LINK_DAYS * 86_400_000),
   });
-  return `${input.appUrl}${ACTION_LINK_PATH}/${input.schoolId}.${secret}`;
+  // Fragment, not path: the token never reaches a web server log or a Referer header (like invitations).
+  return `${input.appUrl}${ACTION_LINK_PATH}#${input.schoolId}.${secret}`;
 }
