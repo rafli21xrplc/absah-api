@@ -39,3 +39,14 @@ export type ConsentPurpose = z.infer<typeof ConsentPurpose>;
 export const CONSENT_METHODS = ['paper', 'digital'] as const;
 export const ConsentMethod = z.enum(CONSENT_METHODS).meta({ id: 'ConsentMethod' });
 export type ConsentMethod = z.infer<typeof ConsentMethod>;
+
+/** ISO weekday: 1 = Senin ... 6 = Sabtu, 7 = Minggu. */
+export const SCHOOL_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+export const SchoolDay = z.int().min(1).max(7).meta({ id: 'SchoolDay' });
+export type SchoolDay = z.infer<typeof SchoolDay>;
+export const DAY_NAMES: Record<number, string> = { 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu', 7: 'Minggu' };
+
+/** A schedule slot belongs to a rombel or to a learning group (mapel pilihan, moving class). */
+export const SLOT_OWNER_TYPES = ['class', 'group'] as const;
+export const SlotOwnerType = z.enum(SLOT_OWNER_TYPES).meta({ id: 'SlotOwnerType' });
+export type SlotOwnerType = z.infer<typeof SlotOwnerType>;
