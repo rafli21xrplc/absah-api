@@ -17,6 +17,14 @@ import {
   StudentImportList,
   StudentImportResponse,
 } from './academic/imports';
+import {
+  ClassList,
+  EnrollmentIdParam,
+  StudentList,
+  StudentListItem,
+  StudentListQuery,
+  UpdateEnrollmentRequest,
+} from './academic/registry';
 import { ErrorBody } from './common';
 import {
   AcceptInvitationRequest,
@@ -278,6 +286,49 @@ function buildRegistry(): OpenAPIRegistry {
     responses: {
       200: { description: 'Imports', content: { 'application/json': { schema: StudentImportList } } },
       ...errors(400, 401, 403),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/students`,
+    tags: ['academic'],
+    summary: 'Students with their rombel in the active year (admin, operator, kepsek, wakasek)',
+    description: 'Cursor pagination ordered by name. NIK is never returned.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: StudentListQuery },
+    responses: {
+      200: { description: 'Students', content: { 'application/json': { schema: StudentList } } },
+      ...errors(400, 401, 403),
+    },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/classes`,
+    tags: ['academic'],
+    summary: 'Rombel of the active academic year with student counts (admin, operator, kepsek, wakasek)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: {
+      200: { description: 'Rombel', content: { 'application/json': { schema: ClassList } } },
+      ...errors(400, 401, 403),
+    },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/enrollments/{enrollmentId}`,
+    tags: ['academic'],
+    summary: 'Settle a calon keluar student: keep, moved or left (admin, operator)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: {
+      params: EnrollmentIdParam,
+      body: { content: { 'application/json': { schema: UpdateEnrollmentRequest } } },
+    },
+    responses: {
+      200: { description: 'Student', content: { 'application/json': { schema: StudentListItem } } },
+      ...errors(400, 401, 403, 404, 409, 422),
     },
   });
 
