@@ -11,6 +11,14 @@ import {
   UpdateSchoolProfileRequest,
 } from './academic/school-settings';
 import { ErrorBody } from './common';
+import {
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
+  CreateInvitationRequest,
+  InvitationPreviewResponse,
+  InvitationResponse,
+  InvitationTokenRequest,
+} from './platform/invitations';
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
 
@@ -166,6 +174,43 @@ function buildRegistry(): OpenAPIRegistry {
     responses: { ...setupResponse, ...errors(400, 401, 403, 409) },
   });
 
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/school/invitations`,
+    tags: ['platform'],
+    summary: 'Invite a staff member by email or WhatsApp number (admin)',
+    description: 'Idempotent. Returns the invite link once; re-inviting a pending member replaces the link.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateInvitationRequest } } } },
+    responses: {
+      201: { description: 'Invited', content: { 'application/json': { schema: InvitationResponse } } },
+      ...errors(400, 401, 403, 409, 422),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/invitations/preview`,
+    tags: ['platform'],
+    summary: 'Show an invitation before accepting it (public, token in body)',
+    request: { body: { content: { 'application/json': { schema: InvitationTokenRequest } } } },
+    responses: {
+      200: { description: 'Invitation', content: { 'application/json': { schema: InvitationPreviewResponse } } },
+      ...errors(400, 404),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/invitations/accept`,
+    tags: ['platform'],
+    summary: 'Accept an invitation; email accounts without a password choose one (public)',
+    request: { body: { content: { 'application/json': { schema: AcceptInvitationRequest } } } },
+    responses: {
+      200: { description: 'Accepted', content: { 'application/json': { schema: AcceptInvitationResponse } } },
+      ...errors(400, 404),
+    },
+  });
+
   registry.registerComponent('securitySchemes', 'session', {
     type: 'apiKey',
     in: 'cookie',
@@ -180,7 +225,7 @@ const ERROR_DESCRIPTIONS: Record<number, string> = {
   400: 'Validation failed (VALIDATION_FAILED)',
   401: 'No session (UNAUTHENTICATED)',
   403: 'Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)',
-  404: 'Not found (NOT_FOUND)',
+  404: 'Not found (NOT_FOUND); unknown, used or expired invitation',
   409: 'Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)',
   422: 'Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)',
 };

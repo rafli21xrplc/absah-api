@@ -5,3 +5,6 @@ export const canViewSchoolMembers = anyRole('admin', 'operator', 'kepsek', 'waka
 
 /** Activate or suspend memberships. Admin only; operators manage data, not people's access. */
 export const canManageMemberships = anyRole('admin');
+
+/** Invite staff into the school (PLT-12). */
+export const canInviteMembers = anyRole('admin');

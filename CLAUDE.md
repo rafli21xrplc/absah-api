@@ -66,6 +66,12 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Authorization lives in use cases: authorize(actor, policy) with policies in <module>/domain/policies.ts
   built from shared/policy.ts (pure; domain/ may import it). Routes only call getActor(req).
 - Better Auth's internalAdapter.createUser drops plugin fields (phoneNumber); set them with updateUser.
+- New schools: `pnpm --filter @absah/server school:create --name ... --admin-name ... --admin-email ...`
+  (ops) creates the school and invites its first admin; the admin runs the setup wizard.
+- Invitations (POST /school/invitations, admin): staff by email (password) or WhatsApp (OTP). The
+  token is "<schoolId>.<secret>" (only an HMAC stored, 7 days, single use) so preview/accept run in
+  withTenant(schoolId) without bypassing RLS. Links use a #fragment and tokens travel in request
+  bodies, never in paths. Delivery over WhatsApp/email arrives in 3.2 (event membership.invited).
 
 ## Non-negotiable rules
 1. Every tenant table has school_id uuid not null, an index starting with school_id, and an RLS policy.
