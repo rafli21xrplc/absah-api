@@ -1,4 +1,5 @@
 import { PgBoss } from 'pg-boss';
+import { academicConsumers } from '../modules/academic';
 import {
   HEARTBEAT_QUEUE,
   IDEMPOTENCY_CLEANUP_QUEUE,
@@ -10,6 +11,7 @@ import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { deleteOldOutboxRows, OUTBOX_RETENTION_QUEUE, startOutbox, type Consumer } from '../shared/outbox';
 import { createLogger } from '../shared/logger';
+import { createObjectStorage } from '../shared/storage';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.LOG_LEVEL, pretty: config.NODE_ENV === 'development' }).child({
@@ -35,8 +37,8 @@ await boss.work(OUTBOX_RETENTION_QUEUE, async () => {
 });
 await boss.schedule(OUTBOX_RETENTION_QUEUE, '30 2 * * *', null, { tz: 'Asia/Jakarta' });
 
-// Outbox consumers from every module. None yet: notifications arrive with prompt 3.2.
-const consumers: Consumer[] = [];
+// Outbox consumers from every module.
+const consumers: Consumer[] = [...academicConsumers(createObjectStorage(config))];
 const outbox = await startOutbox(boss, consumers, logger);
 logger.info('worker started');
 

@@ -3,6 +3,7 @@ import {
   killSwitches,
   resolveCapabilities,
   type BoolCapability,
+  type CapabilityKey,
   type CapabilityValues,
   type FlagRow,
   type InvalidCapabilityHandler,
@@ -75,5 +76,12 @@ export async function loadCapabilities(
 export function requireCap(key: BoolCapability): RequestHandler {
   return (req, _res, next) => {
     next(getCtx(req).caps[key] === true ? undefined : new CapabilityDisabledError(key));
+  };
+}
+
+/** Guards a route behind an enum capability value, e.g. requireCapValue('data.source', 'dapodik'). */
+export function requireCapValue<K extends CapabilityKey>(key: K, value: CapabilityValues[K]): RequestHandler {
+  return (req, _res, next) => {
+    next(getCtx(req).caps[key] === value ? undefined : new CapabilityDisabledError(key));
   };
 }
