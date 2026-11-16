@@ -833,7 +833,7 @@ function buildRegistry(): OpenAPIRegistry {
     type: 'apiKey',
     in: 'header',
     name: 'Authorization',
-    description: 'Link <token> from the action link in a WhatsApp message (the web page reads it from /t/<token>)',
+    description: 'Link <token> from the action link in a WhatsApp message (the web page /t reads it from the URL fragment)',
   });
   registry.registerPath({
     method: 'get',

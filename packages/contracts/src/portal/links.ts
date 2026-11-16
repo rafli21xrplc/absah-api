@@ -5,7 +5,7 @@ import { LeaveKind, LeaveStatus } from '../leave/leave-requests';
 /** Tautan aksi (ORT-01): days a link in a WhatsApp message keeps working. */
 export const ACTION_LINK_DAYS = 7;
 
-/** Path of the web page a link opens: `${appUrl}${ACTION_LINK_PATH}/<token>`. */
+/** Web page a link opens: `${appUrl}${ACTION_LINK_PATH}#<token>` (fragment: never sent to a server). */
 export const ACTION_LINK_PATH = '/t';
 
 /** GET /api/v1/links/context (header `Authorization: Link <token>`): what the link may show. */

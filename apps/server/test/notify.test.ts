@@ -110,7 +110,7 @@ describe('notify (NTF)', () => {
     const text = sender.messages[0]?.text ?? '';
     expect(text).toContain('SD Notifikasi: Ani tercatat tidak hadir tanpa keterangan (alpa)');
     expect(text).not.toContain('LESTARI');
-    expect(sender.messages[0]?.params).toEqual(['SD Notifikasi', 'Ani', expect.stringContaining('2026'), expect.stringMatching(/^https:\/\/absah\.test\/t\//)]);
+    expect(sender.messages[0]?.params).toEqual(['SD Notifikasi', 'Ani', expect.stringContaining('2026'), expect.stringMatching(/^https:\/\/absah\.test\/t#/)]);
     expect((await notificationRows()).every((r) => r.status === 'sent' && r.attempts === 1 && r.providerMessageId)).toBe(true);
     // Each guardian gets an own action link; the redeliveries above minted none.
     expect(new Set(sender.messages.map((m) => m.params.at(-1))).size).toBe(2);
