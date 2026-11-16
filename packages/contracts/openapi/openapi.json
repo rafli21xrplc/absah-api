@@ -3635,6 +3635,106 @@
           "late",
           "notArrived"
         ]
+      },
+      "NotificationOverview": {
+        "type": "object",
+        "properties": {
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "queued": {
+                "type": "integer"
+              },
+              "sent": {
+                "type": "integer"
+              },
+              "delivered": {
+                "type": "integer"
+              },
+              "read": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              }
+            }
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailedNotification"
+            }
+          }
+        },
+        "required": [
+          "schoolDate",
+          "counts",
+          "failed"
+        ]
+      },
+      "FailedNotification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateCode": {
+            "$ref": "#/components/schemas/TemplateCode"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "studentName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "lastError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "failedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "templateCode",
+          "recipient",
+          "studentName",
+          "attempts",
+          "lastError",
+          "createdAt",
+          "failedAt"
+        ]
+      },
+      "TemplateCode": {
+        "type": "string",
+        "enum": [
+          "absent_marked",
+          "leave_approved",
+          "leave_rejected",
+          "login_otp"
+        ]
       }
     },
     "parameters": {}
@@ -9206,6 +9306,127 @@
           },
           "403": {
             "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/overview": {
+      "get": {
+        "tags": [
+          "notify"
+        ],
+        "summary": "WhatsApp delivery today and failures of the last 7 days (admin, operator; numbers masked)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/whatsapp": {
+      "get": {
+        "tags": [
+          "notify"
+        ],
+        "summary": "Provider registration check: echoes hub.challenge when hub.verify_token matches",
+        "responses": {
+          "200": {
+            "description": "The challenge, as text/plain"
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "notify"
+        ],
+        "summary": "Message status webhook (WhatsApp Cloud API format), signed with X-Hub-Signature-256",
+        "description": "Stored once per message id + status and applied by the worker; ranks make the final status right in any order.",
+        "responses": {
+          "200": {
+            "description": "Stored"
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
             "content": {
               "application/json": {
                 "schema": {

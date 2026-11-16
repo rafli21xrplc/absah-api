@@ -7,7 +7,7 @@ import {
   heartbeatHandler,
   idempotencyCleanupHandler,
 } from '../modules/platform';
-import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, notifyConsumers, releaseHandler } from '../modules/notify';
+import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
 import { initCrypto } from '../shared/crypto';
@@ -56,6 +56,10 @@ for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);
 await boss.work(NOTIFY_RELEASE_QUEUE, releaseHandler(logger));
 await boss.schedule(NOTIFY_RELEASE_QUEUE, NOTIFY_RELEASE_CRON, null, { tz: 'UTC' });
+// WhatsApp status webhooks stored by the API are applied every minute.
+await boss.createQueue(NOTIFY_WEBHOOKS_QUEUE);
+await boss.work(NOTIFY_WEBHOOKS_QUEUE, webhookHandler(logger));
+await boss.schedule(NOTIFY_WEBHOOKS_QUEUE, NOTIFY_WEBHOOKS_CRON, null, { tz: 'UTC' });
 
 // Outbox consumers from every module.
 const sender = createMessageSender(config, logger);

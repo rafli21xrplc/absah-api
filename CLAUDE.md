@@ -290,6 +290,15 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   queued, refuses unapproved templates on real providers (template_not_approved), sends, marks sent.
   Retryable SendError throws until the last attempt (Delivery.lastAttempt from pg-boss retryCount),
   then failed with the error code. A crash between provider and commit can resend (at least once).
+- Status webhooks: GET/POST /api/v1/webhooks/whatsapp (mounted before express.json, signature
+  X-Hub-Signature-256 over the raw body with WHATSAPP_APP_SECRET; GET echoes hub.challenge for
+  WHATSAPP_VERIFY_TOKEN; no secrets configured = 404). parseMetaStatuses -> recordWebhook('whatsapp',
+  '<wamid>:<status>') -> job notify.webhooks (every minute) applies them: withPlatform only to read
+  the inbox and find the message's school, then withTenant. nextStatus ranks (read > delivered >
+  failed > sent); each status keeps its own timestamp; last_error only while failed. Unknown ids wait
+  (send may still be committing) and are dropped after a day.
+- Dashboard: GET /notifications/overview (admin, operator): today's counts by status, failures of the
+  last 7 days with masked number (maskPhone) and first name.
 - Consumers get (tx, event, delivery); Consumer.retryLimit overrides the queue's retry policy.
 - Links point to /portal until prompt 3.3 adds tokenized action links. Staff (wali kelas, teacher
   reminders) get push in NTF-06 (prompt 5.7): their phone numbers live in Better Auth tables.
