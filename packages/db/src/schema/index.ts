@@ -8,4 +8,5 @@ export * from './invitations';
 export * from './memberships';
 export * from './outbox';
 export * from './platform';
+export * from './schedule';
 export * from './setup';

@@ -148,6 +148,20 @@
       "when": 1794818738303,
       "tag": "0020_enrollment_class_changed",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794819853201,
+      "tag": "0021_schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794819853757,
+      "tag": "0022_schedule_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -162,6 +162,13 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Test files: anonymous Dapodik exports in packages/db/fixtures/dapodik (generate.ts, fake NIK
   region 990101); import them with dapodikFixture() from '@absah/db/fixtures'. Never real data.
 
+## Schedule (AKD-05, AKD-10, packages/db/src/schema/schedule.ts)
+- subjects; schedule_periods (school, ISO day 1-7, jam ke-n, start/end) - slots refer to
+  (day, period number), not to a period row; schedule_slots (academic year, owner_type class|group
+  + owner_id, day, period, subject, teacher); learning_groups + learning_group_members (enrollment).
+- DB guarantees: one slot per owner per time; a teacher once per time (unique index, teacher not
+  null). Students in two slots at once (rombel + group, or two groups) are checked in the app.
+
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
   read, remove. R2ObjectStorage in production (STORAGE_DRIVER=r2 is enforced), FsObjectStorage in
