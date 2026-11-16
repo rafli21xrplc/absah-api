@@ -148,6 +148,13 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   academic_parse_student_import (worker) parses and stores the preview -> GET /imports/{id}.
   student_imports.preview is one encrypted JSON document (rows incl. NIK + preview lines); counts
   are plain. A bad file sets status failed with a message for staff; other errors retry.
+- Commit (POST /imports/{id}/commit, application/commit-student-import.ts): one transaction under a
+  per-school advisory lock; re-plans and compares the fingerprint (mismatch = 409 stale_preview,
+  nothing written; refresh with POST /parse). Creates the active year (+ semesters) and rombel when
+  needed; class moves close the old enrollment as class_changed and open a new one; missing
+  students get enrollments.missing_since; matched ones have it cleared. After commit the preview
+  keeps no NIK and the file is removed. Job academic.import_retention (02:45) expires uncommitted
+  imports after 7 days.
 - Test files: anonymous Dapodik exports in packages/db/fixtures/dapodik (generate.ts, fake NIK
   region 990101); import them with dapodikFixture() from '@absah/db/fixtures'. Never real data.
 

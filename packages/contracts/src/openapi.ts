@@ -239,12 +239,24 @@ function buildRegistry(): OpenAPIRegistry {
     method: 'post',
     path: `${API_BASE_PATH}/imports/{importId}/parse`,
     tags: ['academic'],
-    summary: 'Queue parsing of the uploaded file (admin, operator)',
+    summary: 'Queue parsing of the uploaded file, or refresh a ready preview (admin, operator)',
     description: 'Naturally idempotent. Poll GET /imports/{importId} until status is ready or failed.',
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: ImportIdParam },
     responses: { ...importResponse('Import'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/imports/{importId}/commit`,
+    tags: ['academic'],
+    summary: 'Apply a ready import in one transaction (admin, operator)',
+    description:
+      'Creates the academic year and rombel when needed, adds new students, applies changes and flags students missing from the file as calon keluar (never deletes). Committing again returns the result. 409 with details.reason = stale_preview when data changed since the preview: refresh with POST /imports/{importId}/parse.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ImportIdParam },
+    responses: { ...importResponse('Committed import'), ...errors(400, 401, 403, 404, 409, 422) },
   });
   registry.registerPath({
     method: 'get',
