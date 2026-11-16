@@ -18,3 +18,4 @@ export * from './gate/card-token';
 export * from './gate/enums';
 export * from './gate/kiosks';
 export * from './gate/cards';
+export * from './gate/scans';

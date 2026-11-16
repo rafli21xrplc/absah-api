@@ -11,3 +11,6 @@ coverage/
 
 # local dev file storage (STORAGE_DRIVER=fs)
 .data/
+
+# k6 fixtures hold kiosk tokens and device keys
+load/*.json

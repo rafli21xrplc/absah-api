@@ -3296,6 +3296,192 @@
           "studentId"
         ],
         "additionalProperties": false
+      },
+      "KioskDay": {
+        "type": "object",
+        "properties": {
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "lateAfter": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "schoolDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "key": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "schoolDate",
+                "key"
+              ]
+            }
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cardId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "deviceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "cardId",
+                "deviceId",
+                "firstName",
+                "className"
+              ]
+            }
+          }
+        },
+        "required": [
+          "schoolDate",
+          "timezone",
+          "lateAfter",
+          "keys",
+          "cards"
+        ]
+      },
+      "KioskScanResults": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KioskScanResult"
+            }
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
+      "KioskScanResult": {
+        "type": "object",
+        "properties": {
+          "clientEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ScanResult"
+          },
+          "rejectReason": {
+            "$ref": "#/components/schemas/ScanRejectReason"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/ArrivalOutcome"
+          },
+          "firstName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "clientEventId",
+          "result",
+          "rejectReason",
+          "outcome",
+          "firstName"
+        ]
+      },
+      "ScanResult": {
+        "type": "string",
+        "enum": [
+          "accepted",
+          "duplicate",
+          "rejected"
+        ]
+      },
+      "ScanRejectReason": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "malformed",
+          "expired",
+          "no_key",
+          "bad_signature",
+          "unknown_card",
+          "wrong_device",
+          "not_enrolled",
+          null
+        ]
+      },
+      "ArrivalOutcome": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "on_time",
+          "late",
+          null
+        ]
+      },
+      "KioskScanBatch": {
+        "type": "object",
+        "properties": {
+          "scans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "clientEventId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "token": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "scannedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "clientEventId",
+                "token",
+                "scannedAt"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "scans"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -8564,6 +8750,128 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CardDeviceKeys"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kiosk/day": {
+      "get": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "Morning download for offline work: day keys (today, tomorrow), late time, bound cards",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Day",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskDay"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kiosk/scans": {
+      "post": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "Queued scans, exactly once per clientEventId (a resent batch gets the stored answers)",
+        "description": "Results per scan: accepted (first arrival of the day, on_time or late; marks attendance with source gate), duplicate, or rejected with a reason (malformed, expired, bad_signature, unknown_card, wrong_device, not_enrolled).",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KioskScanBatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskScanResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }
