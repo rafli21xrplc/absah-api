@@ -104,6 +104,21 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   Never use .returning() on it. Anonymous TPPK flows pass { omitIp: true }.
 - Test phone numbers/emails must be unique per run (testPhone(), uuid emails) so reruns never collide.
 
+## Capabilities (PLT-07, AKD-08)
+- Catalog, level presets and resolveCapabilities() live in packages/capabilities (pure, shared with
+  absah-app). Order: catalog default < LEVEL_PRESETS[level] < MADRASAH_OVERLAY < school_capabilities
+  override < platform_flags kill switch. New keys get a safe default in the catalog.
+- resolveContext fills req.ctx.caps once per request (empty without a school); /me/context sends it
+  to the web. Guard routes with requireCap('<bool key>') after resolveContext({ school: 'required' }):
+  disabled answers 404 CAPABILITY_DISABLED. Enum capabilities are read from req.ctx.caps in use cases.
+- school_capabilities: one row per (school, key). Deferred keys (DEFERRED_CAPABILITIES, today only
+  attendance.mode) keep previous_value until effective_from (tomorrow, school timezone); a null value
+  means "back to the preset". Stored values the catalog rejects are ignored with a warning.
+- platform_flags (kill switches) are set by the Absah team with the owner role, e.g.
+  insert into platform_flags (id, key, value, school_id, reason) values (gen_random_uuid(),
+  'pkl.enabled', 'false', null, 'incident #12'); a per-school row beats the global row. The app role
+  can only read global rows and its own school's.
+
 ## Outbox, consumers and inbox (PLT-13, apps/server/src/shared/outbox)
 - emit(tx, type, payload) inside the use case's withTenant transaction, next to audit(). The school
   comes from the transaction; the request id becomes trace_id. Event types and payload schemas live
