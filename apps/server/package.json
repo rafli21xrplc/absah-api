@@ -10,6 +10,7 @@
     "build": "tsup",
     "start:http": "node dist/http.js",
     "start:worker": "node dist/worker.js",
+    "school:create": "tsx src/entrypoints/create-school.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"

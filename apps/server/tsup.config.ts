@@ -1,7 +1,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: { http: 'src/entrypoints/http.ts', worker: 'src/entrypoints/worker.ts' },
+  entry: {
+    http: 'src/entrypoints/http.ts',
+    worker: 'src/entrypoints/worker.ts',
+    'create-school': 'src/entrypoints/create-school.ts',
+  },
   format: ['esm'],
   platform: 'node',
   target: 'node22',
