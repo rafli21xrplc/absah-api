@@ -39,7 +39,7 @@ export async function lockCard(tx: Tx, schoolId: string, studentId: string) {
 }
 
 /** Binds a new phone: previous devices are revoked, the card points at the new one. */
-export async function bindDevice(tx: Tx, card: { id: string; schoolId: string }, values: { deviceId: string; holder: CardHolder; userId: string; label: string | null }) {
+export async function bindDevice(tx: Tx, card: { id: string; schoolId: string }, values: { deviceId: string; holder: CardHolder; userId: string | null; label: string | null }) {
   await tx.update(d).set({ revokedAt: sql`now()` }).where(and(eq(d.cardId, card.id), isNull(d.revokedAt)));
   await tx.insert(d).values({ id: values.deviceId, schoolId: card.schoolId, cardId: card.id, holder: values.holder, userId: values.userId, label: values.label });
   await tx.update(c).set({ activeDeviceId: values.deviceId }).where(eq(c.id, card.id));

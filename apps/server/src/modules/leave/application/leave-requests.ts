@@ -4,6 +4,7 @@ import type {
   CreateLeaveRequest,
   DecideLeaveRequest,
   LeaveAttachmentLink,
+  LeaveKind,
   LeaveRequest,
   LeaveRequestList,
   LeaveRequestListQuery,
@@ -37,7 +38,8 @@ function toLeaveRequest(row: LeaveRow): LeaveRequest {
     reason: row.reason.reveal(),
     hasAttachment: row.attachmentKey !== null,
     status: row.status,
-    requestedBy: ref(row.requestedBy, row.requestedByName),
+    // A guardian who asked through an action link has no account; show their name from the roster.
+    requestedBy: row.requestedBy ? ref(row.requestedBy, row.requestedByName) : ref(row.requestedByGuardianId, row.requestedByGuardianName && `${row.requestedByGuardianName} (tautan WhatsApp)`),
     decidedBy: ref(row.decidedBy, row.decidedByName),
     decidedAt: row.decidedAt?.toISOString() ?? null,
     decisionNote: row.decisionNote,
@@ -156,4 +158,41 @@ export async function leaveAttachmentLink(actor: Actor, storage: ObjectStorage, 
   if (!row.attachmentKey || !row.attachmentType) throw new NotFoundError('Izin ini tanpa lampiran.');
   const link = await storage.presignDownload({ key: row.attachmentKey, contentType: row.attachmentType });
   return { url: link.url, expiresAt: link.expiresAt.toISOString() };
+}
+
+/**
+ * An izin asked by a guardian through an action link (ORT-01): no account, so the guardian is the
+ * requester. Always pending for the wali kelas. Runs in the caller's tenant transaction, which also
+ * spends the link's one write.
+ */
+export async function requestLeaveAsGuardian(
+  tx: Tx,
+  auditCtx: AuditContext,
+  today: string,
+  input: { enrollmentId: string; guardianId: string; kind: LeaveKind; startsOn: string; endsOn: string; reason: string },
+): Promise<{ id: string; status: 'pending' }> {
+  const problems = checkLeaveDates(input, today);
+  if (problems.length) throw new ValidationError(problems);
+  await lockStudentLeave(tx, input.enrollmentId);
+  if (await hasOverlap(tx, input.enrollmentId, input)) throw new ConflictError('Sudah ada izin untuk siswa ini pada tanggal tersebut.', { reason: 'overlap' });
+  const id = await insertLeave(tx, {
+    schoolId: auditCtx.schoolId,
+    enrollmentId: input.enrollmentId,
+    kind: input.kind,
+    startsOn: input.startsOn,
+    endsOn: input.endsOn,
+    reason: input.reason,
+    attachmentKey: null,
+    attachmentType: null,
+    status: 'pending',
+    requestedBy: null,
+    requestedByGuardianId: input.guardianId,
+    decidedBy: null,
+    decidedAt: null,
+  });
+  await emit(tx, 'leave.requested', { leaveRequestId: id });
+  await audit(tx, auditCtx, 'leave.requested', { type: 'leave_request', id }, {
+    after: { enrollmentId: input.enrollmentId, kind: input.kind, startsOn: input.startsOn, endsOn: input.endsOn, status: 'pending', via: 'action_link', guardianId: input.guardianId },
+  });
+  return { id, status: 'pending' };
 }

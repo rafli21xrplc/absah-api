@@ -11,7 +11,7 @@ const KIND_LABELS: Record<LeaveKind, string> = { sakit: 'sakit', izin: 'izin' };
 
 export interface NotifyDeps {
   sender: MessageSender;
-  /** Web origin; details open there. Prompt 3.3 replaces the portal link with a tokenized action link. */
+  /** Web origin; each message carries an action link there (ORT-01). */
   appUrl: string;
   /** Clock for quiet hours (tests). */
   now?: () => Date;
@@ -22,8 +22,6 @@ export interface NotifyDeps {
  * decisions on izin. Only first name and status in the message; details behind the link.
  */
 export function notifyConsumers(deps: NotifyDeps): Consumer[] {
-  const link = `${deps.appUrl}/portal`;
-
   const absent = defineConsumer({
     name: 'notify_absent_marked',
     event: 'attendance.absent_marked',
@@ -38,7 +36,8 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
         enrollmentId: event.payload.enrollmentId,
         recipients: guardians,
         dedupKey: (r) => `absent:${event.payload.enrollmentId}:${date}:${r.guardianId}`,
-        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), date: dateLabel(date), link },
+        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), date: dateLabel(date) },
+        appUrl: deps.appUrl,
         now: deps.now?.(),
       });
     },
@@ -66,8 +65,8 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
             kind: KIND_LABELS[leave.kind],
             first_name: firstName(guardians[0]?.studentName ?? ''),
             dates: dateRangeLabel(leave.startsOn, leave.endsOn),
-            link,
           },
+          appUrl: deps.appUrl,
           now: deps.now?.(),
         });
       },

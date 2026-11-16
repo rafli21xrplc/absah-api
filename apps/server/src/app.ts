@@ -6,6 +6,7 @@ import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { correctionsRouter, sessionsRouter } from './modules/attendance';
 import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
+import { linksRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
@@ -64,6 +65,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   const openapi = generateOpenApiDocument(version);
   const v1 = express.Router();
   v1.use(healthRouter(version));
+  v1.use(linksRouter());
   v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
   v1.use(importsRouter(auth, storage));

@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, eq, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 
 const n = schema.notifications;
 
@@ -11,14 +11,14 @@ export async function schoolOf(tx: Tx, schoolId: string) {
 /** The student's name and the guardians with a WhatsApp number. */
 export async function guardiansOf(tx: Tx, enrollmentId: string) {
   const rows = await tx
-    .select({ studentName: schema.students.name, guardianId: schema.guardians.id, phone: schema.guardians.phone })
+    .select({ studentId: schema.students.id, studentName: schema.students.name, guardianId: schema.guardians.id, phone: schema.guardians.phone })
     .from(schema.enrollments)
     .innerJoin(schema.students, eq(schema.students.id, schema.enrollments.studentId))
     .innerJoin(schema.studentGuardians, eq(schema.studentGuardians.studentId, schema.students.id))
     .innerJoin(schema.guardians, eq(schema.guardians.id, schema.studentGuardians.guardianId))
     .where(and(eq(schema.enrollments.id, enrollmentId), isNotNull(schema.guardians.phone)))
     .orderBy(asc(schema.guardians.id));
-  return rows.flatMap((r) => (r.phone ? [{ studentName: r.studentName, guardianId: r.guardianId, phone: r.phone.reveal() }] : []));
+  return rows.flatMap((r) => (r.phone ? [{ studentId: r.studentId, studentName: r.studentName, guardianId: r.guardianId, phone: r.phone.reveal() }] : []));
 }
 
 export async function sessionDate(tx: Tx, sessionId: string) {
@@ -38,6 +38,13 @@ export async function leaveOf(tx: Tx, leaveRequestId: string) {
 export type NewNotification = typeof n.$inferInsert;
 
 /** Inserts the rows not seen before (dedup_key); returns the new ids with their release time. */
+/** Dedup keys already used, so no link is minted for a message that will not be sent. */
+export async function usedDedupKeys(tx: Tx, keys: string[]): Promise<Set<string>> {
+  if (keys.length === 0) return new Set();
+  const rows = await tx.select({ key: n.dedupKey }).from(n).where(inArray(n.dedupKey, keys));
+  return new Set(rows.map((r) => r.key));
+}
+
 export function insertNotifications(tx: Tx, rows: NewNotification[]) {
   if (rows.length === 0) return Promise.resolve([]);
   return tx.insert(n).values(rows).onConflictDoNothing().returning({ id: n.id, scheduledFor: n.scheduledFor });
