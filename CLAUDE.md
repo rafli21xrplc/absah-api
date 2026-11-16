@@ -213,6 +213,12 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sessions only, one pending per student), GET /corrections (wakasek/kepsek all, others own),
   POST /corrections/{id}/decide (wakasek/kepsek, never their own request). Approval writes
   source manual (final), recomputes the day, audits attendance.corrected.
+- Izin (application/leave-marks.ts): consumers attendance_apply_leave (leave.approved) and
+  attendance_revoke_leave (leave.cancelled) both run syncLeaveMarks: re-read the request and make
+  its leave marks match (approved -> S/I in every covered class/group session, else none), so
+  order and redelivery do not matter. generateForSchool calls applyLeavesToDate after inserting
+  sessions, so izin approved earlier fill sessions created later. Locked sessions are included
+  (a sick note arriving the next day is normal); backdating is capped at 7 days by the leave module.
 
 ## Leave (IZN, modules/leave, packages/db/src/schema/leave.ts)
 - leave_requests (enrollment, kind sakit|izin, starts_on..ends_on inclusive, reason encryptedText,
@@ -223,14 +229,15 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   or approved request. At most 30 days, starting at most 7 days back (school timezone); one izin per
   student per day (advisory lock per enrollment + overlap check, 409 overlap).
 - Events {leaveRequestId}: leave.requested, leave.approved, leave.rejected, leave.cancelled (only
-  when it was approved). Attendance turns approved ones into marks (2.4c); notify sends WhatsApp (3.2).
+  when it was approved). Attendance turns approved ones into marks (application/leave-marks.ts); notify sends WhatsApp (3.2).
 - Attachments: POST /leave-requests/attachments presigns schools/{id}/leave/{uuid}; create checks the
   object exists; GET /leave-requests/{id}/attachment returns a 5-minute presigned GET (inline, the
   stored content type). Portal action links (3.3) will call createLeave / cancelLeave from index.ts.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
-  presignDownload (5-minute inline GET with a fixed content type), read, remove. R2ObjectStorage in production (STORAGE_DRIVER=r2 is enforced), FsObjectStorage in
+  presignDownload (5-minute inline GET with a fixed content type), read, remove. R2ObjectStorage in
+  production (STORAGE_DRIVER=r2 is enforced), FsObjectStorage in
   dev/test with an HMAC-signed PUT /api/v1/storage/fs/... route that mimics R2.
 - Keys are always storageKey(schoolId, module, uuid) = schools/{school_id}/{module}/{uuid}; build
   them from the actor's school, never from client input.

@@ -13,3 +13,4 @@ export {
 export { sessionsRouter } from './http/sessions';
 export { correctionsRouter } from './http/corrections';
 export { findSchool } from './infrastructure/session-repo';
+export { attendanceConsumers } from './application/consumers';

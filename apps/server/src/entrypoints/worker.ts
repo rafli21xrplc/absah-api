@@ -1,6 +1,6 @@
 import { PgBoss } from 'pg-boss';
 import { academicConsumers, IMPORT_RETENTION_QUEUE, importRetentionHandler } from '../modules/academic';
-import { ATTENDANCE_JOB_CRON, attendanceJobHandlers } from '../modules/attendance';
+import { ATTENDANCE_JOB_CRON, attendanceConsumers, attendanceJobHandlers } from '../modules/attendance';
 import {
   HEARTBEAT_QUEUE,
   IDEMPOTENCY_CLEANUP_QUEUE,
@@ -51,7 +51,7 @@ for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
 }
 
 // Outbox consumers from every module.
-const consumers: Consumer[] = [...academicConsumers(storage)];
+const consumers: Consumer[] = [...academicConsumers(storage), ...attendanceConsumers()];
 const outbox = await startOutbox(boss, consumers, logger);
 logger.info('worker started');
 

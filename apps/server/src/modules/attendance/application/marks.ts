@@ -14,8 +14,9 @@ export async function changeMarks(
   input: { write?: MarkWrite[]; removeRef?: { source: MarkWrite['source']; sourceRef: string }; touch?: { sessionId: string; enrollmentId: string }[] },
 ): Promise<RecordChange[]> {
   const pairs = [...(input.write ?? []), ...(input.touch ?? [])].map(({ sessionId, enrollmentId }) => ({ sessionId, enrollmentId }));
-  if (input.write) await writeMarks(tx, schoolId, input.write);
+  // Remove first: a re-sync of one reference removes its old marks and writes the current ones.
   if (input.removeRef) pairs.push(...(await removeMarksByRef(tx, input.removeRef.source, input.removeRef.sourceRef)));
+  if (input.write) await writeMarks(tx, schoolId, input.write);
   const changes = await resolveRecords(tx, schoolId, pairs);
 
   const dates = await sessionDates(tx, [...new Set(pairs.map((p) => p.sessionId))]);
