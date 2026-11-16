@@ -1,5 +1,6 @@
 import { PgBoss } from 'pg-boss';
 import { academicConsumers, IMPORT_RETENTION_QUEUE, importRetentionHandler } from '../modules/academic';
+import { ATTENDANCE_JOB_CRON, attendanceJobHandlers } from '../modules/attendance';
 import {
   HEARTBEAT_QUEUE,
   IDEMPOTENCY_CLEANUP_QUEUE,
@@ -41,6 +42,13 @@ const storage = createObjectStorage(config);
 await boss.createQueue(IMPORT_RETENTION_QUEUE);
 await boss.work(IMPORT_RETENTION_QUEUE, importRetentionHandler(storage, logger));
 await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jakarta' });
+
+// Attendance jobs run every 5 minutes and act on each school's own clock (UTC cron on purpose).
+for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
+  await boss.createQueue(queue);
+  await boss.work(queue, handler);
+  await boss.schedule(queue, ATTENDANCE_JOB_CRON, null, { tz: 'UTC' });
+}
 
 // Outbox consumers from every module.
 const consumers: Consumer[] = [...academicConsumers(storage)];

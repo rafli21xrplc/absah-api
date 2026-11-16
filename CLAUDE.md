@@ -192,6 +192,12 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   teacher > gate; a source may overwrite itself. Every write goes through shouldReplace.
 - computeDailyStatus: present in any session -> H (T if any T); absent all day -> most frequent of
   S/I/A, ties S > I > A. isSchoolDay: calendar_days first, then weekdays with jam pelajaran, else Mon-Fri.
+- Jobs (jobs/session-jobs.ts) prs.generate-sessions / prs.remind-unfilled / prs.lock-sessions run
+  every 5 minutes (UTC cron) for every school and act on the school's own clock (schoolMinutes):
+  generate from 05.00 (daily: one session per rombel owned by the wali kelas; per_period: one per
+  slot of the weekday), remind 10 min after the lesson (daily: 10.00) via attendance.session_unfilled,
+  lock at 23.59 or later (catch-up): open -> missed, others locked, recomputeDaily, one
+  attendance.session_locked per day. attendance_days rows make each step idempotent.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

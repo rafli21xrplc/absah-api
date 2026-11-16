@@ -10,3 +10,10 @@ export function addDays(date: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
+/** Minutes since local midnight at `now` in the school's timezone (05.00 -> 300). */
+export function schoolMinutes(timezone: string, now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const value = (type: 'hour' | 'minute') => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return value('hour') * 60 + value('minute');
+}
