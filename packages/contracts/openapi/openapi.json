@@ -3743,6 +3743,227 @@
           "login_otp"
         ]
       },
+      "StudentContacts": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "className": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "account": {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "active": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "phone",
+              "active"
+            ]
+          },
+          "guardians": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "relation": {
+                  "$ref": "#/components/schemas/GuardianRelation"
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "relation",
+                "phone"
+              ]
+            }
+          }
+        },
+        "required": [
+          "studentId",
+          "name",
+          "className",
+          "account",
+          "guardians"
+        ]
+      },
+      "GuardianRelation": {
+        "type": "string",
+        "enum": [
+          "ayah",
+          "ibu",
+          "wali"
+        ]
+      },
+      "UpdateStudentContactsRequest": {
+        "type": "object",
+        "properties": {
+          "studentPhone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\+628\\d{7,12}$"
+          },
+          "guardians": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "guardianId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^\\+628\\d{7,12}$"
+                }
+              },
+              "required": [
+                "guardianId",
+                "phone"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 5
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalAttendance": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                },
+                "today": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/AttendanceStatus"
+                    },
+                    "arrivedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "status",
+                    "arrivedAt"
+                  ]
+                },
+                "days": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "status": {
+                        "$ref": "#/components/schemas/AttendanceStatus"
+                      }
+                    },
+                    "required": [
+                      "date",
+                      "status"
+                    ]
+                  }
+                },
+                "counts": {
+                  "type": "object",
+                  "properties": {
+                    "H": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "S": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "I": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "A": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "T": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              },
+              "required": [
+                "studentId",
+                "name",
+                "className",
+                "today",
+                "days",
+                "counts"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "ActionLinkContext": {
         "type": "object",
         "properties": {
@@ -9642,6 +9863,243 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/students/{studentId}/contacts": {
+      "get": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "WhatsApp numbers of a student and their guardians, masked (admin, operator, the student's wali kelas)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "studentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentContacts"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Set guardian numbers (messages, action links) and the student's PWA login number",
+        "description": "A student number creates or moves their OTP login and an active siswa membership; null suspends it. 409 reason phone_taken when the number belongs to another account.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "studentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentContactsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentContacts"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/attendance": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "PWA: the siswa's own attendance or the orang tua's children's, today and the last 30 days",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAttendance"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {

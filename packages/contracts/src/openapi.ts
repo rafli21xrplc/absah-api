@@ -71,7 +71,8 @@ import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
 import { NotificationOverview } from './notify/notifications';
-import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest } from './portal/links';
+import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
+import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance } from './portal/links';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
 import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
@@ -797,6 +798,36 @@ function buildRegistry(): OpenAPIRegistry {
     summary: 'Message status webhook (WhatsApp Cloud API format), signed with X-Hub-Signature-256',
     description: 'Stored once per message id + status and applied by the worker; ranks make the final status right in any order.',
     responses: { 200: { description: 'Stored' }, ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/students/{studentId}/contacts`,
+    tags: ['academic'],
+    summary: "WhatsApp numbers of a student and their guardians, masked (admin, operator, the student's wali kelas)",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: StudentIdParam },
+    responses: { 200: json(StudentContacts, 'Contacts'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/students/{studentId}/contacts`,
+    tags: ['academic'],
+    summary: "Set guardian numbers (messages, action links) and the student's PWA login number",
+    description: 'A student number creates or moves their OTP login and an active siswa membership; null suspends it. 409 reason phone_taken when the number belongs to another account.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: StudentIdParam, body: { content: { 'application/json': { schema: UpdateStudentContactsRequest } } } },
+    responses: { 200: json(StudentContacts, 'Contacts'), ...errors(400, 401, 404, 409, 422) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/portal/attendance`,
+    tags: ['portal'],
+    summary: "PWA: the siswa's own attendance or the orang tua's children's, today and the last 30 days",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(PortalAttendance, 'History'), ...errors(401, 403) },
   });
   registry.registerComponent('securitySchemes', 'actionLink', {
     type: 'apiKey',

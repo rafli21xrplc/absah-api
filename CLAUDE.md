@@ -365,3 +365,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Card: gate.linkCardKeys keeps the link's own device (holder parent, user_id null); a card active
   on another phone answers 409 bound_elsewhere unless `replace`.
 - Context shows the first name only (links get forwarded); no reason, no phone, no full name.
+
+## Portal logins and contacts (ORT-02)
+- PUT /students/{id}/contacts (admin, operator, the student's wali kelas; others 404): guardian
+  numbers (guardians.phone encrypted + phone_hash) and the student's login number. The login is
+  created through Better Auth first (own connection), then the tenant transaction links
+  students.user_id and sets an active `siswa` membership (platform.setPortalMembership; no
+  invitation, the OTP is the proof). null suspends it. A number owned by another account → 409
+  phone_taken. Audit records which numbers changed, never the numbers; responses mask them.
+- Parent logins (orang_tua with guardians.user_id) come with the parent portal (prompt 5.7); the
+  portal endpoints already serve them.
+- GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
+  the last 30 days of daily_attendance with counts.
