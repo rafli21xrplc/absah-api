@@ -155,6 +155,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   students get enrollments.missing_since; matched ones have it cleared. After commit the preview
   keeps no NIK and the file is removed. Job academic.import_retention (02:45) expires uncommitted
   imports after 7 days.
+- Registry reads: GET /students (cursor = base64url [name, id], status active|missing|all, q on
+  name/NISN/NIPD), GET /classes (active year, counts, homeroom name via school_member_directory),
+  PATCH /enrollments/{id} settles calon keluar (active keeps; moved/left ends the enrollment).
+  Readers: admin, operator, kepsek, wakasek (canReadStudentData); writers: admin, operator.
 - Test files: anonymous Dapodik exports in packages/db/fixtures/dapodik (generate.ts, fake NIK
   region 990101); import them with dapodikFixture() from '@absah/db/fixtures'. Never real data.
 
