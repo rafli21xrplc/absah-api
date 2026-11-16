@@ -4,6 +4,9 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import {
   SchoolCapabilitiesResponse,
   SchoolProfileResponse,
+  SchoolSetupResponse,
+  SetupStepParam,
+  UpdateSetupStepRequest,
   UpdateSchoolCapabilitiesRequest,
   UpdateSchoolProfileRequest,
 } from './academic/school-settings';
@@ -124,6 +127,43 @@ function buildRegistry(): OpenAPIRegistry {
       200: { description: 'Settings', content: { 'application/json': { schema: SchoolCapabilitiesResponse } } },
       ...errors(400, 401, 403),
     },
+  });
+
+  const setupResponse = {
+    200: { description: 'Wizard progress', content: { 'application/json': { schema: SchoolSetupResponse } } },
+  };
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/school/setup`,
+    tags: ['academic'],
+    summary: 'Setup wizard progress of the active school (admin)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { ...setupResponse, ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/school/setup/steps/{step}`,
+    tags: ['academic'],
+    summary: 'Mark a wizard step done or skipped (admin)',
+    description: 'Naturally idempotent. profile and level cannot be skipped.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: {
+      params: SetupStepParam,
+      body: { content: { 'application/json': { schema: UpdateSetupStepRequest } } },
+    },
+    responses: { ...setupResponse, ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/school/setup/complete`,
+    tags: ['academic'],
+    summary: 'Finish the setup wizard (admin)',
+    description: 'Naturally idempotent (keeps the first completion time). 409 until profile and level are done.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { ...setupResponse, ...errors(400, 401, 403, 409) },
   });
 
   registry.registerComponent('securitySchemes', 'session', {
