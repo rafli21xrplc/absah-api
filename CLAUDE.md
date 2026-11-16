@@ -67,6 +67,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   built from shared/policy.ts (pure; domain/ may import it). Routes only call getActor(req).
 - Better Auth's internalAdapter.createUser drops plugin fields (phoneNumber); set them with updateUser.
 - New schools: `pnpm --filter @absah/server school:create --name ... --admin-name ... --admin-email ...`
+- Sessions now (ops, e2e): `pnpm --filter @absah/server attendance:generate --school <id> [--date YYYY-MM-DD] [--force]`
+  (--force: also on non-school days and again after a timetable change; existing sessions kept).
   (ops) creates the school and invites its first admin; the admin runs the setup wizard.
 - Invitations (POST /school/invitations, admin): staff by email (password) or WhatsApp (OTP). The
   token is "<schoolId>.<secret>" (only an HMAC stored, 7 days, single use) so preview/accept run in
@@ -203,6 +205,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sources: those students come back fixed=true). Teacher, wali kelas (daily) or admin/operator/
   wakasek/piket may fill (domain/policies.ts). Locked -> 409 SESSION_LOCKED. Unchanged rows are not
   rewritten, so attendance.absent_marked fires only on a change to A. "Today" uses the school timezone.
+- Corrections (PRS-05, application/corrections.ts): POST /sessions/{id}/corrections (locked
+  sessions only, one pending per student), GET /corrections (wakasek/kepsek all, others own),
+  POST /corrections/{id}/decide (wakasek/kepsek, never their own request). Approval writes
+  source manual (final), recomputes the day, audits attendance.corrected.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

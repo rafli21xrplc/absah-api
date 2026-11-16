@@ -4,9 +4,12 @@ export {
   attendanceJobHandlers,
   GENERATE_SESSIONS_QUEUE,
   generateDueSessions,
+  generateForSchool,
   LOCK_SESSIONS_QUEUE,
   lockDueDays,
   REMIND_UNFILLED_QUEUE,
   remindUnfilled,
 } from './jobs/session-jobs';
 export { sessionsRouter } from './http/sessions';
+export { correctionsRouter } from './http/corrections';
+export { findSchool } from './infrastructure/session-repo';
