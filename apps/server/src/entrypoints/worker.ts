@@ -7,7 +7,9 @@ import {
   heartbeatHandler,
   idempotencyCleanupHandler,
 } from '../modules/platform';
+import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, notifyConsumers, releaseHandler } from '../modules/notify';
 import { loadConfig } from '../shared/config';
+import { createMessageSender } from '../shared/messaging';
 import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { deleteOldOutboxRows, OUTBOX_RETENTION_QUEUE, startOutbox, type Consumer } from '../shared/outbox';
@@ -50,8 +52,18 @@ for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
   await boss.schedule(queue, ATTENDANCE_JOB_CRON, null, { tz: 'UTC' });
 }
 
+// Quiet-hour messages are released every minute.
+await boss.createQueue(NOTIFY_RELEASE_QUEUE);
+await boss.work(NOTIFY_RELEASE_QUEUE, releaseHandler(logger));
+await boss.schedule(NOTIFY_RELEASE_QUEUE, NOTIFY_RELEASE_CRON, null, { tz: 'UTC' });
+
 // Outbox consumers from every module.
-const consumers: Consumer[] = [...academicConsumers(storage), ...attendanceConsumers()];
+const sender = createMessageSender(config, logger);
+const consumers: Consumer[] = [
+  ...academicConsumers(storage),
+  ...attendanceConsumers(),
+  ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
+];
 const outbox = await startOutbox(boss, consumers, logger);
 logger.info('worker started');
 

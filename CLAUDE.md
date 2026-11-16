@@ -280,6 +280,19 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   in memory, dev logs at debug) and MetaCloudSender (WhatsApp Cloud API). WHATSAPP_PROVIDER picks
   one; production requires meta_cloud with WHATSAPP_* credentials from env only. SendError.retryable
   separates network/429/5xx from final errors. Never log phone numbers or message text.
+- Flow (modules/notify): consumers notify_absent_marked (attendance.absent_marked), notify_leave_approved
+  and notify_leave_rejected read the student and the guardians with a phone, then queueMessages:
+  one row per guardian with a dedup key (absent:<enrollment>:<date>:<guardian> = one alpa message
+  per day; <event>:<leave>:<guardian>), params = school, first name, status words, link. Due rows
+  get released_at + event notification.queued at once; quiet hours (21.00-06.00 school time,
+  releaseTime) leave them for job notify.release (every minute, withPlatform only to list schools).
+- notify_send (notification.queued, retryLimit 2 = 3 attempts) locks the row, skips anything not
+  queued, refuses unapproved templates on real providers (template_not_approved), sends, marks sent.
+  Retryable SendError throws until the last attempt (Delivery.lastAttempt from pg-boss retryCount),
+  then failed with the error code. A crash between provider and commit can resend (at least once).
+- Consumers get (tx, event, delivery); Consumer.retryLimit overrides the queue's retry policy.
+- Links point to /portal until prompt 3.3 adds tokenized action links. Staff (wali kelas, teacher
+  reminders) get push in NTF-06 (prompt 5.7): their phone numbers live in Better Auth tables.
 - Exception to rule 3: the login OTP is sent inline from Better Auth's sendOTP (user waiting, no
   school for a tenant outbox, route rate limited). Everything else goes through the worker.
 

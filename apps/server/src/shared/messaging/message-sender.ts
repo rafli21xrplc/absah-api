@@ -41,7 +41,7 @@ export class SendError extends Error {
 /** Dev/test sender: keeps messages in memory so tests can read them. */
 export class FakeMessageSender implements MessageSender {
   readonly provider = 'fake';
-  readonly requiresApprovedTemplates = false;
+  readonly requiresApprovedTemplates: boolean = false;
   readonly sent: { to: string; code: string; purpose: 'login' }[] = [];
   readonly messages: (TemplateMessage & { providerMessageId: string })[] = [];
   /** Errors to throw on the next sends, in order (tests of retries). */
