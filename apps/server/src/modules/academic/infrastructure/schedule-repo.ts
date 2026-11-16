@@ -158,3 +158,18 @@ export async function countSlotsOutside(tx: Tx, keep: Set<string>): Promise<numb
 export async function setHomeroomTeacher(tx: Tx, classId: string, teacherId: string | null): Promise<void> {
   await tx.update(schema.classes).set({ homeroomTeacherId: teacherId }).where(eq(schema.classes.id, classId));
 }
+
+/** Removes every lesson of the given rombel/groups in a year. */
+export async function deleteOwnerSlots(tx: Tx, academicYearId: string, ownerType: SlotOwnerType, ownerIds: string[]): Promise<number> {
+  if (ownerIds.length === 0) return 0;
+  const s = schema.scheduleSlots;
+  const rows = await tx
+    .delete(s)
+    .where(and(eq(s.academicYearId, academicYearId), eq(s.ownerType, ownerType), inArray(s.ownerId, ownerIds)))
+    .returning({ id: s.id });
+  return rows.length;
+}
+
+export async function insertSlots(tx: Tx, rows: (typeof schema.scheduleSlots.$inferInsert)[]): Promise<void> {
+  if (rows.length > 0) await tx.insert(schema.scheduleSlots).values(rows);
+}
