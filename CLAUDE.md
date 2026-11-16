@@ -140,6 +140,14 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Enum values live in packages/contracts/src/academic/enums.ts and feed the pgEnums.
 - memberships live in schema/memberships.ts (FK to academic_years) to avoid an import cycle.
 
+## File storage (apps/server/src/shared/storage)
+- ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
+  read, remove. R2ObjectStorage in production (STORAGE_DRIVER=r2 is enforced), FsObjectStorage in
+  dev/test with an HMAC-signed PUT /api/v1/storage/fs/... route that mimics R2.
+- Keys are always storageKey(schoolId, module, uuid) = schools/{school_id}/{module}/{uuid}; build
+  them from the actor's school, never from client input.
+- Browsers upload directly to the presigned URL; handlers never stream file bodies.
+
 ## Outbox, consumers and inbox (PLT-13, apps/server/src/shared/outbox)
 - emit(tx, type, payload) inside the use case's withTenant transaction, next to audit(). The school
   comes from the transaction; the request id becomes trace_id. Event types and payload schemas live

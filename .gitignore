@@ -8,3 +8,6 @@ coverage/
 .env
 .env.local
 .env.*.local
+
+# local dev file storage (STORAGE_DRIVER=fs)
+.data/

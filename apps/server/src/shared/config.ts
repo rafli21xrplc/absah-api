@@ -29,6 +29,13 @@ const ConfigSchema = z.object({
   ENCRYPTION_ACTIVE_KEY_ID: z.string().min(1),
   /** HMAC key for IP hashes and tracking codes. 32+ random characters per environment. */
   HASH_KEY: z.string().min(32),
+  /** fs = local disk behind a signed dev upload route; r2 = Cloudflare R2 (required in production). */
+  STORAGE_DRIVER: z.enum(['fs', 'r2']).default('fs'),
+  STORAGE_FS_DIR: z.string().default('.data/storage'),
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -41,6 +48,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       parseKeyring(c.ENCRYPTION_KEYS, c.ENCRYPTION_ACTIVE_KEY_ID);
     } catch (e) {
       ctx.addIssue({ code: 'custom', path: ['ENCRYPTION_KEYS'], message: (e as Error).message });
+    }
+    if (c.NODE_ENV === 'production' && c.STORAGE_DRIVER !== 'r2') {
+      ctx.addIssue({ code: 'custom', path: ['STORAGE_DRIVER'], message: 'must be r2 in production' });
+    }
+    if (c.STORAGE_DRIVER === 'r2') {
+      for (const k of ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const) {
+        if (!c[k]) ctx.addIssue({ code: 'custom', path: [k], message: 'required when STORAGE_DRIVER=r2' });
+      }
     }
   }).safeParse(env);
   if (!parsed.success) {
