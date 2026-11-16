@@ -1,14 +1,11 @@
 import { XLSX_CONTENT_TYPE } from '@absah/contracts';
 import { schema } from '@absah/db';
-import { dapodikFixture } from '@absah/db/fixtures';
 import { eq } from 'drizzle-orm';
-import { readFile } from 'node:fs/promises';
 import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { academicConsumers } from '../src/modules/academic';
 import { getDb, withTenant } from '../src/shared/db';
-import { runConsumer } from '../src/shared/outbox';
 import { buildTestApp, enableTotp, signIn, type Agent } from './harness';
+import { fixture, importer, type ImportBody, type Preview } from './import-helpers';
 
 const t = buildTestApp();
 afterAll(() => t.cleanup());
@@ -37,52 +34,20 @@ async function newSchool(level: 'smp' | 'sma' = 'smp') {
   return id;
 }
 
-type ImportBody = {
-  import: { id: string; status: string };
-  upload: { url: string; method: string; headers: Record<string, string> };
-};
-type Preview = {
-  status: string;
-  error: string | null;
-  academicYear: string | null;
-  counts: Record<string, number> | null;
-  items: { kind: string; name: string; className: string | null }[];
-};
-
-async function start(school: string, file: Buffer) {
-  const res = await operator
-    .post('/api/v1/imports/dapodik')
-    .set('X-School-Id', school)
-    .set('Idempotency-Key', `import-${uuidv7()}`)
-    .send({ fileName: 'daftar-pd.xlsx', fileSize: file.length, contentType: XLSX_CONTENT_TYPE })
-    .expect(201);
-  return res.body as ImportBody;
-}
-
-async function upload(body: ImportBody, file: Buffer) {
-  const url = new URL(body.upload.url);
-  await operator.put(url.pathname + url.search).set(body.upload.headers).send(file).expect(200);
-}
-
-/** What the worker does when the outbox relays student_import.uploaded. */
-async function runParseJob(school: string, importId: string) {
-  const [consumer] = academicConsumers(t.storage);
-  if (!consumer) throw new Error('no consumer');
-  const event = { id: uuidv7(), schoolId: school, type: 'student_import.uploaded', payload: { importId }, traceId: null, occurredAt: new Date().toISOString() };
-  return runConsumer(consumer, event);
-}
-
-const preview = async (school: string, id: string) =>
-  (await operator.get(`/api/v1/imports/${id}`).set('X-School-Id', school).expect(200)).body as Preview;
+const imports = (school: string) => importer(t, operator, school);
+const start = (school: string, file: Buffer) => imports(school).start(file);
+const upload = (school: string, body: ImportBody, file: Buffer) => imports(school).upload(body, file);
+const runParseJob = (school: string, id: string) => imports(school).runParseJob(id);
+const preview = (school: string, id: string) => imports(school).preview(id);
 
 describe('Dapodik import: upload, parse, preview', () => {
   it('turns an uploaded export into a preview without touching student data', async () => {
     const school = await newSchool();
-    const file = await readFile(dapodikFixture('daftar-pd-awal.xlsx'));
+    const file = await fixture('daftar-pd-awal.xlsx');
     const started = await start(school, file);
     expect(started.import.status).toBe('awaiting_upload');
     expect(started.upload.method).toBe('PUT');
-    await upload(started, file);
+    await upload(school, started, file);
 
     const parse = await operator.post(`/api/v1/imports/${started.import.id}/parse`).set('X-School-Id', school).expect(200);
     expect((parse.body as Preview).status).toBe('parsing');
@@ -120,7 +85,7 @@ describe('Dapodik import: upload, parse, preview', () => {
 
     const csv = Buffer.from('nama,nisn\nANI,0131000001\n');
     const wrong = await start(school, csv);
-    await upload(wrong, csv);
+    await upload(school, wrong, csv);
     await operator.post(`/api/v1/imports/${wrong.import.id}/parse`).set('X-School-Id', school).expect(200);
     await runParseJob(school, wrong.import.id);
     const notExport = await preview(school, wrong.import.id);

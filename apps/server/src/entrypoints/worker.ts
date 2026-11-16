@@ -1,5 +1,5 @@
 import { PgBoss } from 'pg-boss';
-import { academicConsumers } from '../modules/academic';
+import { academicConsumers, IMPORT_RETENTION_QUEUE, importRetentionHandler } from '../modules/academic';
 import {
   HEARTBEAT_QUEUE,
   IDEMPOTENCY_CLEANUP_QUEUE,
@@ -37,8 +37,13 @@ await boss.work(OUTBOX_RETENTION_QUEUE, async () => {
 });
 await boss.schedule(OUTBOX_RETENTION_QUEUE, '30 2 * * *', null, { tz: 'Asia/Jakarta' });
 
+const storage = createObjectStorage(config);
+await boss.createQueue(IMPORT_RETENTION_QUEUE);
+await boss.work(IMPORT_RETENTION_QUEUE, importRetentionHandler(storage, logger));
+await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jakarta' });
+
 // Outbox consumers from every module.
-const consumers: Consumer[] = [...academicConsumers(createObjectStorage(config))];
+const consumers: Consumer[] = [...academicConsumers(storage)];
 const outbox = await startOutbox(boss, consumers, logger);
 logger.info('worker started');
 
