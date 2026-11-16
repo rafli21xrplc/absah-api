@@ -68,6 +68,8 @@ import {
 } from './attendance/corrections';
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
+import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
+import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
   CreateLeaveAttachmentRequest,
   CreateLeaveAttachmentResponse,
@@ -640,6 +642,98 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [...leaveParams, idempotencyHeader],
     request: { params: LeaveRequestIdParam },
     responses: { 200: json(LeaveRequest, 'Cancelled'), ...errors(401, 403, 404, 409) },
+  });
+
+  const gateParams = [{ ...schoolHeader, required: true }];
+  const gateNote = 'Requires gate.enabled (404 CAPABILITY_DISABLED otherwise).';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/gate/kiosks/pairings`,
+    tags: ['gate'],
+    summary: 'One-time pairing code for a new kiosk (admin, operator; 10 minutes)',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    responses: { 200: json(KioskPairing, 'Code'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/gate/kiosks`,
+    tags: ['gate'],
+    summary: 'Kiosk devices with heartbeat state (admin, operator)',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    responses: { 200: json(KioskDeviceList, 'Kiosks'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/gate/kiosks/{kioskId}/revoke`,
+    tags: ['gate'],
+    summary: 'Revoke a kiosk; its token stops working at once',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: KioskIdParam },
+    responses: { 200: json(KioskDevice, 'Revoked'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/pair`,
+    tags: ['kiosk'],
+    summary: 'A kiosk claims a pairing code and receives its device token (shown once)',
+    description: 'No session. Idempotency-Key is scoped to the school named in the code.',
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: PairKioskRequest } } } },
+    responses: { 200: json(PairKioskResponse, 'Paired'), ...errors(400, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/heartbeat`,
+    tags: ['kiosk'],
+    summary: 'Every minute: queue size and app version',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: KioskHeartbeatRequest } } } },
+    responses: { 200: json(KioskHeartbeatResponse, 'Server time'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/cards/mine`,
+    tags: ['gate'],
+    summary: 'Cards the caller holds (card.holder: own card for students, children for parents)',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    responses: { 200: json(MyCards, 'Cards'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/cards/devices`,
+    tags: ['gate'],
+    summary: 'Bind this phone to a card (the previous phone stops working) and get 7 days of keys',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: BindCardDeviceRequest } } } },
+    responses: { 200: json(CardDeviceKeys, 'Device keys'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/cards/devices/{deviceId}/keys`,
+    tags: ['gate'],
+    summary: 'Fresh day keys while this phone is still the bound device',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: DeviceIdParam },
+    responses: { 200: json(CardDeviceKeys, 'Device keys'), ...errors(401, 404) },
+  });
+  registry.registerComponent('securitySchemes', 'kiosk', {
+    type: 'apiKey',
+    in: 'header',
+    name: 'Authorization',
+    description: 'Kiosk <deviceToken> from POST /kiosk/pair',
   });
 
   registry.registerComponent('securitySchemes', 'session', {
