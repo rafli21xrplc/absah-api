@@ -261,6 +261,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   of the day (unique index decides races) else duplicate. Accepted arrivals call attendance
   applyGateArrivals (source gate: daily H or T after schoolStartTime = first jam pelajaran else
   07.00; lessons H before, T during, none after); generateForSchool re-applies arrivals of the day.
+- Piket (application/arrivals.ts): POST /gate/arrivals (piket/admin/operator/wakasek; reason
+  required; today, not in the future; gate_scans method manual + recorded_by; 409 already_arrived;
+  audited gate.manual_arrival) and GET /gate/today (late arrivals, not-arrived list with approved
+  izin flagged S/I so piket does not chase them; reads leave_requests directly).
 - Load: test/kiosk-load.test.ts (900 scans, 3 kiosks, resent batches, CI) and
   load/kiosk-scans.k6.js with `gate:load-fixture --school <id>` (dev/staging only).
 

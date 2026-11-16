@@ -3482,6 +3482,159 @@
           "scans"
         ],
         "additionalProperties": false
+      },
+      "Arrival": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "className": {
+            "type": "string"
+          },
+          "arrivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/ArrivalOutcome"
+          },
+          "method": {
+            "$ref": "#/components/schemas/ScanMethod"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "name",
+          "className",
+          "arrivedAt",
+          "outcome",
+          "method",
+          "reason"
+        ]
+      },
+      "ScanMethod": {
+        "type": "string",
+        "enum": [
+          "qr",
+          "manual"
+        ]
+      },
+      "ManualArrivalRequest": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "arrivedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "GateToday": {
+        "type": "object",
+        "properties": {
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "lateAfter": {
+            "type": "string"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "students": {
+                "type": "integer"
+              },
+              "arrived": {
+                "type": "integer"
+              },
+              "late": {
+                "type": "integer"
+              },
+              "notArrived": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "students",
+              "arrived",
+              "late",
+              "notArrived"
+            ]
+          },
+          "late": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Arrival"
+            }
+          },
+          "notArrived": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                },
+                "leave": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "S",
+                    "I",
+                    null
+                  ]
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "name",
+                "className",
+                "leave"
+              ]
+            }
+          }
+        },
+        "required": [
+          "schoolDate",
+          "lateAfter",
+          "counts",
+          "late",
+          "notArrived"
+        ]
       }
     },
     "parameters": {}
@@ -8878,6 +9031,181 @@
           },
           "401": {
             "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gate/arrivals": {
+      "post": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "Piket enters an arrival without a card scan (reason required, today only)",
+        "description": "Requires gate.enabled (404 CAPABILITY_DISABLED otherwise). 409 already_arrived when the student is already in.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualArrivalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Arrival"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gate/today": {
+      "get": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "Late arrivals and students not in yet (piket, admin, operator, wakasek, kepsek)",
+        "description": "Requires gate.enabled (404 CAPABILITY_DISABLED otherwise).",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Today",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateToday"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {
