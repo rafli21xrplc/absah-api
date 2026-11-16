@@ -10,6 +10,13 @@ export const SchoolLevel = z.enum(SCHOOL_LEVELS).meta({ id: 'SchoolLevel' });
 
 export const SchoolIdHeader = z.uuid();
 
+/**
+ * Resolved capabilities of the active school, key -> bool or enum value. Keys and kinds come from
+ * the catalog in @absah/capabilities (type CapabilityValues), kept out of this package on purpose.
+ */
+export const CapabilityValue = z.union([z.boolean(), z.string()]).meta({ id: 'CapabilityValue' });
+export const CapabilityMap = z.record(z.string(), CapabilityValue).meta({ id: 'CapabilityMap' });
+
 export const MeSchool = z
   .object({
     id: z.uuid(),
@@ -37,8 +44,7 @@ export const MeContextResponse = z
       .object({
         schoolId: z.uuid(),
         roles: z.array(Role),
-        /** Filled from prompt 1.4 (capabilities). */
-        capabilities: z.record(z.string(), z.unknown()),
+        capabilities: CapabilityMap,
       })
       .nullable(),
   })

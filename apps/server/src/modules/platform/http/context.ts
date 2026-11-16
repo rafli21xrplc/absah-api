@@ -1,6 +1,7 @@
 import { SchoolIdHeader, TWO_FACTOR_REQUIRED_ROLES } from '@absah/contracts';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { RequestHandler } from 'express';
+import { loadCapabilities } from '../../../shared/capability';
 import type { RequestContext } from '../../../shared/context';
 import { ForbiddenError, TwoFactorRequiredError, UnauthenticatedError, ValidationError } from '../../../shared/errors';
 import type { Auth } from '../infrastructure/auth';
@@ -26,6 +27,7 @@ export function resolveContext(auth: Auth, options: ResolveContextOptions): Requ
     const header = req.get('x-school-id');
     let schoolId: string | null = null;
     let roles: RequestContext['roles'] = [];
+    let caps: RequestContext['caps'] = {};
 
     if (header !== undefined) {
       const parsed = SchoolIdHeader.safeParse(header);
@@ -38,6 +40,7 @@ export function resolveContext(auth: Auth, options: ResolveContextOptions): Requ
       if (!user.twoFactorEnabled && roles.some((r) => TWO_FACTOR_REQUIRED_ROLES.includes(r))) {
         throw new TwoFactorRequiredError();
       }
+      caps = await loadCapabilities({ schoolId, userId: user.id }, membership, req.log);
     } else if (options.school === 'required') {
       throw new ValidationError({ header: 'X-School-Id' }, 'Header X-School-Id wajib diisi.');
     }
@@ -55,7 +58,7 @@ export function resolveContext(auth: Auth, options: ResolveContextOptions): Requ
       memberships,
       schoolId,
       roles,
-      caps: {}, // prompt 1.4
+      caps,
     };
     next();
   };
