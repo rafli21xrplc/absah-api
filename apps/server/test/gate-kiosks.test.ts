@@ -98,6 +98,19 @@ describe('kiosk devices (GRB-02)', () => {
   });
 });
 
+describe('kiosk CORS', () => {
+  it('lets only the kiosk origin call /kiosk/* cross-origin, without cookies', async () => {
+    const pre = await kiosk().options('/api/v1/kiosk/scans').set('Origin', 'http://kios.test').set('Access-Control-Request-Method', 'POST').expect(204);
+    expect(pre.headers['access-control-allow-origin']).toBe('http://kios.test');
+    expect(pre.headers['access-control-allow-headers']).toContain('Idempotency-Key');
+    expect(pre.headers['access-control-allow-credentials']).toBeUndefined();
+    const other = await kiosk().options('/api/v1/kiosk/scans').set('Origin', 'https://jahat.test').set('Access-Control-Request-Method', 'POST');
+    expect(other.headers['access-control-allow-origin']).toBeUndefined();
+    const web = await kiosk().get('/api/v1/health').set('Origin', 'http://kios.test');
+    expect(web.headers['access-control-allow-origin']).toBeUndefined();
+  });
+});
+
 describe('cards on the holder phone (GRB-01)', () => {
   it('bind to a parent phone; only the latest phone gets keys', async () => {
     await setCap('card.holder', 'parent');
