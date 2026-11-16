@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { correctionsRouter, sessionsRouter } from './modules/attendance';
-import { gateRouter, kioskRouter } from './modules/gate';
+import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
 import { leaveRouter } from './modules/leave';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
@@ -24,9 +24,11 @@ export interface AppDeps {
   /** Web origin for links in API responses (BETTER_AUTH_URL). */
   appUrl: string;
   storage: ObjectStorage;
+  /** Kiosk app origins allowed to call /api/v1/kiosk/* (KIOSK_ORIGINS). */
+  kioskOrigins?: readonly string[];
 }
 
-export function createApp({ logger, version, auth, ipHeaders, appUrl, storage }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [] }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
@@ -47,6 +49,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage }:
       },
     }),
   );
+  app.use('/api/v1/kiosk', kioskCors(kioskOrigins));
   // Better Auth reads the raw body itself, so it is mounted before express.json().
   app.all('/api/auth/{*splat}', toNodeHandler(auth));
   // Dev/test stand-in for R2 presigned uploads; also reads the raw body, so before express.json().

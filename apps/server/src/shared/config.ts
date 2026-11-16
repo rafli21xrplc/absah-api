@@ -20,6 +20,11 @@ const ConfigSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   /** Public origin the browser uses (absah-app proxies /api/* to this server). */
   BETTER_AUTH_URL: z.url().default('http://localhost:3000'),
+  /** Origins of the kiosk app (static export, calls /api/v1/kiosk/* cross-origin), comma separated. */
+  KIOSK_ORIGINS: z
+    .string()
+    .default('http://localhost:3001')
+    .transform((v) => v.split(',').map((o) => o.trim()).filter(Boolean)),
   TRUSTED_ORIGINS: csv(),
   AUTH_RATE_LIMIT: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   /** Headers that carry the client IP for auth rate limiting. Behind Cloudflare: cf-connecting-ip. */

@@ -248,7 +248,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Kiosks (application/kiosks.ts): admin/operator POST /gate/kiosks/pairings -> code
   "<schoolId>.<secret>" (10 min, single use, shown as QR + text); the kiosk POST /kiosk/pair gets
   a device token "<schoolId>.<kioskId>.<secret>" (hash stored) and sends `Authorization: Kiosk
-  <token>`. kioskContext() authenticates and requires gate.enabled; kiosk Idempotency-Keys are
+  <token>`. The kiosk app is a static export on its own origin: /api/v1/kiosk/* allows CORS for
+  KIOSK_ORIGINS only (no cookies, kioskCors). kioskContext() authenticates and requires gate.enabled; kiosk Idempotency-Keys are
   scoped to the device (kioskIdempotencyScope; idempotent(scopeOf) takes any scope). Heartbeat
   every minute (queue size, version); online = heartbeat < 150 s. Revoke = 401 at once.
 - Cards (application/cards.ts): holder from card.holder (student: students.user_id; parent:
