@@ -80,6 +80,7 @@
           "CONFLICT",
           "CAPABILITY_DISABLED",
           "SCHEDULE_CONFLICT",
+          "SESSION_LOCKED",
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS",
           "RATE_LIMITED",
@@ -2037,6 +2038,423 @@
         },
         "required": [
           "fingerprint"
+        ],
+        "additionalProperties": false
+      },
+      "TodayResponse": {
+        "type": "object",
+        "properties": {
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionSummary"
+            }
+          }
+        },
+        "required": [
+          "schoolDate",
+          "sessions"
+        ]
+      },
+      "SessionSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SessionMode"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/SessionOwnerType"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "name"
+            ]
+          },
+          "period": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "number": {
+                "type": "integer"
+              },
+              "startsAt": {
+                "type": "string"
+              },
+              "endsAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "number",
+              "startsAt",
+              "endsAt"
+            ]
+          },
+          "subject": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "teacher": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "students": {
+                "type": "integer"
+              },
+              "filled": {
+                "type": "integer"
+              },
+              "absent": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "students",
+              "filled",
+              "absent"
+            ]
+          },
+          "canFill": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "schoolDate",
+          "mode",
+          "status",
+          "owner",
+          "period",
+          "subject",
+          "teacher",
+          "counts",
+          "canFill"
+        ]
+      },
+      "SessionMode": {
+        "type": "string",
+        "enum": [
+          "per_period",
+          "daily",
+          "activity",
+          "pkl"
+        ]
+      },
+      "SessionStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "submitted",
+          "missed",
+          "locked"
+        ]
+      },
+      "SessionOwnerType": {
+        "type": "string",
+        "enum": [
+          "class",
+          "group",
+          "activity",
+          "placement"
+        ]
+      },
+      "SessionDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SessionMode"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/SessionOwnerType"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "name"
+            ]
+          },
+          "period": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "number": {
+                "type": "integer"
+              },
+              "startsAt": {
+                "type": "string"
+              },
+              "endsAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "number",
+              "startsAt",
+              "endsAt"
+            ]
+          },
+          "subject": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "teacher": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "students": {
+                "type": "integer"
+              },
+              "filled": {
+                "type": "integer"
+              },
+              "absent": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "students",
+              "filled",
+              "absent"
+            ]
+          },
+          "canFill": {
+            "type": "boolean"
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/AttendanceStatus"
+                },
+                "source": {
+                  "$ref": "#/components/schemas/AttendanceSource"
+                },
+                "fixed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "studentId",
+                "name",
+                "className",
+                "status",
+                "source",
+                "fixed"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "schoolDate",
+          "mode",
+          "status",
+          "owner",
+          "period",
+          "subject",
+          "teacher",
+          "counts",
+          "canFill",
+          "students"
+        ]
+      },
+      "AttendanceStatus": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "H",
+          "S",
+          "I",
+          "A",
+          "T",
+          null
+        ]
+      },
+      "AttendanceSource": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "teacher",
+          "gate",
+          "leave",
+          "uks",
+          "pkl_confirm",
+          "manual",
+          null
+        ]
+      },
+      "SubmitSessionRequest": {
+        "type": "object",
+        "properties": {
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "S",
+                    "I",
+                    "A",
+                    "T"
+                  ]
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "status"
+              ]
+            },
+            "maxItems": 300
+          }
+        },
+        "required": [
+          "exceptions"
         ],
         "additionalProperties": false
       }
@@ -5499,6 +5917,278 @@
           },
           "422": {
             "description": "Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attendance/today": {
+      "get": {
+        "tags": [
+          "attendance"
+        ],
+        "summary": "Today's sessions: mine (teacher, wali kelas) or all (admin, operator, kepsek, wakasek, piket)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "default": "mine"
+            },
+            "required": false,
+            "name": "scope",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions of the school date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{sessionId}": {
+      "get": {
+        "tags": [
+          "attendance"
+        ],
+        "summary": "A session with its students and current statuses",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{sessionId}/submit": {
+      "post": {
+        "tags": [
+          "attendance"
+        ],
+        "summary": "Fill a session: everyone present except the listed exceptions",
+        "description": "Statuses from izin, UKS or an approved correction are kept. 409 SESSION_LOCKED after 23.59: request a correction instead. Emits attendance.absent_marked for students newly marked A.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Filled session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
             "content": {
               "application/json": {
                 "schema": {

@@ -58,6 +58,7 @@ import {
   ScheduleImportResult,
   UploadIdParam,
 } from './academic/schedule-import';
+import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import {
   AcceptInvitationRequest,
@@ -471,6 +472,39 @@ function buildRegistry(): OpenAPIRegistry {
     UploadIdParam,
     'Replaces every lesson of the rombel in the file. 409 stale_preview when the file or school data changed since the preview, 409 has_errors while rows have errors.',
   );
+
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/attendance/today`,
+    tags: ['attendance'],
+    summary: "Today's sessions: mine (teacher, wali kelas) or all (admin, operator, kepsek, wakasek, piket)",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: TodayQuery },
+    responses: { 200: json(TodayResponse, 'Sessions of the school date'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/sessions/{sessionId}`,
+    tags: ['attendance'],
+    summary: 'A session with its students and current statuses',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: SessionIdParam },
+    responses: { 200: json(SessionDetail, 'Session'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/sessions/{sessionId}/submit`,
+    tags: ['attendance'],
+    summary: 'Fill a session: everyone present except the listed exceptions',
+    description:
+      'Statuses from izin, UKS or an approved correction are kept. 409 SESSION_LOCKED after 23.59: request a correction instead. Emits attendance.absent_marked for students newly marked A.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SubmitSessionRequest } } } },
+    responses: { 200: json(SessionDetail, 'Filled session'), ...errors(400, 401, 403, 404, 409) },
+  });
 
   registry.registerComponent('securitySchemes', 'session', {
     type: 'apiKey',
