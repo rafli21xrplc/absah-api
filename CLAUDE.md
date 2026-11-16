@@ -139,6 +139,12 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   (hashValue). Never select NIK into list responses.
 - Enum values live in packages/contracts/src/academic/enums.ts and feed the pgEnums.
 - memberships live in schema/memberships.ts (FK to academic_years) to avoid an import cycle.
+- Student import: importers implement StudentImporter (domain/student-import.ts) and live in
+  infrastructure/importers/<source>; importerFor(source) picks one. Parsers read only the columns
+  Absah needs. Matching is pure (domain/student-matching.ts): NISN, then NIK hash, then name +
+  birth date; blanks never erase stored values; students missing from the file are "calon keluar".
+- Test files: anonymous Dapodik exports in packages/db/fixtures/dapodik (generate.ts, fake NIK
+  region 990101); import them with dapodikFixture() from '@absah/db/fixtures'. Never real data.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
