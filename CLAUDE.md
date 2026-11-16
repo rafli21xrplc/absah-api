@@ -176,6 +176,11 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   while lessons use them.
 - Learning groups (routes behind requireCap('attendance.learningGroups')): members are active
   enrollments; replacing members re-checks student clashes at the group's lesson times.
+- Template import (application/schedule-import.ts): GET /schedule/template.xlsx (sheet Jadwal:
+  Rombel | Hari | Jam ke | Mapel | Guru, prefilled + reference sheets), presigned upload under
+  schools/{id}/schedule_imports/{uploadId}, stateless preview (planScheduleImport, per-row errors,
+  fingerprint) and commit (re-plan under lock, 409 stale_preview / has_errors; replaces every
+  lesson of the rombel in the file, creates missing subjects, deletes the file).
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

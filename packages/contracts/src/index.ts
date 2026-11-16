@@ -9,3 +9,4 @@ export * from './academic/imports';
 export * from './academic/registry';
 export * from './academic/schedule';
 export * from './academic/learning-groups';
+export * from './academic/schedule-import';

@@ -6,3 +6,4 @@ export { IMPORT_RETENTION_QUEUE, importRetentionHandler, purgeStaleImports } fro
 export { registryRouter } from './http/registry';
 export { scheduleRouter } from './http/schedule';
 export { learningGroupsRouter } from './http/learning-groups';
+export { scheduleImportRouter } from './http/schedule-import';
