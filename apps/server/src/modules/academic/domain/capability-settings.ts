@@ -21,7 +21,9 @@ export type OverridePlan = Pick<OverrideRow, 'value' | 'previousValue' | 'effect
 const isDeferred = (key: CapabilityKey) => DEFERRED_CAPABILITIES.includes(key);
 
 /**
- * Plans an override change. Immediate keys change now. Deferred keys keep today's value in
+ * Plans an override change. `tomorrow` null means nothing is deferred: the school is still in its
+ * setup wizard, so no attendance session exists that a same-day switch could disturb.
+ * Immediate keys change now. Deferred keys keep today's value in
  * previous_value and switch tomorrow; asking for the value already in force today (override or
  * preset) cancels a pending change instead.
  */
@@ -31,10 +33,10 @@ export function planOverride(
   next: CapabilityValue | null,
   preset: CapabilityValue,
   today: string,
-  tomorrow: string,
+  tomorrow: string | null,
 ): OverridePlan {
   const immediate = next === null ? null : { value: next, previousValue: null, effectiveFrom: null };
-  if (!isDeferred(key)) return immediate;
+  if (!isDeferred(key) || tomorrow === null) return immediate;
   const now = overrideToday(current, today) ?? null;
   if ((next ?? preset) === (now ?? preset)) return immediate;
   return { value: next, previousValue: now, effectiveFrom: tomorrow };
@@ -49,9 +51,10 @@ export function pinsForProfileChange(
   after: CapabilityValues,
   rows: Map<string, OverrideRow>,
   today: string,
-  tomorrow: string,
+  tomorrow: string | null,
 ): Map<CapabilityKey, NonNullable<OverridePlan>> {
   const pins = new Map<CapabilityKey, NonNullable<OverridePlan>>();
+  if (tomorrow === null) return pins; // setup in progress: the new preset applies at once
   for (const key of DEFERRED_CAPABILITIES) {
     if (before[key] === after[key]) continue;
     const row = rows.get(key);

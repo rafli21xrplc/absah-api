@@ -26,10 +26,14 @@ beforeAll(async () => {
   await signIn(guru, g.email).expect(200);
 });
 
-async function newSchool(level: 'sd' | 'sma' = 'sma') {
+async function newSchool(level: 'sd' | 'sma' = 'sma', options: { setupDone?: boolean } = {}) {
   const id = await t.school(level, 'Sekolah Pengaturan');
   await t.member(id, adminId, 'admin');
   await t.member(id, guruId, 'guru');
+  // Deferral of attendance.mode only applies to schools that finished setup.
+  if (options.setupDone ?? true) {
+    await getDb().db.insert(schema.schoolSetup).values({ schoolId: id, steps: { profile: 'done', level: 'done' }, completedAt: new Date() });
+  }
   return id;
 }
 
@@ -187,6 +191,16 @@ describe('PATCH /school/profile', () => {
   });
 });
 
+describe('during the setup wizard', () => {
+  it('applies a level change to attendance.mode at once (no sessions exist yet)', async () => {
+    const school = await newSchool('sma', { setupDone: false });
+    const res = await patchProfile(school, { level: 'sd' }).expect(200);
+    expect((res.body as { capabilities: Record<string, unknown> }).capabilities['attendance.mode']).toBe('daily');
+    const put1 = await put(school, { 'attendance.mode': 'per_period' }).expect(200);
+    expect(setting(put1.body, 'attendance.mode')).toMatchObject({ effective: 'per_period', pending: null });
+  });
+});
+
 describe('school identity in PATCH /school/profile', () => {
   const digits = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join('');
 
@@ -227,7 +241,7 @@ describe('setup wizard progress', () => {
   const complete = (school: string) => admin.post('/api/v1/school/setup/complete').set('X-School-Id', school);
 
   it('starts with every step todo and the current profile', async () => {
-    const school = await newSchool('sd');
+    const school = await newSchool('sd', { setupDone: false });
     const res = await setupGet(school).expect(200);
     expect(res.body).toMatchObject({
       completedAt: null,
@@ -237,7 +251,7 @@ describe('setup wizard progress', () => {
   });
 
   it('keeps progress, refuses to skip required steps and finishes once', async () => {
-    const school = await newSchool();
+    const school = await newSchool('sma', { setupDone: false });
     await mark(school, 'profile', 'done').expect(200);
     await mark(school, 'level', 'skipped').expect(400);
     await mark(school, 'mbg', 'skipped').expect(200);
