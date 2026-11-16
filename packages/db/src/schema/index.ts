@@ -3,6 +3,7 @@ export * from './attendance';
 export * from './audit';
 export * from './auth';
 export * from './capabilities';
+export * from './gate';
 export * from './idempotency';
 export * from './imports';
 export * from './invitations';

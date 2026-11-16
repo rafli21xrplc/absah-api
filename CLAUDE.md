@@ -234,6 +234,18 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   object exists; GET /leave-requests/{id}/attachment returns a 5-minute presigned GET (inline, the
   stored content type). Portal action links (3.3) will call createLeave / cancelLeave from index.ts.
 
+## Gate (GRB, modules/gate, packages/db/src/schema/gate.ts)
+- Tables: gate_secrets (per-school card secret, encryptedText, never leaves the server), cards
+  (one per student, active_device_id = the bound phone), card_devices (bind history), kiosk_devices
+  (token hash, heartbeat fields), kiosk_pairings (one-time codes), gate_scans (append-only log of
+  every kiosk scan and piket manual entry: accepted | duplicate | rejected + reason; unique
+  (kiosk, client_event_id); one accepted arrival per student per school date). students.user_id
+  links the PWA siswa account (3.3).
+- Card tokens (@absah/contracts gate/card-token.ts, shared with kiosk and portal): A1.<card+device
+  ids>.<30 s window>.<HMAC>. schoolDayKey = HMAC(secret, date) goes to kiosks (offline checks),
+  deviceDayKey = HMAC(dayKey, deviceId) only to the bound phone, so tokens for another device id
+  cannot be made; +-2 windows of clock skew. Never change the format without a new prefix.
+
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
   presignDownload (5-minute inline GET with a fixed content type), read, remove. R2ObjectStorage in

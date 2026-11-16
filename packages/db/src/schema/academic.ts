@@ -123,6 +123,8 @@ export const students = pgTable(
     schoolId: schoolRef(),
     name: text('name').notNull(),
     nisn: text('nisn'),
+    /** The student's own account (PWA siswa, prompt 3.3); holder of the card when card.holder = student. */
+    userId: uuid('user_id').references(() => user.id, { onDelete: 'set null' }),
     nik: encryptedText('nik', 'students.nik'),
     nikHash: text('nik_hash'),
     /** Nomor induk lokal (NIPD/NIS). */
