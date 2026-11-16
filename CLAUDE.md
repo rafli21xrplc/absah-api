@@ -168,6 +168,12 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   + owner_id, day, period, subject, teacher); learning_groups + learning_group_members (enrollment).
 - DB guarantees: one slot per owner per time; a teacher once per time (unique index, teacher not
   null). Students in two slots at once (rombel + group, or two groups) are checked in the app.
+- Conflict logic is pure: findScheduleConflicts (domain/schedule-conflicts.ts) over any set of
+  slots + a studentsOf lookup; every schedule write runs under lockSchedule (per-school advisory
+  lock) and answers 409 SCHEDULE_CONFLICT with details.conflicts (ScheduleConflictDetail[]).
+- Managers: admin, operator, wakasek (canManageSchedule); readers add kepsek, wali_kelas, guru,
+  piket. Teachers must be active staff (school_member_directory). Jam pelajaran cannot be removed
+  while lessons use them.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

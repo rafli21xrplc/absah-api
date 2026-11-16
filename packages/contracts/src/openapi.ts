@@ -1,5 +1,6 @@
 // OpenAPI document built from the Zod contracts. Kept out of index.ts so web/kiosk
 // bundles that import contracts do not pull in the generator.
+import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
   SchoolCapabilitiesResponse,
@@ -19,12 +20,28 @@ import {
 } from './academic/imports';
 import {
   ClassList,
+  ClassListItem,
   EnrollmentIdParam,
   StudentList,
   StudentListItem,
   StudentListQuery,
   UpdateEnrollmentRequest,
 } from './academic/registry';
+import {
+  ClassIdParam,
+  CreateSubjectRequest,
+  PutScheduleSlotRequest,
+  ReplaceSchedulePeriodsRequest,
+  SchedulePeriodsResponse,
+  ScheduleQuery,
+  ScheduleResponse,
+  ScheduleSlot,
+  SlotIdParam,
+  Subject,
+  SubjectList,
+  TeacherList,
+  UpdateClassRequest,
+} from './academic/schedule';
 import { ErrorBody } from './common';
 import {
   AcceptInvitationRequest,
@@ -331,6 +348,57 @@ function buildRegistry(): OpenAPIRegistry {
       ...errors(400, 401, 403, 404, 409, 422),
     },
   });
+
+  const json = (schema: z.ZodType, description: string) => ({ description, content: { 'application/json': { schema } } });
+  const scheduleRead = (path: string, summary: string, response: z.ZodType, request?: { query?: z.ZodObject }) =>
+    registry.registerPath({
+      method: 'get',
+      path: `${API_BASE_PATH}${path}`,
+      tags: ['academic'],
+      summary,
+      security: [{ session: [] }],
+      parameters: [{ ...schoolHeader, required: true }],
+      ...(request ? { request } : {}),
+      responses: { 200: json(response, 'OK'), ...errors(400, 401, 403) },
+    });
+  scheduleRead('/subjects', 'Subjects of the school (staff)', SubjectList);
+  scheduleRead('/schedule/periods', 'Jam pelajaran per weekday (staff)', SchedulePeriodsResponse);
+  scheduleRead('/schedule/teachers', 'Staff who can teach or be wali kelas (schedule managers)', TeacherList);
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/schedule`,
+    tags: ['academic'],
+    summary: 'Weekly timetable of one rombel, learning group or teacher (staff)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: ScheduleQuery },
+    responses: { 200: json(ScheduleResponse, 'Timetable'), ...errors(400, 401, 403) },
+  });
+  const scheduleWrite = (method: 'post' | 'put' | 'patch' | 'delete', path: string, summary: string, response: z.ZodType | null, body?: z.ZodType, params?: z.ZodObject, description?: string) =>
+    registry.registerPath({
+      method,
+      path: `${API_BASE_PATH}${path}`,
+      tags: ['academic'],
+      summary,
+      ...(description ? { description } : {}),
+      security: [{ session: [] }],
+      parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+      request: { ...(params ? { params } : {}), ...(body ? { body: { content: { 'application/json': { schema: body } } } } : {}) },
+      responses: { ...(response ? { 200: json(response, 'Saved') } : { 204: { description: 'Deleted' } }), ...errors(400, 401, 403, 404, 409, 422) },
+    });
+  scheduleWrite('post', '/subjects', 'Add a subject (admin, operator, wakasek)', Subject, CreateSubjectRequest);
+  scheduleWrite('put', '/schedule/periods', 'Replace jam pelajaran (admin, operator, wakasek)', SchedulePeriodsResponse, ReplaceSchedulePeriodsRequest, undefined, '409 when a removed period still has lessons.');
+  scheduleWrite(
+    'put',
+    '/schedule/slots',
+    'Set the lesson of a rombel or group at a day and period (admin, operator, wakasek)',
+    ScheduleSlot,
+    PutScheduleSlotRequest,
+    undefined,
+    '409 SCHEDULE_CONFLICT with details.conflicts (ScheduleConflictDetail[]) when the teacher or any student already has a lesson then.',
+  );
+  scheduleWrite('delete', '/schedule/slots/{slotId}', 'Remove a lesson (admin, operator, wakasek)', null, undefined, SlotIdParam);
+  scheduleWrite('patch', '/classes/{classId}', 'Set the wali kelas of a rombel (admin, operator, wakasek)', ClassListItem, UpdateClassRequest, ClassIdParam);
 
   registry.registerComponent('securitySchemes', 'session', {
     type: 'apiKey',

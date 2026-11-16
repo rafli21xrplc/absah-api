@@ -57,6 +57,13 @@ export class ConflictError extends AppError {
   }
 }
 
+/** A lesson would put a teacher or a student in two places at once (AKD-05). */
+export class ScheduleConflictError extends AppError {
+  constructor(message: string, conflicts: unknown[]) {
+    super('SCHEDULE_CONFLICT', 409, message, { conflicts });
+  }
+}
+
 /** Same Idempotency-Key, different request (PLT-13). */
 export class IdempotencyKeyReusedError extends AppError {
   constructor() {
