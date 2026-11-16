@@ -21,6 +21,10 @@ export const EVENTS = {
   }),
   /** The file of a student import is uploaded; academic parses it into a preview. */
   'student_import.uploaded': z.object({ importId: z.uuid() }),
+  /** A session is still open 10 minutes after its lesson ended; notify reminds the teacher (3.2). */
+  'attendance.session_unfilled': z.object({ sessionId: z.uuid(), teacherId: z.uuid() }),
+  /** All sessions of a school date are locked and daily_attendance is final (one event per day). */
+  'attendance.session_locked': z.object({ schoolDate: z.iso.date(), sessions: z.int(), missed: z.int() }),
 } as const;
 
 export type EventType = keyof typeof EVENTS;
