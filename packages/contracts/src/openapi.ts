@@ -42,6 +42,14 @@ import {
   TeacherList,
   UpdateClassRequest,
 } from './academic/schedule';
+import {
+  CreateLearningGroupRequest,
+  GroupIdParam,
+  LearningGroup,
+  LearningGroupDetail,
+  LearningGroupList,
+  ReplaceGroupMembersRequest,
+} from './academic/learning-groups';
 import { ErrorBody } from './common';
 import {
   AcceptInvitationRequest,
@@ -399,6 +407,28 @@ function buildRegistry(): OpenAPIRegistry {
   );
   scheduleWrite('delete', '/schedule/slots/{slotId}', 'Remove a lesson (admin, operator, wakasek)', null, undefined, SlotIdParam);
   scheduleWrite('patch', '/classes/{classId}', 'Set the wali kelas of a rombel (admin, operator, wakasek)', ClassListItem, UpdateClassRequest, ClassIdParam);
+
+  scheduleRead('/learning-groups', 'Learning groups of the active year (staff; attendance.learningGroups)', LearningGroupList);
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/learning-groups/{groupId}`,
+    tags: ['academic'],
+    summary: 'A learning group with its members (staff; attendance.learningGroups)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: GroupIdParam },
+    responses: { 200: json(LearningGroupDetail, 'Group'), ...errors(400, 401, 403, 404) },
+  });
+  scheduleWrite('post', '/learning-groups', 'Create a learning group (admin, operator, wakasek)', LearningGroup, CreateLearningGroupRequest);
+  scheduleWrite(
+    'put',
+    '/learning-groups/{groupId}/members',
+    'Replace the members of a learning group (admin, operator, wakasek)',
+    LearningGroupDetail,
+    ReplaceGroupMembersRequest,
+    GroupIdParam,
+    '409 SCHEDULE_CONFLICT when a new member already has a lesson at one of the group lesson times.',
+  );
 
   registry.registerComponent('securitySchemes', 'session', {
     type: 'apiKey',
