@@ -162,6 +162,20 @@
       "when": 1794819853757,
       "tag": "0022_schedule_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794828553382,
+      "tag": "0023_attendance",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794828553942,
+      "tag": "0024_attendance_rls",
+      "breakpoints": true
     }
   ]
 }
