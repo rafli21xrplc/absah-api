@@ -54,7 +54,9 @@ beforeAll(async () => {
       .returning();
     sessionId = session?.id ?? '';
     // CITRA has an approved izin (written by the leave module in prompt 2.4).
-    await tx.insert(schema.attendanceRecords).values({ schoolId: school, sessionId, enrollmentId: students.CITRA ?? '', status: 'I', source: 'leave' });
+    const izin = { schoolId: school, sessionId, enrollmentId: students.CITRA ?? '', status: 'I' as const, source: 'leave' as const };
+    await tx.insert(schema.attendanceMarks).values(izin);
+    await tx.insert(schema.attendanceRecords).values(izin);
   });
 });
 

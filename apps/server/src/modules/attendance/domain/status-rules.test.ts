@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyWrites, computeDailyStatus, isSchoolDay, isoWeekday, shouldReplace, type SourcedStatus } from './status-rules';
+import { computeDailyStatus, isSchoolDay, isoWeekday, marksAfter, resolveMarks, teacherCanSet, type SourcedStatus } from './status-rules';
+
+const applyWrites = (writes: SourcedStatus[]) => resolveMarks(marksAfter(writes));
 
 const w = (source: SourcedStatus['source'], status: SourcedStatus['status']): SourcedStatus => ({ source, status });
 
@@ -17,9 +19,18 @@ describe('source priority (8 scenarios)', () => {
     expect(applyWrites(writes)).toEqual(expected);
   });
 
-  it('izin outranks UKS and any write lands on an empty record', () => {
-    expect(shouldReplace(w('leave', 'I'), w('uks', 'S'))).toBe(false);
-    expect(shouldReplace(null, w('gate', 'H'))).toBe(true);
+  it('izin outranks UKS; the teacher sets students nothing higher has marked', () => {
+    expect(applyWrites([w('leave', 'I'), w('uks', 'S')])).toEqual(w('leave', 'I'));
+    expect(teacherCanSet(null)).toBe(true);
+    expect(teacherCanSet(w('gate', 'T'))).toBe(true);
+    expect(teacherCanSet(w('leave', 'I'))).toBe(false);
+  });
+
+  it('a cancelled izin brings back the next source, or nothing', () => {
+    const marks = marksAfter([w('gate', 'T'), w('teacher', 'A'), w('leave', 'S')]);
+    expect(resolveMarks(marks)).toEqual(w('leave', 'S'));
+    expect(resolveMarks(marks.filter((m) => m.source !== 'leave'))).toEqual(w('teacher', 'A'));
+    expect(resolveMarks(marks.filter((m) => m.source === 'leave').filter((m) => m.source !== 'leave'))).toBeNull();
   });
 });
 

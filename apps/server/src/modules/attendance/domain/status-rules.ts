@@ -24,16 +24,22 @@ export interface SourcedStatus {
   source: AttendanceSource;
 }
 
-/** True when `incoming` should replace the stored record. */
-export function shouldReplace(existing: SourcedStatus | null | undefined, incoming: SourcedStatus): boolean {
-  if (!existing) return true;
-  return SOURCE_PRIORITY[incoming.source] >= SOURCE_PRIORITY[existing.source];
+/**
+ * The status that stands among the marks of one student in one session: the highest priority
+ * source wins. Each source holds one mark (its latest word), so removing a mark, e.g. a cancelled
+ * izin, lets the next source show again. null when no source said anything.
+ */
+export function resolveMarks<M extends SourcedStatus>(marks: readonly M[]): M | null {
+  return marks.reduce<M | null>((best, m) => (best === null || SOURCE_PRIORITY[m.source] > SOURCE_PRIORITY[best.source] ? m : best), null);
 }
 
-/** The record that stands after applying writes in order. */
-export function applyWrites(writes: SourcedStatus[]): SourcedStatus | null {
-  return writes.reduce<SourcedStatus | null>((current, w) => (shouldReplace(current, w) ? w : current), null);
+/** The marks after a sequence of writes (a source's later write replaces its earlier one). */
+export function marksAfter(writes: SourcedStatus[]): SourcedStatus[] {
+  return [...new Map(writes.map((w) => [w.source, w])).values()];
 }
+
+/** Whether a teacher write would show (nothing above the teacher has marked the student). */
+export const teacherCanSet = (current: SourcedStatus | null | undefined) => !current || SOURCE_PRIORITY[current.source] <= SOURCE_PRIORITY.teacher;
 
 const ABSENCE_ORDER: AttendanceStatus[] = ['S', 'I', 'A'];
 

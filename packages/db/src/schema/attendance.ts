@@ -79,6 +79,32 @@ export const attendanceRecords = pgTable(
   ],
 );
 
+/**
+ * Every source's word on one student in one session (one row per source). attendance_records holds
+ * the winner (resolveMarks); removing a mark, e.g. a cancelled izin, brings the next source back.
+ */
+export const attendanceMarks = pgTable(
+  'attendance_marks',
+  {
+    schoolId: schoolRef(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => attendanceSessions.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    source: attendanceSource('source').notNull(),
+    status: attendanceStatus('status').notNull(),
+    sourceRef: uuid('source_ref'),
+    recordedBy: userRef('recorded_by'),
+    recordedAt: at('recorded_at').notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.enrollmentId, t.source] }),
+    index('attendance_marks_school_id_source_ref_idx').on(t.schoolId, t.sourceRef),
+  ],
+);
+
 /** S/I/A rekap: one row per student per school date (RKP, MBG and e-Rapor read this). */
 export const dailyAttendance = pgTable(
   'daily_attendance',
