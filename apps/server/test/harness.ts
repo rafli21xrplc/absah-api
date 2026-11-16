@@ -41,7 +41,7 @@ export function buildTestApp() {
   const messageSender = new FakeMessageSender();
   const auth = createAuth({ db, config, messageSender });
   const storage = new FsObjectStorage(mkdtempSync(path.join(tmpdir(), 'absah-storage-')), TEST_ORIGIN, 'test-storage-secret');
-  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'] });
+  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' } });
 
   const created = { schools: [] as string[], users: [] as string[] };
 

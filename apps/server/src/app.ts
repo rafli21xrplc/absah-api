@@ -7,6 +7,7 @@ import type { Logger } from 'pino';
 import { correctionsRouter, sessionsRouter } from './modules/attendance';
 import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
 import { leaveRouter } from './modules/leave';
+import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
@@ -26,9 +27,11 @@ export interface AppDeps {
   storage: ObjectStorage;
   /** Kiosk app origins allowed to call /api/v1/kiosk/* (KIOSK_ORIGINS). */
   kioskOrigins?: readonly string[];
+  /** WhatsApp status webhook secrets; without them the webhook route answers 404. */
+  whatsappWebhook?: WhatsappWebhookConfig;
 }
 
-export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [] }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [], whatsappWebhook }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
@@ -54,6 +57,8 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   app.all('/api/auth/{*splat}', toNodeHandler(auth));
   // Dev/test stand-in for R2 presigned uploads; also reads the raw body, so before express.json().
   if (storage instanceof FsObjectStorage) app.use('/api/v1', fsUploadRouter(storage));
+  // Signed over the raw body, so also before express.json().
+  app.use('/api/v1/webhooks/whatsapp', whatsappWebhookRouter(whatsappWebhook));
   app.use(express.json({ limit: '1mb' }));
 
   const openapi = generateOpenApiDocument(version);
@@ -71,6 +76,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(leaveRouter(auth, storage));
   v1.use(gateRouter(auth));
   v1.use(kioskRouter());
+  v1.use(notificationsRouter(auth));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });

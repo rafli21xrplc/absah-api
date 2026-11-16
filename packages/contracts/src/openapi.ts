@@ -70,6 +70,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { NotificationOverview } from './notify/notifications';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
 import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
@@ -771,6 +772,30 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: gateParams,
     responses: { 200: json(GateToday, 'Today'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/notifications/overview`,
+    tags: ['notify'],
+    summary: "WhatsApp delivery today and failures of the last 7 days (admin, operator; numbers masked)",
+    security: [{ session: [] }],
+    parameters: [schoolHeader],
+    responses: { 200: json(NotificationOverview, 'Overview'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/webhooks/whatsapp`,
+    tags: ['notify'],
+    summary: 'Provider registration check: echoes hub.challenge when hub.verify_token matches',
+    responses: { 200: { description: 'The challenge, as text/plain' }, ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/webhooks/whatsapp`,
+    tags: ['notify'],
+    summary: 'Message status webhook (WhatsApp Cloud API format), signed with X-Hub-Signature-256',
+    description: 'Stored once per message id + status and applied by the worker; ranks make the final status right in any order.',
+    responses: { 200: { description: 'Stored' }, ...errors(401, 404) },
   });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',
