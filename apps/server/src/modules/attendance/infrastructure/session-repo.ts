@@ -11,6 +11,14 @@ export const listSchools = (tx: Tx) =>
     .orderBy(asc(schema.schools.id));
 export type JobSchool = Awaited<ReturnType<typeof listSchools>>[number];
 
+export async function findSchool(tx: Tx, id: string): Promise<JobSchool | undefined> {
+  const [row] = await tx
+    .select({ id: schema.schools.id, timezone: schema.schools.timezone, level: schema.schools.level, isMadrasah: schema.schools.isMadrasah })
+    .from(schema.schools)
+    .where(eq(schema.schools.id, id));
+  return row;
+}
+
 /** Serializes the jobs of one school day (generate and lock may overlap after a restart). */
 export async function lockAttendanceDay(tx: Tx, schoolId: string, date: string): Promise<void> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`attendance-day:${schoolId}:${date}`}, 0))`);

@@ -67,6 +67,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   built from shared/policy.ts (pure; domain/ may import it). Routes only call getActor(req).
 - Better Auth's internalAdapter.createUser drops plugin fields (phoneNumber); set them with updateUser.
 - New schools: `pnpm --filter @absah/server school:create --name ... --admin-name ... --admin-email ...`
+- Sessions now (ops, e2e): `pnpm --filter @absah/server attendance:generate --school <id> [--date YYYY-MM-DD] [--force]`
+  (--force: also on non-school days and again after a timetable change; existing sessions kept).
   (ops) creates the school and invites its first admin; the admin runs the setup wizard.
 - Invitations (POST /school/invitations, admin): staff by email (password) or WhatsApp (OTP). The
   token is "<schoolId>.<secret>" (only an HMAC stored, 7 days, single use) so preview/accept run in

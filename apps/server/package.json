@@ -11,6 +11,7 @@
     "start:http": "node dist/http.js",
     "start:worker": "node dist/worker.js",
     "school:create": "tsx src/entrypoints/create-school.ts",
+    "attendance:generate": "tsx src/entrypoints/generate-sessions.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
