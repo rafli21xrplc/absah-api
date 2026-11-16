@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { effectiveOverrides, killSwitches } from './capability';
-import { addDays, schoolDate } from './school-date';
+import { effectiveOverrides, killSwitches } from './overrides';
 
 describe('effectiveOverrides', () => {
   const row = (key: string, value: unknown, previousValue: unknown = null, effectiveFrom: string | null = null) => ({
@@ -43,18 +42,5 @@ describe('killSwitches', () => {
 
   it('ignores invalid rows', () => {
     expect(killSwitches([{ key: 'attendance.mode', value: 'weekly', schoolId: null }])).toEqual({});
-  });
-});
-
-describe('school dates', () => {
-  it('uses the school timezone', () => {
-    const lateUtc = new Date('2026-11-16T18:30:00Z'); // 01:30 on the 17th in Jakarta
-    expect(schoolDate('Asia/Jakarta', lateUtc)).toBe('2026-11-17');
-    expect(schoolDate('UTC', lateUtc)).toBe('2026-11-16');
-  });
-
-  it('adds calendar days across month and year ends', () => {
-    expect(addDays('2026-11-30', 1)).toBe('2026-12-01');
-    expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
   });
 });
