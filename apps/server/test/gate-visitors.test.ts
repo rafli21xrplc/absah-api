@@ -3,7 +3,9 @@ import { and, eq } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getDb } from '../src/shared/db';
+import { purgeVisitorPhotos } from '../src/modules/gate';
 import { schoolDate } from '../src/shared/school-date';
+import { storageKey } from '../src/shared/storage';
 import { gateSchool } from './gate-fixtures';
 import { buildTestApp, signIn, type Agent } from './harness';
 
@@ -11,7 +13,7 @@ const t = buildTestApp();
 afterAll(() => t.cleanup());
 
 type Kiosk = Awaited<ReturnType<typeof gateSchool>>;
-type Visit = { id: string; name: string; organization: string | null; host: { id: string; name: string } | null; leftAt: string | null; schoolDate: string };
+type Visit = { id: string; hasPhoto: boolean; name: string; organization: string | null; host: { id: string; name: string } | null; leftAt: string | null; schoolDate: string };
 type VisitList = { schoolDate: string; inside: number; items: Visit[] };
 
 const today = schoolDate('Asia/Jakarta');
@@ -183,5 +185,83 @@ describe('piket: list and sign out', () => {
     const res = await list(piket).expect(404);
     expect(res.body).toMatchObject({ code: 'CAPABILITY_DISABLED' });
     await getDb().db.update(schema.schoolCapabilities).set({ value: true }).where(and(eq(schema.schoolCapabilities.schoolId, school), eq(schema.schoolCapabilities.key, 'gate.visitors')));
+  });
+});
+
+describe('guest photo', () => {
+  const putPhoto = async (agent: Agent, upload: { url: string; headers: Record<string, string> }, bytes = 'JPEG!') => {
+    const url = new URL(upload.url);
+    await agent.put(url.pathname + url.search).set(upload.headers).send(Buffer.from(bytes)).expect(200);
+  };
+  const newPhoto = async () => (await kiosk.post('/kiosk/visitor-photos', { fileSize: 5, contentType: 'image/jpeg' }).expect(200)).body as { photoId: string; upload: { url: string; headers: Record<string, string> } };
+  const photoLink = (agent: Agent, id: string) => agent.get(`/api/v1/visitors/${id}/photo`).set('X-School-Id', school);
+  const photoRow = async (id: string) => {
+    const [row] = await getDb().db.select({ key: schema.visitors.photoKey, removedAt: schema.visitors.photoRemovedAt }).from(schema.visitors).where(eq(schema.visitors.id, id));
+    return row;
+  };
+
+  it('refuses a photo that was never uploaded, then keeps the uploaded one private behind a short link', async () => {
+    const photo = await newPhoto();
+    const early = await signInGuest(guest({ photoId: photo.photoId })).expect(400);
+    expect(JSON.stringify(early.body)).toContain('photoId');
+    await putPhoto(t.agent(), photo.upload);
+    const made = (await signInGuest(guest({ name: 'Tamu Berfoto', photoId: photo.photoId })).expect(200)).body as Visit;
+    expect(made.hasPhoto).toBe(true);
+
+    await photoLink(guru, made.id).expect(403);
+    const link = (await photoLink(piket, made.id).expect(200)).body as { url: string };
+    const url = new URL(link.url);
+    const file = await t.agent().get(url.pathname + url.search).expect(200);
+    expect(file.headers['content-type']).toBe('image/jpeg');
+    expect(Buffer.from(file.body as Buffer).toString()).toBe('JPEG!');
+    const views = await getDb()
+      .db.select({ id: schema.auditLogs.id })
+      .from(schema.auditLogs)
+      .where(and(eq(schema.auditLogs.schoolId, school), eq(schema.auditLogs.action, 'gate.visitor_photo_viewed'), eq(schema.auditLogs.entityId, made.id)));
+    expect(views).toHaveLength(1);
+  });
+
+  it('answers 404 for a guest without a photo, and refuses another type, a big file or an unknown photoId', async () => {
+    const plain = (await signInGuest(guest({ name: 'Tanpa Foto' })).expect(200)).body as Visit;
+    expect(plain.hasPhoto).toBe(false);
+    await photoLink(piket, plain.id).expect(404);
+    await kiosk.post('/kiosk/visitor-photos', { fileSize: 5, contentType: 'image/png' }).expect(400);
+    await kiosk.post('/kiosk/visitor-photos', { fileSize: 2 * 1024 * 1024 + 1, contentType: 'image/jpeg' }).expect(400);
+    await signInGuest(guest({ photoId: uuidv7() })).expect(400);
+    await offKiosk.post('/kiosk/visitor-photos', { fileSize: 5, contentType: 'image/jpeg' }).expect(404);
+  });
+
+  it('replays an idempotent photo request with the same upload', async () => {
+    const k = key();
+    const first = await kiosk.post('/kiosk/visitor-photos', { fileSize: 5, contentType: 'image/jpeg' }, k).expect(200);
+    const replay = await kiosk.post('/kiosk/visitor-photos', { fileSize: 5, contentType: 'image/jpeg' }, k).expect(200);
+    expect(replay.headers['idempotent-replayed']).toBe('true');
+    expect(replay.body).toEqual(first.body);
+  });
+
+  it('removes photos 30 days after the guest left, or after arrival when nobody signed them out', async () => {
+    const signed = async (name: string) => {
+      const photo = await newPhoto();
+      await putPhoto(t.agent(), photo.upload);
+      const v = (await signInGuest(guest({ name, photoId: photo.photoId })).expect(200)).body as Visit;
+      return { id: v.id, key: storageKey(school, 'visitors', photo.photoId) };
+    };
+    const left = await signed('Sudah Pulang');
+    const stayed = await signed('Lupa Absen Pulang');
+    await leave(piket, left.id).expect(200);
+
+    const day = 86_400_000;
+    await purgeVisitorPhotos(t.storage, new Date(Date.now() + 29 * day));
+    expect((await photoRow(left.id))?.removedAt).toBeNull();
+    expect(await t.storage.read(left.key)).not.toBeNull();
+
+    await purgeVisitorPhotos(t.storage, new Date(Date.now() + 31 * day));
+    for (const visit of [left, stayed]) {
+      expect((await photoRow(visit.id))?.removedAt).not.toBeNull();
+      expect(await t.storage.read(visit.key)).toBeNull();
+      await photoLink(piket, visit.id).expect(404);
+    }
+    const shown = await list(piket).expect(200);
+    expect((shown.body as VisitList).items.find((v) => v.id === left.id)?.hasPhoto).toBe(false);
   });
 });

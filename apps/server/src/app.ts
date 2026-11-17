@@ -83,8 +83,8 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(journalRouter(auth));
   v1.use(correctionsRouter(auth));
   v1.use(leaveRouter(auth, storage));
-  v1.use(gateRouter(auth));
-  v1.use(kioskRouter());
+  v1.use(gateRouter(auth, storage));
+  v1.use(kioskRouter(storage));
   v1.use(notificationsRouter(auth));
   v1.use(portalRouter(auth));
   v1.use(reportsRouter(auth));
