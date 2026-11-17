@@ -41,6 +41,8 @@ export const EVENTS = {
   'mbg.count_ready': z.object({ schoolDate: z.iso.date(), correction: z.boolean() }),
   /** An admin asked to pay an invoice; subscription opens the VA/QRIS at the gateway in the worker (BIL). */
   'payment.requested': z.object({ paymentId: z.uuid() }),
+  /** A guest signed in at the kiosk for a staff member (GRB-11); the push to them arrives with NTF-06 (5.7). */
+  'gate.visitor_arrived': z.object({ visitorId: z.uuid(), hostUserId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;

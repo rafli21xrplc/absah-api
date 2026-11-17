@@ -71,6 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { CreateVisitorRequest, Visitor, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
 import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance } from './portal/links';
@@ -805,6 +806,49 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: gateParams,
     responses: { 200: json(GateToday, 'Today'), ...errors(401, 403, 404) },
+  });
+  const visitorNote = 'Requires gate.visitors (404 CAPABILITY_DISABLED otherwise).';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/kiosk/visitor-hosts`,
+    tags: ['kiosk'],
+    summary: 'Staff a guest can pick as the person they came for (name only)',
+    description: visitorNote,
+    security: [{ kiosk: [] }],
+    responses: { 200: json(VisitorHostList, 'Hosts'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/visitors`,
+    tags: ['kiosk'],
+    summary: 'A guest signs in at the kiosk (buku tamu); the person they came for is told',
+    description: `${visitorNote} Exactly once per clientEventId: a resend returns the stored visit. Emits gate.visitor_arrived when a host is named.`,
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreateVisitorRequest } } } },
+    responses: { 200: json(Visitor, 'Visit'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/visitors`,
+    tags: ['gate'],
+    summary: "The day's guests, newest first (piket, admin, operator, wakasek, kepsek)",
+    description: visitorNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { query: VisitorsQuery },
+    responses: { 200: json(VisitorList, 'Visitors'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/visitors/{visitorId}/leave`,
+    tags: ['gate'],
+    summary: 'Piket signs a guest out; signing out again changes nothing',
+    description: visitorNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: VisitorIdParam },
+    responses: { 200: json(Visitor, 'Visit'), ...errors(401, 403, 404) },
   });
   registry.registerPath({
     method: 'get',

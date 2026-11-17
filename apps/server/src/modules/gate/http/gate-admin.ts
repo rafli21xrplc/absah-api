@@ -1,4 +1,4 @@
-import { Arrival, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
+import { Arrival, Visitor, VisitorIdParam, VisitorList, VisitorsQuery, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -10,6 +10,7 @@ import { resolveContext, type Auth } from '../../platform';
 import { gateToday, recordManualArrival } from '../application/arrivals';
 import { bindCardDevice, getDeviceKeys, getMyCards } from '../application/cards';
 import { createPairing, getKiosks, revoke } from '../application/kiosks';
+import { leaveVisitor, listVisitors } from '../application/visitors';
 
 function schoolClock(req: Request) {
   const ctx = getCtx(req);
@@ -53,6 +54,15 @@ export function gateRouter(auth: Auth): Router {
   });
   router.get('/gate/today', ...gate, async (req, res) => {
     sendContract(res, GateToday, await gateToday(getActor(req), schoolClock(req).timezone));
+  });
+
+  const visitors = [...gate, requireCap('gate.visitors')];
+  router.get('/visitors', ...visitors, async (req, res) => {
+    sendContract(res, VisitorList, await listVisitors(getActor(req), schoolClock(req).timezone, VisitorsQuery.parse(req.query)));
+  });
+  router.patch('/visitors/:visitorId/leave', ...visitors, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, Visitor, await leaveVisitor(actor, auditContext(req, actor), VisitorIdParam.parse(req.params).visitorId));
   });
 
   return router;
