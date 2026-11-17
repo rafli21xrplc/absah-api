@@ -434,6 +434,21 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   WHATSAPP_PROVIDER=fake: the guardian numbers are invented and must never receive messages.
 - Parallel run of X-1 (11-22 Jan 2027) on staging: `attendance:generate --school <id> --date 2027-01-11 --force`.
 
+## ETL from the old project-attendance app (packages/db/etl)
+- `pnpm --filter @absah/db etl:project-attendance --dump <file.sql> --school <id> --out <dir> [--apply]`.
+  Reads a local mysqldump (readDump: CREATE TABLE column order + INSERT rows, no MySQL server), maps
+  it (mapProjectAttendance, pure) and writes gagal.csv, undang-ulang.csv, siswa.csv. Dry-run unless --apply.
+- Mapping: rombel = type_class.category (grade, roman or digits) + class_room.name; stream from the name;
+  students not graduated with NISN padded back to 10 digits (bigint in the old schema), enrollment from
+  the open student_class_histories row (never before the year start); teachers -> re-invite list with
+  NIP, WhatsApp number and wali kelas of (old passwords are never read). Attendance history, payments
+  and schedules stay in the old system. Failures: tingkat_tidak_dikenal, rombel_ganda, nisn_tidak_valid,
+  nisn_ganda, rombel_tidak_ditemukan, nama_kosong.
+- applyEtl: one tenant transaction under the student import lock, into the active academic year (none ->
+  stop), rombel matched by name, students whose NISN already exists skipped, so reruns add nothing.
+- Fixture: fixtures/project-attendance/dump.sql (synthetic). The output CSVs hold personal data: write
+  them outside the repo and delete them after go-live.
+
 ## Workspace billing (BIL, modules/subscription, packages/db/src/schema/subscription.ts)
 - Pure rules in domain/invoice.ts computeInvoice(enrollments, exemptDays, month): Rp10.000 per active
   student per month, pro rata per calendar day (active days / days in month), a student counts once per
