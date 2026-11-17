@@ -15,19 +15,24 @@ const period = schema.schedulePeriods;
  */
 export function sentHomeCoverage(tx: Tx, timezone: string, filter: { uksVisitId: string } | { schoolDate: string }) {
   const inGroup = sql`exists (select 1 from learning_group_members m where m.learning_group_id = ${s.ownerId} and m.enrollment_id = ${e.id})`;
+  const inActivity = sql`exists (select 1 from activity_members m where m.activity_id = ${s.ownerId} and m.enrollment_id = ${e.id})`;
   const stillRunning = or(
     eq(s.mode, 'daily'),
+    eq(s.mode, 'activity'),
     isNull(period.endsAt),
     sql`(${u.visitedAt} at time zone ${timezone})::time < ${period.endsAt}`,
   );
-  const where: SQL[] = [eq(u.outcome, 'dipulangkan'), eq(e.status, 'active'), inArray(s.mode, ['per_period', 'daily'])];
+  const where: SQL[] = [eq(u.outcome, 'dipulangkan'), eq(e.status, 'active'), inArray(s.mode, ['per_period', 'daily', 'activity'])];
   if (stillRunning) where.push(stillRunning);
   where.push('uksVisitId' in filter ? eq(u.id, filter.uksVisitId) : eq(u.schoolDate, filter.schoolDate));
   return tx
     .select({ sessionId: s.id, enrollmentId: e.id, uksVisitId: u.id, recordedBy: u.recordedBy })
     .from(u)
     .innerJoin(e, eq(e.id, u.enrollmentId))
-    .innerJoin(s, and(eq(s.schoolDate, u.schoolDate), or(and(eq(s.ownerType, 'class'), eq(s.ownerId, e.classId)), and(eq(s.ownerType, 'group'), inGroup))))
+    .innerJoin(
+      s,
+      and(eq(s.schoolDate, u.schoolDate), or(and(eq(s.ownerType, 'class'), eq(s.ownerId, e.classId)), and(eq(s.ownerType, 'group'), inGroup), and(eq(s.ownerType, 'activity'), inActivity))),
+    )
     .leftJoin(slot, eq(slot.id, s.slotId))
     .leftJoin(period, and(eq(period.schoolId, s.schoolId), eq(period.day, slot.day), eq(period.number, slot.period)))
     .where(and(...where));

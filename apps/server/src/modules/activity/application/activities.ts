@@ -1,4 +1,4 @@
-import type { Activity, ActivityList, ActivityMemberList, CreateActivityRequest, SetActivityMembersRequest, UpdateActivityRequest } from '@absah/contracts';
+import { ATTENDANCE_STATUSES, type Activity, type ActivityList, type ActivityMemberList, type ActivityRecap, type CreateActivityRequest, type SetActivityMembersRequest, type UpdateActivityRequest } from '@absah/contracts';
 import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
@@ -6,6 +6,8 @@ import { withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors';
 import { isUniqueViolation } from '../../../shared/pg-errors';
 import type { Actor } from '../../../shared/policy';
+import { schoolDate } from '../../../shared/school-date';
+import { openActivitySession } from '../../attendance';
 import { canManageActivities, canSeeAllActivities } from '../domain/policies';
 import {
   activeEnrollmentIds,
@@ -18,7 +20,9 @@ import {
   membersOf,
   replaceCoaches,
   replaceMembers,
+  recapCounts,
   searchStudents,
+  sessionCount,
   updateActivity,
   type ActivityRow,
 } from '../infrastructure/activity-repo';
@@ -153,5 +157,38 @@ export function findStudents(actor: Actor, text: string): Promise<ActivityMember
       throw new ForbiddenError('Pencarian siswa untuk pembina kegiatan.');
     }
     return { items: await searchStudents(tx, yearId, text) };
+  });
+}
+
+/**
+ * A coach (or a manager) opens the session of a date, today by default, to take attendance with
+ * the usual session screen. Past days stay possible until they are locked; future days are not.
+ */
+export function startSession(actor: Actor, timezone: string, activityId: string, date: string | undefined): Promise<string> {
+  return withTenant(scope(actor), async (tx) => {
+    const { activity, coach } = await visible(tx, actor, activityId);
+    if (!coach && !canManageActivities.allows(actor)) throw new ForbiddenError('Sesi kegiatan dibuka oleh pembinanya.');
+    if (!activity.active) throw new ConflictError('Kegiatan ini tidak aktif.');
+    const day = date ?? schoolDate(timezone);
+    if (day > schoolDate(timezone)) throw new ValidationError([{ path: 'date', message: 'Sesi tidak bisa dibuka untuk hari yang belum tiba.' }]);
+    if ((activity.startsOn && day < activity.startsOn) || (activity.endsOn && day > activity.endsOn)) {
+      throw new ValidationError([{ path: 'date', message: 'Tanggal di luar masa kegiatan.' }]);
+    }
+    return openActivitySession(tx, actor.schoolId, activityId, day);
+  });
+}
+
+/** Rekap kegiatan (KEG-01): per member, from the activity's own sessions only. */
+export function activityRecap(actor: Actor, activityId: string, from: string, to: string): Promise<ActivityRecap> {
+  return withTenant(scope(actor), async (tx) => {
+    await visible(tx, actor, activityId);
+    const [members, rows, sessions] = await Promise.all([membersOf(tx, activityId), recapCounts(tx, activityId, from, to), sessionCount(tx, activityId, from, to)]);
+    const items = members.map((m) => {
+      const counts = Object.fromEntries(ATTENDANCE_STATUSES.map((st) => [st, 0])) as Record<(typeof ATTENDANCE_STATUSES)[number], number>;
+      for (const r of rows) if (r.enrollment_id === m.enrollmentId) counts[r.status as keyof typeof counts] += r.n;
+      const recorded = ATTENDANCE_STATUSES.reduce((n, st) => n + counts[st], 0);
+      return { ...m, counts, presentRate: recorded === 0 ? null : Math.round(((counts.H + counts.T) / recorded) * 1000) / 1000 };
+    });
+    return { from, to, sessions, items };
   });
 }

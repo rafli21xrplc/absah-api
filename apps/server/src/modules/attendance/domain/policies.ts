@@ -9,12 +9,15 @@ export interface SessionOwnership {
   teacherId: string | null;
   mode: string;
   homeroomTeacherId: string | null;
+  /** Pembina of the activity, for mode activity (KEG-01). */
+  coachIds: readonly string[];
 }
 
-/** The session's teacher, the wali kelas for a daily session, or a manager. */
+/** The session's teacher, the wali kelas for a daily session, a coach for an activity session, or a manager. */
 export function mayFillSession(actor: Actor, session: SessionOwnership): boolean {
   if (session.teacherId === actor.userId) return true;
   if (session.mode === 'daily' && session.homeroomTeacherId === actor.userId) return true;
+  if (session.mode === 'activity' && session.coachIds.includes(actor.userId)) return true;
   return canFillAny.allows(actor);
 }
 

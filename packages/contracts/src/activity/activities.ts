@@ -86,3 +86,26 @@ export type SetActivityMembersRequest = z.infer<typeof SetActivityMembersRequest
 
 /** GET /api/v1/activities/students?q=: active students of this year by name, at most 20, to add. */
 export const ActivityStudentQuery = z.object({ q: z.string().trim().min(2, 'Ketik minimal 2 huruf.').max(60) });
+
+/** POST /api/v1/activities/{activityId}/sessions: the session of a date (default today); returns it to fill. */
+export const OpenActivitySessionRequest = z.object({ date: z.iso.date().optional() }).strict().meta({ id: 'OpenActivitySessionRequest' });
+export type OpenActivitySessionRequest = z.infer<typeof OpenActivitySessionRequest>;
+
+/** GET /api/v1/activities/{activityId}/recap?from&to: separate from the rombel S/I/A rekap. */
+export const ActivityRecapQuery = z
+  .object({ from: z.iso.date(), to: z.iso.date() })
+  .refine((v) => v.from <= v.to, { message: 'Tanggal akhir tidak boleh sebelum tanggal awal.', path: ['to'] })
+  .refine((v) => (Date.parse(v.to) - Date.parse(v.from)) / 86_400_000 <= 366, { message: 'Rentang paling lama satu tahun.', path: ['to'] });
+
+const Counts = z.object({ H: z.number().int(), T: z.number().int(), S: z.number().int(), I: z.number().int(), A: z.number().int() });
+
+export const ActivityRecap = z
+  .object({
+    from: z.iso.date(),
+    to: z.iso.date(),
+    /** Activity sessions in the range (filled or not). */
+    sessions: z.number().int(),
+    items: z.array(ActivityMember.extend({ counts: Counts, presentRate: z.number().nullable() })),
+  })
+  .meta({ id: 'ActivityRecap' });
+export type ActivityRecap = z.infer<typeof ActivityRecap>;

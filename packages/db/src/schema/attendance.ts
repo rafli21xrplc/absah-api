@@ -52,6 +52,8 @@ export const attendanceSessions = pgTable(
     uniqueIndex('attendance_sessions_daily_owner_key')
       .on(t.schoolId, t.schoolDate, t.ownerType, t.ownerId)
       .where(sql`${t.mode} = 'daily'`),
+    // One session per activity per day, whether generated or opened by a coach (KEG-01).
+    uniqueIndex('attendance_sessions_activity_date_key').on(t.schoolId, t.schoolDate, t.activityId).where(sql`${t.mode} = 'activity'`),
   ],
 );
 

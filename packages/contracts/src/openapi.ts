@@ -71,7 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
-import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityStudentQuery, CreateActivityRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
+import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import {
   AddTppkCaseEventRequest,
   CreateTppkCaseRequest,
@@ -939,6 +939,8 @@ function buildRegistry(): OpenAPIRegistry {
     { method: 'patch', path: '/activities/{activityId}', summary: 'Edit an activity, its coaches or deactivate it (admin, wakasek)', request: { params: ActivityIdParam, ...activityBody(UpdateActivityRequest) }, ok: Activity, label: 'Updated', write: true },
     { method: 'get', path: '/activities/{activityId}/members', summary: 'Members of an activity', request: { params: ActivityIdParam }, ok: ActivityMemberList, label: 'Members' },
     { method: 'put', path: '/activities/{activityId}/members', summary: 'Replace the members (managers or the coaches)', request: { params: ActivityIdParam, ...activityBody(SetActivityMembersRequest) }, ok: ActivityMemberList, label: 'Members', write: true },
+    { method: 'post', path: '/activities/{activityId}/sessions', summary: 'Open (or get) the activity session of a date, default today; fill it with POST /sessions/{id}/submit', request: { params: ActivityIdParam, ...activityBody(OpenActivitySessionRequest) }, ok: SessionDetail, label: 'Session' },
+    { method: 'get', path: '/activities/{activityId}/recap', summary: 'Rekap kegiatan per member (separate from the rombel rekap)', request: { params: ActivityIdParam, query: ActivityRecapQuery }, ok: ActivityRecap, label: 'Recap' },
   ];
   for (const p of activityPaths) {
     registry.registerPath({

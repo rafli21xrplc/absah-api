@@ -6,18 +6,23 @@ const classes = schema.classes;
 const groups = schema.learningGroups;
 const slot = schema.scheduleSlots;
 const period = schema.schedulePeriods;
+const activities = schema.activities;
 
 /** Active students of a session's rombel or learning group. */
 const rosterSize = sql<number>`(case
   when ${s.ownerType} = 'class' then (select count(*) from enrollments e where e.class_id = ${s.ownerId} and e.status = 'active')
   when ${s.ownerType} = 'group' then (select count(*) from learning_group_members m join enrollments e on e.id = m.enrollment_id
     where m.learning_group_id = ${s.ownerId} and e.status = 'active')
+  when ${s.ownerType} = 'activity' then (select count(*) from activity_members m join enrollments e on e.id = m.enrollment_id
+    where m.activity_id = ${s.ownerId} and e.status = 'active')
   else 0 end)::int`;
+const coachIds = sql<string[]>`coalesce((select array_agg(ac.user_id order by ac.user_id) from activity_coaches ac where ac.activity_id = ${s.activityId}), '{}')`;
+const ownerName = sql<string>`coalesce(${classes.name}, ${groups.name}, ${activities.name}, '')`;
 
 export interface SessionFilter {
   date?: string;
   id?: string;
-  /** Sessions the user teaches, or daily sessions of the rombel the user is wali kelas of. */
+  /** Sessions the user teaches, daily sessions of the rombel the user is wali kelas of, activity sessions they coach. */
   forUser?: string;
   /** Jurnal mengajar: per-period sessions of one teacher (or all) between two school dates, inclusive. */
   journal?: { from: string; to: string; teacherId?: string };
@@ -28,7 +33,8 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
   if (filter.date) where.push(eq(s.schoolDate, filter.date));
   if (filter.id) where.push(eq(s.id, filter.id));
   if (filter.forUser) {
-    const mine = or(eq(s.teacherId, filter.forUser), and(eq(s.mode, 'daily'), eq(classes.homeroomTeacherId, filter.forUser)));
+    const coaching = sql`exists (select 1 from activity_coaches ac where ac.activity_id = ${s.activityId} and ac.user_id = ${filter.forUser}::uuid)`;
+    const mine = or(eq(s.teacherId, filter.forUser), and(eq(s.mode, 'daily'), eq(classes.homeroomTeacherId, filter.forUser)), and(eq(s.mode, 'activity'), coaching));
     if (mine) where.push(mine);
   }
   if (filter.journal) {
@@ -44,8 +50,9 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
       status: s.status,
       ownerType: s.ownerType,
       ownerId: s.ownerId,
-      ownerName: sql<string>`coalesce(${classes.name}, ${groups.name}, '')`,
+      ownerName,
       homeroomTeacherId: classes.homeroomTeacherId,
+      coachIds,
       teacherId: s.teacherId,
       teacherName: sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${s.teacherId} limit 1)`,
       lockedAt: s.lockedAt,
@@ -61,11 +68,12 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
     .from(s)
     .leftJoin(classes, and(eq(s.ownerType, 'class'), eq(classes.id, s.ownerId)))
     .leftJoin(groups, and(eq(s.ownerType, 'group'), eq(groups.id, s.ownerId)))
+    .leftJoin(activities, and(eq(s.ownerType, 'activity'), eq(activities.id, s.ownerId)))
     .leftJoin(slot, eq(slot.id, s.slotId))
     .leftJoin(period, and(eq(period.schoolId, s.schoolId), eq(period.day, slot.day), eq(period.number, slot.period)))
     .leftJoin(schema.subjects, eq(schema.subjects.id, slot.subjectId))
     .where(and(...where))
-    .orderBy(sql`${period.startsAt} nulls first`, sql`coalesce(${classes.name}, ${groups.name}, '')`, asc(s.id));
+    .orderBy(sql`${period.startsAt} nulls first`, ownerName, asc(s.id));
 }
 export type SessionRow = Awaited<ReturnType<typeof listSessions>>[number];
 
@@ -74,7 +82,7 @@ export async function lockSessionRow(tx: Tx, id: string) {
   return row;
 }
 
-/** Active students of a rombel or learning group, with their rombel name. */
+/** Active students of a rombel, learning group or activity, with their rombel name. */
 export async function roster(tx: Tx, owner: { ownerType: string; ownerId: string }) {
   const e = schema.enrollments;
   const base = tx
@@ -91,6 +99,13 @@ export async function roster(tx: Tx, owner: { ownerType: string; ownerId: string
       .innerJoin(m, eq(m.enrollmentId, e.id))
       .where(and(eq(m.learningGroupId, owner.ownerId), eq(e.status, 'active')))
       .orderBy(asc(schema.students.name));
+  }
+  if (owner.ownerType === 'activity') {
+    const m = schema.activityMembers;
+    return base
+      .innerJoin(m, eq(m.enrollmentId, e.id))
+      .where(and(eq(m.activityId, owner.ownerId), eq(e.status, 'active')))
+      .orderBy(asc(classes.name), asc(schema.students.name));
   }
   return [];
 }
