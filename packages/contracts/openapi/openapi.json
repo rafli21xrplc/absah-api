@@ -4775,6 +4775,210 @@
         ],
         "additionalProperties": false
       },
+      "InvoiceList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Invoice"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "month": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InvoiceStatus"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unitPrice": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "daysInMonth": {
+            "type": "integer",
+            "minimum": 28,
+            "maximum": 31
+          },
+          "exemptDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "studentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "billedDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "paidAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "month",
+          "status",
+          "total",
+          "unitPrice",
+          "daysInMonth",
+          "exemptDays",
+          "studentCount",
+          "billedDays",
+          "issuedAt",
+          "dueOn",
+          "paidAt"
+        ]
+      },
+      "InvoiceStatus": {
+        "type": "string",
+        "enum": [
+          "issued",
+          "paid",
+          "void"
+        ]
+      },
+      "InvoiceDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "month": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InvoiceStatus"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unitPrice": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "daysInMonth": {
+            "type": "integer",
+            "minimum": 28,
+            "maximum": 31
+          },
+          "exemptDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "studentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "billedDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "paidAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "studentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "nisn": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "days": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "amount": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "studentId",
+                "name",
+                "nisn",
+                "days",
+                "amount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "month",
+          "status",
+          "total",
+          "unitPrice",
+          "daysInMonth",
+          "exemptDays",
+          "studentCount",
+          "billedDays",
+          "issuedAt",
+          "dueOn",
+          "paidAt",
+          "lines"
+        ]
+      },
       "ActionLinkContext": {
         "type": "object",
         "properties": {
@@ -11939,6 +12143,139 @@
           },
           "422": {
             "description": "Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/invoices": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Absah's monthly invoices to the school, newest first (admin, kepsek)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/invoices/{invoiceId}": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "One invoice with a line per billed student",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "invoiceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {
