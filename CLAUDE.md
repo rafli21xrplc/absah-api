@@ -405,9 +405,18 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 ## MBG (RKP-08, modules/report, behind requireCap('mbg.enabled'))
 - mbg_settings (one row per school: cutoff_time default 08.30, pic_name, pic_phone encryptedText; the PIC
   is not an account). GET /mbg/settings (masked number; admin, operator, kepsek, wakasek), PUT (admin,
-  idempotent, audited without the number).
+  idempotent, audited without the number; picPhone left out keeps the stored number, null removes it).
 - mbg_daily_counts: per rombel per school date enrolled, present_at_cutoff (H + T; S/I/A not counted),
   unrecorded (no attendance yet), forecast_h3 (RKP-09, later), sent_at. Insert-only (no UPDATE/DELETE
   for absah_app): a correction is a new row with supersedes_id = the row it replaces; the current number
   is the row nobody supersedes. One cutoff row (supersedes_id null) per rombel and day.
 - GET /mbg/daily?date=: pending = live from daily_attendance, counted = stored rows, not_school_day.
+- Job rkp.mbg-cutoff (every 5 min, UTC cron, each school on its own clock like the PRS jobs): with
+  mbg.enabled, once the school clock passes cutoff_time and today's sessions were generated
+  (attendance_days.generated_at; holidays never count), stores one row per rombel under lockMbgDay,
+  once per date, and emits mbg.count_ready { schoolDate, correction } when a PIC number is set.
+- POST /mbg/daily/recount (admin, today only, 409 not_counted before the cutoff): rombel whose numbers
+  changed get a superseding row, audited mbg.recounted, event with correction true; unchanged = no-op.
+- notify_mbg_count sends template mbg_count / mbg_count_corrected to the PIC (no guardian, no action
+  link; queueMessages recipients without guardianId get none): total present + "1A 28, 1B 25 (3 belum
+  diisi)" on one line (template params cannot hold line breaks). Templates added in migration 0039.

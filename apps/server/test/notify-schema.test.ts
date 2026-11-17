@@ -1,3 +1,4 @@
+import { TEMPLATE_CODES } from '@absah/contracts';
 import { schema, sensitive } from '@absah/db';
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -41,7 +42,8 @@ describe('notify schema', () => {
     const templates = await withTenant({ schoolId: a, userId: null }, (tx) =>
       tx.select({ code: schema.messageTemplates.code, params: schema.messageTemplates.params }).from(schema.messageTemplates).orderBy(schema.messageTemplates.code),
     );
-    expect(templates.map((x) => x.code)).toEqual(['absent_marked', 'leave_approved', 'leave_rejected', 'login_otp']);
+    // Every template code the product sends has a row.
+    expect(templates.map((x) => x.code)).toEqual([...TEMPLATE_CODES].sort());
     await expect(
       withTenant({ schoolId: a, userId: null }, (tx) => tx.update(schema.messageTemplates).set({ approval: 'approved' }).where(eq(schema.messageTemplates.code, 'login_otp'))),
     ).rejects.toThrow();
