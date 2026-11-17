@@ -6,7 +6,7 @@ import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { correctionsRouter, journalRouter, sessionsRouter } from './modules/attendance';
 import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
-import { linksRouter, portalRouter } from './modules/portal';
+import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { activitiesRouter } from './modules/activity';
 import { tppkRouter, uksRouter } from './modules/student-affairs';
@@ -94,6 +94,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(kioskRouter(storage));
   v1.use(notificationsRouter(auth));
   v1.use(portalRouter(auth));
+  v1.use(liaisonRouter(auth));
   v1.use(reportsRouter(auth));
   v1.use(exportsRouter(auth, storage));
   v1.use(mbgRouter(auth));

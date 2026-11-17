@@ -20,6 +20,7 @@ export const CAPABILITIES = {
   'mbg.enabled': { kind: 'bool', default: false },
   'student.tppk': { kind: 'bool', default: true },
   'student.uks': { kind: 'bool', default: true },
+  'portal.liaison': { kind: 'bool', default: true },
   'data.source': { kind: 'enum', values: ['dapodik', 'emis'], default: 'dapodik' },
   'report.target': { kind: 'enum', values: ['erapor', 'rdm'], default: 'erapor' },
 } as const satisfies Record<string, CapabilityDef>;

@@ -372,6 +372,20 @@
       "when": 1794924698894,
       "tag": "0052_activity_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794925064368,
+      "tag": "0053_liaison",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794925065065,
+      "tag": "0054_liaison_rls",
+      "breakpoints": true
     }
   ]
 }

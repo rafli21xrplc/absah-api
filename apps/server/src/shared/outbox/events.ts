@@ -49,6 +49,8 @@ export const EVENTS = {
   'tppk.report_received': z.object({ reportId: z.uuid() }),
   /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */
   'tppk.members_changed': z.object({ added: z.array(z.uuid()), removed: z.array(z.uuid()) }),
+  /** A buku penghubung message was posted (ORT-07): notify tells the other side, held outside service hours. */
+  'liaison.message_posted': z.object({ messageId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;
