@@ -43,6 +43,8 @@ export const EVENTS = {
   'payment.requested': z.object({ paymentId: z.uuid() }),
   /** A guest signed in at the kiosk for a staff member (GRB-11); the push to them arrives with NTF-06 (5.7). */
   'gate.visitor_arrived': z.object({ visitorId: z.uuid(), hostUserId: z.uuid() }),
+  /** UKS sent a student home (KSW-08): attendance marks the rest of the day S (source uks), notify tells the parents. */
+  'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;

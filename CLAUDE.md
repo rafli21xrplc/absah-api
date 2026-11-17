@@ -400,6 +400,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
   the last 30 days of daily_attendance with counts.
 
+## Student affairs (KSW, modules/student-affairs, packages/db/src/schema/student-affairs.ts)
+- UKS (KSW-08, behind student.uks, role petugas_uks only: even admin does not read the notes):
+  uks_visits (enrollment, school_date, visited_at, complaint + action encryptedText, outcome
+  kembali_kelas|istirahat|dipulangkan, recorded_by) is insert-only for absah_app. GET /uks/students?q=
+  (active, name contains, max 20), POST /uks/visits (idempotent, audited uks.visit_recorded with the
+  outcome only, never the notes), GET /uks/visits?date=. Outcome dipulangkan emits uks.sent_home
+  { uksVisitId } in the same transaction; attendance (5.1c part 2) marks the rest of the day S with
+  source uks and notify (part 3) tells the parents.
+
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,
   /reports/attendance/classes?from&to (per rombel), /reports/attendance/classes/{id}?from&to (per
