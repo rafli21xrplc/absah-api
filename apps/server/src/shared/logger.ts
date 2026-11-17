@@ -57,3 +57,8 @@ export function createLogger(
 }
 
 export type { Logger };
+
+/** Request paths as logged: a TPPK tracking code is a secret of the reporter, so it never reaches a log. */
+export function maskPath(path: string): string {
+  return path.replace(/(\/tppk\/reports\/track\/)[^/]+/, '$1[code]');
+}

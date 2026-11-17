@@ -53,3 +53,61 @@ export const SetTppkMembersRequest = z
   .strict()
   .meta({ id: 'SetTppkMembersRequest' });
 export type SetTppkMembersRequest = z.infer<typeof SetTppkMembersRequest>;
+
+/** Crockford base32: no I, L, O, U, so a code read aloud or copied by hand survives. 32^10 = 2^50. */
+export const TRACKING_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const TRACKING_CODE_LENGTH = 10;
+
+/** Upper case, spaces and dashes dropped, O/I/L read as 0/1/1 (as Crockford does). */
+export function normalizeTrackingCode(raw: string): string {
+  return raw
+    .toUpperCase()
+    .replace(/[\s-]/g, '')
+    .replace(/O/g, '0')
+    .replace(/[IL]/g, '1');
+}
+export const TppkTrackingCode = z
+  .string()
+  .max(40)
+  .transform(normalizeTrackingCode)
+  .pipe(z.string().regex(/^[0-9A-HJKMNP-TV-Z]{10}$/));
+
+/** GET /api/v1/tppk/channel/{schoolId} (public): the form shows the school; 404 when closed or unknown. */
+export const TppkChannel = z.object({ schoolName: z.string() }).meta({ id: 'TppkChannel' });
+export type TppkChannel = z.infer<typeof TppkChannel>;
+
+/**
+ * POST /api/v1/tppk/reports (public, rate limited). Anonymous: no name, no contact, and the server
+ * keeps nothing that points to the reporter (not the account, not the IP).
+ */
+export const CreateTppkReportRequest = z
+  .object({
+    schoolId: z.uuid(),
+    category: TppkReportCategory,
+    chronology: z.string().trim().min(20, 'Ceritakan apa yang terjadi, minimal 20 huruf.').max(5000),
+    occurredOn: z.iso.date().optional(),
+    reporterRelation: TppkReporterRelation,
+    anonymous: z.boolean(),
+    reporterName: z.string().trim().min(2).max(100).optional(),
+    reporterContact: z.string().trim().min(5).max(100).optional(),
+  })
+  .strict()
+  .refine((v) => !v.anonymous || (v.reporterName === undefined && v.reporterContact === undefined), {
+    message: 'Laporan anonim tidak menyimpan nama atau kontak.',
+    path: ['anonymous'],
+  })
+  .meta({ id: 'CreateTppkReportRequest' });
+export type CreateTppkReportRequest = z.infer<typeof CreateTppkReportRequest>;
+
+/** Shown once: the server keeps only a keyed hash of the code. */
+export const TppkReportReceipt = z
+  .object({ trackingCode: z.string().length(TRACKING_CODE_LENGTH), status: TppkReportStatus })
+  .meta({ id: 'TppkReportReceipt' });
+export type TppkReportReceipt = z.infer<typeof TppkReportReceipt>;
+
+/** GET /api/v1/tppk/reports/track/{code}: the status and nothing else. */
+export const TppkTrackResponse = z.object({ status: TppkReportStatus }).meta({ id: 'TppkTrackResponse' });
+export type TppkTrackResponse = z.infer<typeof TppkTrackResponse>;
+
+export const TppkSchoolParam = z.object({ schoolId: z.uuid() });
+export const TppkCodeParam = z.object({ code: z.string().max(40) });

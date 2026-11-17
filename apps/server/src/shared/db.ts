@@ -1,5 +1,6 @@
 import {
   createDb,
+  withAnonymous as withAnonymousOn,
   withPlatform as withPlatformOn,
   withTenant as withTenantOn,
   withUser as withUserOn,
@@ -32,6 +33,11 @@ export function withTenant<T>(ctx: TenantContext, fn: (tx: Tx) => Promise<T>): P
 /** Cross-school lookups for one user before a school is chosen (/me/context only). */
 export function withUser<T>(userId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return withUserOn(getDb().db, userId, fn, { appRole });
+}
+
+/** No school, no user: for the public TPPK tracking lookup only (a SECURITY DEFINER function). */
+export function withAnonymous<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return withAnonymousOn(getDb().db, fn, { appRole });
 }
 
 /**

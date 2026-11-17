@@ -71,7 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
-import { SetTppkMembersRequest, TppkMemberList } from './student-affairs/tppk';
+import { CreateTppkReportRequest, SetTppkMembersRequest, TppkChannel, TppkCodeParam, TppkMemberList, TppkReportReceipt, TppkSchoolParam, TppkTrackResponse } from './student-affairs/tppk';
 import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
@@ -909,6 +909,34 @@ function buildRegistry(): OpenAPIRegistry {
     responses: { 200: json(UksVisitList, 'Visits'), ...errors(400, 401, 403, 404) },
   });
   const tppkNote = 'Behind student.tppk (404 CAPABILITY_DISABLED otherwise). Reports and cases are readable only by TPPK members (RLS), never by the admin or kepsek through their role.';
+  const tppkPublic = 'Public, no login. Rate limited per client in memory (429 RATE_LIMITED); the IP is never stored or logged.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tppk/channel/{schoolId}`,
+    tags: ['student-affairs'],
+    summary: 'The school a report form is for (public, from the QR poster)',
+    description: `${tppkPublic} 404 when the school is unknown or student.tppk is off (same answer).`,
+    request: { params: TppkSchoolParam },
+    responses: { 200: json(TppkChannel, 'Channel open'), ...errors(400, 404, 429) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/tppk/reports`,
+    tags: ['student-affairs'],
+    summary: 'File a report to the TPPK (public; anonymous allowed)',
+    description: `${tppkPublic} The tracking code is returned once; only its keyed hash is kept. A named report from a signed-in user keeps the account; an anonymous one keeps nothing about the reporter. Only TPPK members are told (tppk.report_received).`,
+    request: { body: { content: { 'application/json': { schema: CreateTppkReportRequest } } } },
+    responses: { 201: json(TppkReportReceipt, 'Received'), ...errors(400, 404, 429) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tppk/reports/track/{code}`,
+    tags: ['student-affairs'],
+    summary: 'Status of a report by its tracking code (public)',
+    description: `${tppkPublic} Unknown and malformed codes get the same 404. The code is masked in request logs.`,
+    request: { params: TppkCodeParam },
+    responses: { 200: json(TppkTrackResponse, 'Status'), ...errors(404, 429) },
+  });
   registry.registerPath({
     method: 'get',
     path: `${API_BASE_PATH}/tppk/members`,
@@ -1197,6 +1225,7 @@ const ERROR_DESCRIPTIONS: Record<number, string> = {
   404: 'Not found (NOT_FOUND); unknown, used or expired invitation',
   409: 'Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)',
   422: 'Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)',
+  429: 'Too many requests from this client (RATE_LIMITED)',
 };
 
 export function generateOpenApiDocument(version = '0.0.0') {
