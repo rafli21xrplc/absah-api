@@ -414,6 +414,20 @@
       "when": 1794926186530,
       "tag": "0058_mbg_forecasts_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794929265129,
+      "tag": "0059_pickup_guardians",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794929265848,
+      "tag": "0060_pickup_guardians_rls",
+      "breakpoints": true
     }
   ]
 }

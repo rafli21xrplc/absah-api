@@ -288,6 +288,18 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   gate.visitor_photos (02:55) removes the file and sets photo_removed_at 30 days after left_at, or after
   arrived_at when nobody signed the guest out. The R2 bucket CORS must allow PUT from KIOSK_ORIGINS; in dev/tests the filesystem stand-in
   (/api/v1/storage/fs) gets the same kioskCors middleware (GET, POST, PUT).
+- Penjemput resmi (GRB-09, behind gate.pickup; http/pickup.ts, application/pickup-guardians.ts, table
+  pickup_guardians, migrations 0059-0060): name, relation (pickup_relation enum), phone encryptedText
+  (masked in responses, never audited), photo_key (required, schools/{id}/pickup/{uuid}), valid_until,
+  status pending|approved|rejected|inactive, decided_by/at, ended_at, photo_removed_at. Who: the
+  student's parent (guardians.user_id), their wali kelas (homeroom of the active rombel) or admin;
+  anyone else 404. A parent's entry is pending, a wali kelas/admin entry approved at once; at most 6
+  pending+approved per student (409 too_many). POST /pickup-guardians/{id}/approve|reject (wali kelas,
+  admin; pending only) and /deactivate (also the parent); repeating is a no-op, other moves 409;
+  audited gate.pickup_guardian_<status>. GET /pickup-guardians?status (admin: all, others: own rombel as
+  wali kelas). Piket also reads a student's list and opens photos; GET /pickup-guardians/{id}/photo is
+  for wali kelas, piket, admin (5-minute link, audited gate.pickup_photo_viewed). Job gate.pickup_photos
+  (02:50) removes photos 30 days after ended_at.
 
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,
