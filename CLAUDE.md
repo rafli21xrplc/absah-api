@@ -427,6 +427,7 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   reads every thread incl. retracted text (audited liaison.thread_viewed) and cannot write.
 - Retract only by the sender within LIAISON_RETRACT_MINUTES (15); afterwards permanent (409).
   Each message emits liaison.message_posted.
+- GET /liaison/students?q= (2+ letters): students the user teaches this year, to start a thread.
 - notify_liaison_message: a parent's message goes to the wali kelas (view homeroom_contacts, phone
   only), a staff message to guardians WITH a portal account (guardians.user_id) and a phone; never
   the text, no action link (params.url to /penghubung or /portal/penghubung). Service hours

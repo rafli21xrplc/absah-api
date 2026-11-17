@@ -70,3 +70,10 @@ export const UpdateLiaisonSettingsRequest = LiaisonSettings.strict()
   .refine((v) => v.startsAt < v.endsAt, { message: 'Jam selesai harus setelah jam mulai.', path: ['endsAt'] })
   .meta({ id: 'UpdateLiaisonSettingsRequest' });
 export type UpdateLiaisonSettingsRequest = z.infer<typeof UpdateLiaisonSettingsRequest>;
+
+/** GET /api/v1/liaison/students?q=: students the teacher (wali kelas, guru mapel) may write about. */
+export const LiaisonStudentQuery = z.object({ q: z.string().trim().min(2, 'Ketik minimal 2 huruf.').max(100) });
+export const LiaisonStudentList = z
+  .object({ items: z.array(z.object({ id: z.uuid(), name: z.string(), className: z.string().nullable() })) })
+  .meta({ id: 'LiaisonStudentList' });
+export type LiaisonStudentList = z.infer<typeof LiaisonStudentList>;
