@@ -4606,6 +4606,174 @@
           "expiresAt"
         ]
       },
+      "MbgDaily": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "cutoffTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "counted",
+              "not_school_day"
+            ]
+          },
+          "countedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sentAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "total": {
+            "type": "object",
+            "properties": {
+              "enrolled": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "present": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unrecorded": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "enrolled",
+              "present",
+              "unrecorded"
+            ]
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrolled": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "present": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "unrecorded": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "classId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "corrected": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enrolled",
+                "present",
+                "unrecorded",
+                "classId",
+                "name",
+                "corrected"
+              ]
+            }
+          }
+        },
+        "required": [
+          "date",
+          "cutoffTime",
+          "status",
+          "countedAt",
+          "sentAt",
+          "total",
+          "classes"
+        ]
+      },
+      "MbgSettings": {
+        "type": "object",
+        "properties": {
+          "cutoffTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "picName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "picPhone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "cutoffTime",
+          "picName",
+          "picPhone",
+          "updatedAt"
+        ]
+      },
+      "UpdateMbgSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "cutoffTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "picName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "picPhone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\+628\\d{7,12}$"
+          }
+        },
+        "required": [
+          "cutoffTime",
+          "picName",
+          "picPhone"
+        ],
+        "additionalProperties": false
+      },
       "ActionLinkContext": {
         "type": "object",
         "properties": {
@@ -11406,6 +11574,273 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mbg/daily": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Jumlah hadir MBG per rombel: live before the cutoff, the stored (latest corrected) numbers after it",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MbgDaily"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mbg/settings": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "MBG cutoff time and PIC (number masked)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MbgSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Set the MBG cutoff time and PIC (admin)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMbgSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MbgSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)",
             "content": {
               "application/json": {
                 "schema": {

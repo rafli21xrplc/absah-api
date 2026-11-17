@@ -98,6 +98,7 @@ import {
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
+import { MbgDaily, MbgDailyQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
 
 export const API_BASE_PATH = '/api/v1';
@@ -908,6 +909,35 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: ExportIdParam },
     responses: { 200: json(ExportDownload, 'Download'), ...errors(401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/mbg/daily`,
+    tags: ['report'],
+    summary: 'Jumlah hadir MBG per rombel: live before the cutoff, the stored (latest corrected) numbers after it',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MbgDailyQuery },
+    responses: { 200: json(MbgDaily, 'Counts'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/mbg/settings`,
+    tags: ['report'],
+    summary: 'MBG cutoff time and PIC (number masked)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(MbgSettings, 'Settings'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/mbg/settings`,
+    tags: ['report'],
+    summary: 'Set the MBG cutoff time and PIC (admin)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: UpdateMbgSettingsRequest } } } },
+    responses: { 200: json(MbgSettings, 'Settings'), ...errors(400, 401, 403, 404, 409, 422) },
   });
   registry.registerComponent('securitySchemes', 'actionLink', {
     type: 'apiKey',
