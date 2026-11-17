@@ -24,6 +24,7 @@ export * from './gate/arrivals';
 export * from './gate/visitors';
 export * from './gate/pickup';
 export * from './activity/activities';
+export * from './activity/habits';
 export * from './student-affairs/tppk';
 export * from './student-affairs/uks';
 export * from './notify/enums';

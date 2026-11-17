@@ -20,6 +20,7 @@ import {
   mbgForecastHandler,
   reportConsumers,
 } from '../modules/report';
+import { LOCK_HABITS_CRON, LOCK_HABITS_QUEUE, lockHabitsHandler } from '../modules/activity';
 import {
   APPLY_PAYMENTS_CRON,
   APPLY_PAYMENTS_QUEUE,
@@ -94,6 +95,9 @@ await boss.schedule(MBG_CUTOFF_QUEUE, MBG_CUTOFF_CRON, null, { tz: 'UTC' });
 await boss.createQueue(MBG_FORECAST_QUEUE);
 await boss.work(MBG_FORECAST_QUEUE, mbgForecastHandler(logger));
 await boss.schedule(MBG_FORECAST_QUEUE, MBG_FORECAST_CRON, null, { tz: 'UTC' });
+await boss.createQueue(LOCK_HABITS_QUEUE);
+await boss.work(LOCK_HABITS_QUEUE, lockHabitsHandler(logger));
+await boss.schedule(LOCK_HABITS_QUEUE, LOCK_HABITS_CRON, null, { tz: 'Asia/Jakarta' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);

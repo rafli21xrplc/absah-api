@@ -449,6 +449,20 @@
       "when": 1794930168332,
       "tag": "0063_unlisted_pickup_template",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794931836305,
+      "tag": "0064_habit_entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1794931837033,
+      "tag": "0065_habit_entries_rls",
+      "breakpoints": true
     }
   ]
 }
