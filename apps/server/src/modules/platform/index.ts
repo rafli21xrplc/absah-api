@@ -4,6 +4,7 @@ export { platformRouter } from './http/me';
 export { resolveContext, type ResolveContextOptions } from './http/context';
 export { createAuth, PHONE_E164_ID, type Auth, type AuthDeps } from './infrastructure/auth';
 export { createPhoneUser, createStaffUser } from './infrastructure/users';
+export { seedPilot, type PilotSeedResult } from './application/pilot';
 export { inviteMember } from './application/invitations';
 export { createSchoolWithAdmin } from './application/create-school';
 export { HEARTBEAT_QUEUE, heartbeatHandler } from './jobs/heartbeat';
