@@ -2,8 +2,9 @@ import type { LeaveKind } from '@absah/contracts';
 import { defineConsumer, type Consumer } from '../../../shared/outbox';
 import { firstName } from '../../../shared/names';
 import type { MessageSender } from '../../../shared/messaging';
-import { dateLabel, dateRangeLabel, mbgClassesLine } from '../domain/messages';
-import { guardiansOf, leaveOf, mbgCurrentCounts, mbgPicPhone, schoolOf, sessionDate } from '../infrastructure/notify-repo';
+import { schoolMinutes } from '../../../shared/school-date';
+import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine } from '../domain/messages';
+import { guardiansOf, leaveOf, mbgCurrentCounts, mbgPicPhone, schoolOf, sentHomeVisit, sessionDate } from '../infrastructure/notify-repo';
 import { deliverConsumer } from './deliver';
 import { queueMessages } from './queue';
 
@@ -95,5 +96,29 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, deliverConsumer(deps.sender)];
+  /** KSW-08: parents hear that UKS sent their child home. First name and time only, never the complaint. */
+  const sentHome = defineConsumer({
+    name: 'notify_uks_sent_home',
+    event: 'uks.sent_home',
+    async handle(tx, event) {
+      const visit = await sentHomeVisit(tx, event.payload.uksVisitId);
+      if (!visit) return;
+      const [school, guardians] = await Promise.all([schoolOf(tx, event.schoolId), guardiansOf(tx, visit.enrollmentId)]);
+      if (!school || guardians.length === 0) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'student_sent_home',
+        enrollmentId: visit.enrollmentId,
+        recipients: guardians,
+        dedupKey: (r) => `sent_home:${event.payload.uksVisitId}:${r.guardianId}`,
+        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), time: clockLabel(schoolMinutes(school.timezone, visit.visitedAt)) },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, sentHome, deliverConsumer(deps.sender)];
 }

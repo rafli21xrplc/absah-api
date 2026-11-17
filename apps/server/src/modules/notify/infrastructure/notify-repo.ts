@@ -35,6 +35,13 @@ export async function leaveOf(tx: Tx, leaveRequestId: string) {
   return row;
 }
 
+/** A UKS visit that sent the student home; null for other outcomes (no message). */
+export async function sentHomeVisit(tx: Tx, uksVisitId: string) {
+  const u = schema.uksVisits;
+  const [row] = await tx.select({ enrollmentId: u.enrollmentId, visitedAt: u.visitedAt, outcome: u.outcome }).from(u).where(eq(u.id, uksVisitId));
+  return row?.outcome === 'dipulangkan' ? row : null;
+}
+
 /** The PIC MBG's WhatsApp number (RKP-08), if the school set one. */
 export async function mbgPicPhone(tx: Tx): Promise<string | null> {
   const [row] = await tx.select({ phone: schema.mbgSettings.picPhone }).from(schema.mbgSettings);

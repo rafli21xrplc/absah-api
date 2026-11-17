@@ -62,3 +62,8 @@ export function mbgClassesLine(rows: readonly { name: string; present: number; u
   if (rows.length === 0) return '-';
   return rows.map((r) => (r.unrecorded > 0 ? `${r.name} ${r.present} (${r.unrecorded} belum diisi)` : `${r.name} ${r.present}`)).join(', ');
 }
+
+/** Minutes since midnight on the school clock -> "10.35" (Indonesian style). */
+export function clockLabel(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}.${String(minutes % 60).padStart(2, '0')}`;
+}

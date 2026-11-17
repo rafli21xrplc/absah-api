@@ -411,8 +411,10 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   source_ref = the visit in the student's class/group sessions of that date: daily sessions always,
   lessons only while their end time is after the visit on the school clock (visited_at at time zone);
   izin and corrections still outrank it, the teacher cannot overwrite it. generateForSchool also calls
-  applyUksToDate, so sessions created later that day get the visits already recorded. Notify (part 3)
-  tells the parents.
+  applyUksToDate, so sessions created later that day get the visits already recorded. Notify consumer
+  notify_uks_sent_home (dipulangkan only) queues template student_sent_home (migration 0046, pending
+  approval) per guardian with a phone: school, first name, time on the school clock (clockLabel) and the
+  action link; dedup key sent_home:<visit>:<guardian>. Never the complaint or any note.
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,
