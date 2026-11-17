@@ -25,3 +25,4 @@ export * from './notify/notifications';
 export * from './portal/links';
 export * from './academic/contacts';
 export * from './report/recap';
+export * from './report/exports';
