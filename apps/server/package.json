@@ -13,6 +13,7 @@
     "school:create": "tsx src/entrypoints/create-school.ts",
     "attendance:generate": "tsx src/entrypoints/generate-sessions.ts",
     "billing:exempt": "tsx src/entrypoints/billing-exempt.ts",
+    "billing:issue": "tsx src/entrypoints/billing-issue.ts",
     "gate:load-fixture": "tsx src/entrypoints/gate-load-fixture.ts",
     "notify:last-link": "tsx src/entrypoints/notify-last-link.ts",
     "lint": "eslint .",

@@ -439,6 +439,7 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - GET /billing/invoices, GET /billing/invoices/{id} (lines with student name/NISN): admin and kepsek.
 - Ops: `pnpm --filter @absah/server billing:exempt --school <id> --from --to [--name] [--remove]`
   (owner role) marks a long year-end break as exempt holidays; short breaks stay billed.
+  `billing:issue --school <id> --month YYYY-MM` issues one month now (idempotent; ops, e2e).
 - Payments (shared/payments PaymentProvider; PAYMENT_PROVIDER none|fake, fake refused in production,
   PAYMENT_WEBHOOK_SECRET required with a gateway; a real gateway adapter comes with its sandbox account):
   POST /billing/invoices/{id}/payments { method va|qris } (admin, idempotent, 202, audited; reuses an
