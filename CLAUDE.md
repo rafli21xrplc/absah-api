@@ -423,7 +423,9 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Card: gate.linkCardKeys keeps the link's own device (holder parent, user_id null); a card active
   on another phone answers 409 bound_elsewhere unless `replace`.
 - Context shows the first name only (links get forwarded); no reason, no phone, no full name.
-- e2e reads a link with the dev CLI `notify:last-link --school <id>` (refuses production).
+- e2e reads a link with the dev CLI `notify:last-link --school <id>` (refuses production) and a login
+  code with `auth:last-otp --phone <E.164>` (platform lastPhoneOtp reads Better Auth's verification
+  row through withPlatform; refuses production).
 
 ## Portal logins and contacts (ORT-02)
 - PUT /students/{id}/contacts (admin, operator, the student's wali kelas; others 404): guardian
