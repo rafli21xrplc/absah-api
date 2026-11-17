@@ -124,7 +124,7 @@ import {
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
-import { MbgDaily, MbgDailyQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
+import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
 import { CreatePaymentRequest, Payment, PaymentList } from './billing/payments';
 import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
@@ -1196,6 +1196,16 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: MbgDailyQuery },
     responses: { 200: json(MbgDaily, 'Counts'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/mbg/forecast`,
+    tags: ['report'],
+    summary: 'Prakiraan MBG H-3 (RKP-09): stored at 13.00 three days before; default date is three days from today',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MbgForecastQuery },
+    responses: { 200: json(MbgForecast, 'Forecast'), ...errors(400, 401, 403, 404) },
   });
   registry.registerPath({
     method: 'post',

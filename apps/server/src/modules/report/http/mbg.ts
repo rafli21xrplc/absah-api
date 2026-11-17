@@ -1,4 +1,4 @@
-import { MbgDaily, MbgDailyQuery, MbgSettings, UpdateMbgSettingsRequest } from '@absah/contracts';
+import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from '@absah/contracts';
 import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -8,6 +8,7 @@ import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
 import { getMbgSettings, mbgDaily, updateMbgSettings } from '../application/mbg';
 import { recountMbg } from '../application/mbg-cutoff';
+import { mbgForecast } from '../application/mbg-forecast';
 
 /** Jumlah hadir MBG (RKP-08), only for schools that receive MBG (mbg.enabled). */
 export function mbgRouter(auth: Auth): Router {
@@ -22,6 +23,10 @@ export function mbgRouter(auth: Auth): Router {
   router.post('/mbg/daily/recount', ...school, idempotent(), async (req, res) => {
     const actor = getActor(req);
     sendContract(res, MbgDaily, await recountMbg(actor, auditContext(req, actor)));
+  });
+
+  router.get('/mbg/forecast', ...school, async (req, res) => {
+    sendContract(res, MbgForecast, await mbgForecast(getActor(req), MbgForecastQuery.parse(req.query).date));
   });
 
   router.get('/mbg/settings', ...school, async (req, res) => {

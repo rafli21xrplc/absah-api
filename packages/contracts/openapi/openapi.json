@@ -5465,6 +5465,7 @@
           "mbg_count",
           "mbg_count_corrected",
           "liaison_message",
+          "mbg_forecast",
           "student_sent_home",
           "tppk_report_received",
           "tppk_team_changed"
@@ -6432,6 +6433,82 @@
           "cutoffTime",
           "status",
           "countedAt",
+          "sentAt",
+          "total",
+          "classes"
+        ]
+      },
+      "MbgForecast": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "computed",
+              "pending"
+            ]
+          },
+          "computedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sentAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "classId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "enrolled": {
+                  "type": "integer"
+                },
+                "onLeave": {
+                  "type": "integer"
+                },
+                "offCampus": {
+                  "type": "integer"
+                },
+                "forecast": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "classId",
+                "name",
+                "enrolled",
+                "onLeave",
+                "offCampus",
+                "forecast"
+              ]
+            }
+          }
+        },
+        "required": [
+          "date",
+          "status",
+          "computedAt",
           "sentAt",
           "total",
           "classes"
@@ -17252,6 +17329,92 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MbgDaily"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mbg/forecast": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Prakiraan MBG H-3 (RKP-09): stored at 13.00 three days before; default date is three days from today",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forecast",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MbgForecast"
                 }
               }
             }

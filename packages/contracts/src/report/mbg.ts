@@ -69,3 +69,21 @@ export type MbgDaily = z.infer<typeof MbgDaily>;
 
 export const MbgDailyQuery = z.object({ date: z.iso.date().optional() }).meta({ id: 'MbgDailyQuery' });
 export type MbgDailyQuery = z.infer<typeof MbgDailyQuery>;
+
+/** GET /api/v1/mbg/forecast?date: prakiraan H-3 (RKP-09); default the date three days from today. */
+export const MbgForecastQuery = z.object({ date: z.iso.date().optional() }).meta({ id: 'MbgForecastQuery' });
+
+export const MbgForecast = z
+  .object({
+    date: z.iso.date(),
+    /** computed: stored at 13.00 three days before; pending: not computed (yet, or not a school day). */
+    status: z.enum(['computed', 'pending']),
+    computedAt: z.iso.datetime({ offset: true }).nullable(),
+    sentAt: z.iso.datetime({ offset: true }).nullable(),
+    total: z.number().int(),
+    classes: z.array(
+      z.object({ classId: z.uuid(), name: z.string(), enrolled: z.number().int(), onLeave: z.number().int(), offCampus: z.number().int(), forecast: z.number().int() }),
+    ),
+  })
+  .meta({ id: 'MbgForecast' });
+export type MbgForecast = z.infer<typeof MbgForecast>;

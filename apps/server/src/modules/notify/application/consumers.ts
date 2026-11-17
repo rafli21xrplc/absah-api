@@ -11,6 +11,7 @@ import {
   liaisonNotice,
   liaisonWindow,
   mbgCurrentCounts,
+  mbgForecastRows,
   mbgPicPhone,
   portalGuardians,
   schoolOf,
@@ -105,6 +106,34 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
         recipients: [{ phone }],
         dedupKey: () => `mbg:${schoolDate}:${event.id}`,
         params: { school: school.name, date: dateLabel(schoolDate), total: String(rows.reduce((n, r) => n + r.present, 0)), classes: mbgClassesLine(rows) },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  /** RKP-09: the PIC MBG gets the H-3 forecast at 13.00, total and per rombel. */
+  const mbgForecast = defineConsumer({
+    name: 'notify_mbg_forecast',
+    event: 'mbg.forecast_ready',
+    async handle(tx, event) {
+      const { schoolDate } = event.payload;
+      const [school, phone, rows] = await Promise.all([schoolOf(tx, event.schoolId), mbgPicPhone(tx), mbgForecastRows(tx, schoolDate)]);
+      if (!school || !phone || rows.length === 0) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'mbg_forecast',
+        enrollmentId: null,
+        recipients: [{ phone }],
+        dedupKey: () => `mbg_forecast:${schoolDate}`,
+        params: {
+          school: school.name,
+          date: dateLabel(schoolDate),
+          total: String(rows.reduce((n, r) => n + r.forecast, 0)),
+          classes: rows.map((r) => `${r.name} ${r.forecast}`).join(', '),
+        },
         appUrl: deps.appUrl,
         now: deps.now?.(),
       });
@@ -233,5 +262,5 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, sentHome, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
 }
