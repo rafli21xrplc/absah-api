@@ -5069,6 +5069,253 @@
           "items"
         ]
       },
+      "HabitJournal": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "student"
+            ]
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "editableFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HabitDay"
+            }
+          }
+        },
+        "required": [
+          "studentId",
+          "name",
+          "mode",
+          "canEdit",
+          "editableFrom",
+          "days"
+        ]
+      },
+      "HabitDay": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "habits": {
+            "type": "object",
+            "properties": {
+              "bangun_pagi": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "beribadah": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "berolahraga": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "makan_sehat": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "gemar_belajar": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "bermasyarakat": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "tidur_cepat": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "bangun_pagi",
+              "beribadah",
+              "berolahraga",
+              "makan_sehat",
+              "gemar_belajar",
+              "bermasyarakat",
+              "tidur_cepat"
+            ]
+          },
+          "filledBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "orang_tua",
+              "siswa",
+              null
+            ]
+          },
+          "locked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "habits",
+          "filledBy",
+          "locked"
+        ]
+      },
+      "PutHabitsRequest": {
+        "type": "object",
+        "properties": {
+          "habits": {
+            "type": "object",
+            "properties": {
+              "bangun_pagi": {
+                "type": "boolean"
+              },
+              "beribadah": {
+                "type": "boolean"
+              },
+              "berolahraga": {
+                "type": "boolean"
+              },
+              "makan_sehat": {
+                "type": "boolean"
+              },
+              "gemar_belajar": {
+                "type": "boolean"
+              },
+              "bermasyarakat": {
+                "type": "boolean"
+              },
+              "tidur_cepat": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "habits"
+        ],
+        "additionalProperties": false
+      },
+      "ClassHabitWeek": {
+        "type": "object",
+        "properties": {
+          "classId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "className": {
+            "type": "string"
+          },
+          "weekStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "weekEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "daysFilled": {
+                  "type": "integer"
+                },
+                "counts": {
+                  "type": "object",
+                  "properties": {
+                    "bangun_pagi": {
+                      "type": "integer"
+                    },
+                    "beribadah": {
+                      "type": "integer"
+                    },
+                    "berolahraga": {
+                      "type": "integer"
+                    },
+                    "makan_sehat": {
+                      "type": "integer"
+                    },
+                    "gemar_belajar": {
+                      "type": "integer"
+                    },
+                    "bermasyarakat": {
+                      "type": "integer"
+                    },
+                    "tidur_cepat": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "bangun_pagi",
+                    "beribadah",
+                    "berolahraga",
+                    "makan_sehat",
+                    "gemar_belajar",
+                    "bermasyarakat",
+                    "tidur_cepat"
+                  ]
+                }
+              },
+              "required": [
+                "studentId",
+                "name",
+                "daysFilled",
+                "counts"
+              ]
+            }
+          }
+        },
+        "required": [
+          "classId",
+          "className",
+          "weekStart",
+          "weekEnd",
+          "students"
+        ]
+      },
       "LiaisonThreadList": {
         "type": "object",
         "properties": {
@@ -16157,6 +16404,302 @@
           },
           "403": {
             "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/habits/{studentId}": {
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "The journal of a student, one entry per day (default the last 7, at most 31), newest first",
+        "description": "Jurnal 7 KAIH (KEG-02): requires habits.kaih parent or student (404 CAPABILITY_DISABLED when off). Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek; others 404.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "studentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Journal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HabitJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/habits/{studentId}/{date}": {
+      "put": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Tick habits of a day: the parent in mode parent, the student in mode student (409 not_filler otherwise)",
+        "description": "Jurnal 7 KAIH (KEG-02): requires habits.kaih parent or student (404 CAPABILITY_DISABLED when off). Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek; others 404. Today and the 2 days before only; older dates are locked (409 locked; job keg.lock-habits 00.30). Habits not sent stay as they are.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "studentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "date",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutHabitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Day",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HabitDay"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classes/{classId}/habits": {
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Weekly summary per student of a rombel (its wali kelas and the school leaders)",
+        "description": "Jurnal 7 KAIH (KEG-02): requires habits.kaih parent or student (404 CAPABILITY_DISABLED when off). Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek; others 404.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "classId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "weekStart",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Week",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassHabitWeek"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
             "content": {
               "application/json": {
                 "schema": {

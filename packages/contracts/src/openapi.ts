@@ -73,6 +73,7 @@ import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from '.
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
 import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStudentParam, LiaisonStudentQuery, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
+import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
 import {
   AddTppkCaseEventRequest,
   CreateTppkCaseRequest,
@@ -1100,6 +1101,32 @@ function buildRegistry(): OpenAPIRegistry {
       parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
       ...(p.request ? { request: p.request } : {}),
       responses: { 200: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
+  const habitNote = 'Jurnal 7 KAIH (KEG-02): requires habits.kaih parent or student (404 CAPABILITY_DISABLED when off). Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek; others 404.';
+  for (const p of [
+    { method: 'get' as const, path: '/habits/{studentId}', summary: 'The journal of a student, one entry per day (default the last 7, at most 31), newest first', request: { params: StudentIdParam, query: HabitRangeQuery }, ok: HabitJournal, label: 'Journal' },
+    {
+      method: 'put' as const,
+      path: '/habits/{studentId}/{date}',
+      summary: 'Tick habits of a day: the parent in mode parent, the student in mode student (409 not_filler otherwise)',
+      request: { params: HabitParams, body: { content: { 'application/json': { schema: PutHabitsRequest } } } },
+      ok: HabitDay,
+      label: 'Day',
+      write: true,
+    },
+    { method: 'get' as const, path: '/classes/{classId}/habits', summary: 'Weekly summary per student of a rombel (its wali kelas and the school leaders)', request: { params: ClassHabitsParams, query: ClassHabitsQuery }, ok: ClassHabitWeek, label: 'Week' },
+  ]) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['activity'],
+      summary: p.summary,
+      description: 'write' in p ? `${habitNote} Today and the 2 days before only; older dates are locked (409 locked; job keg.lock-habits 00.30). Habits not sent stay as they are.` : habitNote,
+      security: [{ session: [] }],
+      parameters: 'write' in p ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      request: p.request,
+      responses: { 200: json(p.ok, p.label), ...errors(...('write' in p ? [400, 401, 404, 409] : [400, 401, 404])) },
     });
   }
   const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';

@@ -1,4 +1,4 @@
-import { ACTIVITY_KINDS, ACTIVITY_LOCATIONS } from '@absah/contracts';
+import { ACTIVITY_KINDS, ACTIVITY_LOCATIONS, KAIH_HABITS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { boolean, check, date, index, pgEnum, pgTable, primaryKey, smallint, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { academicYears, enrollments } from './academic';
@@ -8,6 +8,7 @@ import { schools } from './platform';
 
 export const activityKind = pgEnum('activity_kind', ACTIVITY_KINDS);
 export const activityLocation = pgEnum('activity_location', ACTIVITY_LOCATIONS);
+export const habitCode = pgEnum('habit_code', KAIH_HABITS);
 
 const schoolRef = () => schoolId().references(() => schools.id, { onDelete: 'cascade' });
 
@@ -71,4 +72,33 @@ export const activityMembers = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.activityId, t.enrollmentId] }), index('activity_members_school_id_enrollment_id_idx').on(t.schoolId, t.enrollmentId)],
+);
+
+/**
+ * Jurnal 7 KAIH (KEG-02): one row per enrollment, date and habit. filled_by_role says who ticked
+ * (orang_tua or siswa, by habits.kaih). locked_at is set by keg.lock-habits once the date is more
+ * than HABIT_EDIT_DAYS back; the API refuses such dates anyway.
+ */
+export const habitEntries = pgTable(
+  'habit_entries',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    schoolDate: date('school_date').notNull(),
+    habit: habitCode('habit').notNull(),
+    value: boolean('value').notNull(),
+    filledBy: uuid('filled_by').references(() => user.id, { onDelete: 'set null' }),
+    filledByRole: text('filled_by_role').notNull(),
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('habit_entries_enrollment_id_school_date_habit_key').on(t.enrollmentId, t.schoolDate, t.habit),
+    index('habit_entries_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
+    check('habit_entries_filled_by_role_check', sql`${t.filledByRole} in ('orang_tua', 'siswa')`),
+  ],
 );

@@ -457,6 +457,18 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   /sessions/{id}/submit (mayFillSession: coachIds). Izin and UKS marks cover them; recomputeDaily and
   the rombel rekap skip them, and an alpa there emits no attendance.absent_marked (changeMarks).
   GET /activities/{id}/recap?from&to counts per member from these sessions only.
+- Jurnal 7 KAIH (KEG-02; http/habits.ts, application/habits.ts, table habit_entries, migrations
+  0064-0065): behind habits.kaih parent|student (custom kaihOn guard; 'off' is 404). One row per
+  (enrollment, date, habit enum habit_code) with value boolean, filled_by, filled_by_role
+  orang_tua|siswa, locked_at. PUT /habits/{studentId}/{date} { habits: partial map }: mode parent ->
+  only the student's parent (guardians.user_id), mode student -> only the student (students.user_id);
+  anyone else who may read gets 409 not_filler. Dates: today and HABIT_EDIT_DAYS (2) back; future 400,
+  older or a locked row 409 locked; upsert never touches a locked row. GET /habits/{studentId}?from&to
+  (default 7 days, max 31; readers: student, parents, wali kelas, admin/operator/wakasek/kepsek; others
+  404). GET /classes/{classId}/habits?weekStart (Monday of that week): daysFilled and ticks per habit
+  per active student (wali kelas of the rombel or the leaders). Job keg.lock-habits (00.30 WIB) sets
+  locked_at on entries older than 2 days in each school's own date. Every calendar day counts
+  (weekends and holidays too).
 
 ## Buku penghubung (ORT-07, modules/portal, packages/db/src/schema/portal.ts)
 - communication_threads (one per student, all years), communication_messages (body encrypted,
