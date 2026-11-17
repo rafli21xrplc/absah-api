@@ -22,6 +22,7 @@ export * from './gate/cards';
 export * from './gate/scans';
 export * from './gate/arrivals';
 export * from './gate/visitors';
+export * from './student-affairs/tppk';
 export * from './student-affairs/uks';
 export * from './notify/enums';
 export * from './notify/notifications';

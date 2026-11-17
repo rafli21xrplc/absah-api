@@ -5,6 +5,7 @@ export * from './auth';
 export * from './capabilities';
 export * from './gate';
 export * from './student-affairs';
+export * from './tppk';
 export * from './idempotency';
 export * from './imports';
 export * from './invitations';

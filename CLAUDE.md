@@ -416,6 +416,17 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   notify_uks_sent_home (dipulangkan only) queues template student_sent_home (migration 0046, pending
   approval) per guardian with a phone: school, first name, time on the school clock (clockLabel) and the
   action link; dedup key sent_home:<visit>:<guardian>. Never the complaint or any note.
+- TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
+  "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
+  'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,
+  kepsek, jobs (user null) and support read 0 rows. Reports: INSERT allowed to any context, WITHOUT
+  RETURNING (the reporter cannot read it back; non-member UPDATE touches 0 rows). case_events are
+  insert-only; nothing is deletable by absah_app. tppk.report_status(code_hash) is SECURITY DEFINER and
+  returns only the status for the tracking page. GET /tppk/members (any staff), PUT /tppk/members (admin,
+  replaces the team, members must be active staff, belowMinimum under TPPK_MIN_MEMBERS = 3, audited,
+  emits tppk.members_changed {added, removed} so the team sees every change).
+  Pitfall: in sql`(select ... from school_member_directory d where d.user_id = ${col})` a column
+  named user_id renders bare and binds to the view's own column; qualify it by hand.
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,

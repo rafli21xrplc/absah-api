@@ -71,6 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { SetTppkMembersRequest, TppkMemberList } from './student-affairs/tppk';
 import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
@@ -906,6 +907,28 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: UksVisitsQuery },
     responses: { 200: json(UksVisitList, 'Visits'), ...errors(400, 401, 403, 404) },
+  });
+  const tppkNote = 'Behind student.tppk (404 CAPABILITY_DISABLED otherwise). Reports and cases are readable only by TPPK members (RLS), never by the admin or kepsek through their role.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tppk/members`,
+    tags: ['student-affairs'],
+    summary: 'The TPPK team of the school (any staff member)',
+    description: `${tppkNote} belowMinimum is true with fewer than 3 members.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(TppkMemberList, 'Team'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/tppk/members`,
+    tags: ['student-affairs'],
+    summary: 'Replace the TPPK team (admin)',
+    description: `${tppkNote} Members must be active staff. Audited as tppk.members_changed and the whole team is told.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: SetTppkMembersRequest } } } },
+    responses: { 200: json(TppkMemberList, 'Team'), ...errors(400, 401, 403, 404) },
   });
   registry.registerPath({
     method: 'get',
