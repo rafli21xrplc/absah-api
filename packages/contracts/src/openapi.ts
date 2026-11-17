@@ -921,6 +921,15 @@ function buildRegistry(): OpenAPIRegistry {
     responses: { 200: json(MbgDaily, 'Counts'), ...errors(400, 401, 403, 404) },
   });
   registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/mbg/daily/recount`,
+    tags: ['report'],
+    summary: "Correct today's MBG numbers after the cutoff (admin): changed rombel get a new row, the PIC a correction",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    responses: { 200: json(MbgDaily, 'Counts'), ...errors(401, 403, 404, 409, 422) },
+  });
+  registry.registerPath({
     method: 'get',
     path: `${API_BASE_PATH}/mbg/settings`,
     tags: ['report'],

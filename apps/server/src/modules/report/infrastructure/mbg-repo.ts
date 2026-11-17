@@ -78,3 +78,22 @@ export function cutoffRows(tx: Tx, date: string) {
     .orderBy(asc(m.createdAt))
     .limit(1);
 }
+
+/** Every school with its clock and level (capabilities are resolved per school in the job). */
+export const mbgJobSchools = (tx: Tx) =>
+  tx
+    .select({ id: schema.schools.id, timezone: schema.schools.timezone, level: schema.schools.level, isMadrasah: schema.schools.isMadrasah })
+    .from(schema.schools)
+    .orderBy(asc(schema.schools.id));
+export type MbgJobSchool = Awaited<ReturnType<typeof mbgJobSchools>>[number];
+
+/** Serializes the cutoff job and corrections of one school date. */
+export async function lockMbgDay(tx: Tx, schoolId: string, date: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`mbg-day:${schoolId}:${date}`}, 0))`);
+}
+
+export type NewMbgCount = typeof m.$inferInsert;
+
+export async function insertCounts(tx: Tx, rows: NewMbgCount[]): Promise<void> {
+  if (rows.length) await tx.insert(m).values(rows);
+}

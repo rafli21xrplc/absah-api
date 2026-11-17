@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateLabel, dateRangeLabel, maskPhone, orderedParams, releaseTime, renderTemplate } from './messages';
+import { dateLabel, dateRangeLabel, maskPhone, mbgClassesLine, orderedParams, releaseTime, renderTemplate } from './messages';
 
 describe('notify messages', () => {
   it('renders and orders parameters, refusing gaps', () => {
@@ -25,5 +25,17 @@ describe('notify messages', () => {
 
   it('masks phone numbers', () => {
     expect(maskPhone('+6281234567890')).toBe('+62812****7890');
+  });
+});
+
+describe('mbgClassesLine', () => {
+  it('lists every rombel on one line and flags unfilled ones', () => {
+    expect(
+      mbgClassesLine([
+        { name: 'VII A', present: 28, unrecorded: 0 },
+        { name: 'VII B', present: 25, unrecorded: 3 },
+      ]),
+    ).toBe('VII A 28, VII B 25 (3 belum diisi)');
+    expect(mbgClassesLine([])).toBe('-');
   });
 });
