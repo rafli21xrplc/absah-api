@@ -406,8 +406,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   kembali_kelas|istirahat|dipulangkan, recorded_by) is insert-only for absah_app. GET /uks/students?q=
   (active, name contains, max 20), POST /uks/visits (idempotent, audited uks.visit_recorded with the
   outcome only, never the notes), GET /uks/visits?date=. Outcome dipulangkan emits uks.sent_home
-  { uksVisitId } in the same transaction; attendance (5.1c part 2) marks the rest of the day S with
-  source uks and notify (part 3) tells the parents.
+  { uksVisitId } in the same transaction. Attendance consumer attendance_apply_uks_sent_home
+  (application/uks-marks.ts, syncUksMarks) re-reads the visit and writes S with source uks and
+  source_ref = the visit in the student's class/group sessions of that date: daily sessions always,
+  lessons only while their end time is after the visit on the school clock (visited_at at time zone);
+  izin and corrections still outrank it, the teacher cannot overwrite it. generateForSchool also calls
+  applyUksToDate, so sessions created later that day get the visits already recorded. Notify (part 3)
+  tells the parents.
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,
