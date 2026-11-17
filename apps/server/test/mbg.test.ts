@@ -115,6 +115,11 @@ describe('settings', () => {
     expect(JSON.stringify(audits[0])).not.toContain(phone.slice(-8));
   });
 
+  it('keeps the stored number when picPhone is left out', async () => {
+    const res = await put(admin, { cutoffTime: '07:45', picName: 'Bu Sari' }).expect(200);
+    expect(bodyOf<MbgSettings>(res).picPhone).toMatch(/^\+628\d{2}\*{4}\d{4}$/);
+  });
+
   it('rejects a bad time or number', async () => {
     await put(admin, { cutoffTime: '25:00', picName: null, picPhone: null }).expect(400);
     await put(admin, { cutoffTime: '08:30', picName: 'X', picPhone: '08123' }).expect(400);
