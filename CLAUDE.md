@@ -439,6 +439,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   logged (report 5/h, track 30/10 min, channel 60/h). Cloudflare rules on /api/v1/tppk/* stay the first
   line. maskPath (shared/logger.ts) replaces the code in logged request paths; test/tppk-report.test.ts
   captures the log and checks no IP, chronology or code (buildTestApp({ logger })).
+- TPPK cases (application/tppk-cases.ts, members only via asMember: isMember check -> 403, RLS
+  underneath): GET /tppk/reports[?status], GET /tppk/reports/{id} (chronology; reporter null when
+  anonymous), GET|POST /tppk/cases, GET /tppk/cases/{id} (report + events), POST .../events (catatan |
+  langkah, open cases only), POST .../close and .../reopen (each an event too). Report status follows:
+  case opened -> ditangani, closed -> selesai, reopened -> ditangani. One case per report (409).
+  Every read and write audits tppk.<verb> with ids, counts and statuses only.
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,

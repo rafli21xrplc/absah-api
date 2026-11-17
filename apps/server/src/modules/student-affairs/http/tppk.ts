@@ -1,4 +1,24 @@
-import { CreateTppkReportRequest, SetTppkMembersRequest, TppkChannel, TppkCodeParam, TppkMemberList, TppkReportReceipt, TppkSchoolParam, TppkTrackResponse } from '@absah/contracts';
+import {
+  AddTppkCaseEventRequest,
+  CreateTppkCaseRequest,
+  CreateTppkReportRequest,
+  SetTppkMembersRequest,
+  TppkCaseDetail,
+  TppkCaseIdParam,
+  TppkCaseList,
+  TppkCaseNoteRequest,
+  TppkCasesQuery,
+  TppkChannel,
+  TppkCodeParam,
+  TppkMemberList,
+  TppkReportDetail,
+  TppkReportIdParam,
+  TppkReportList,
+  TppkReportReceipt,
+  TppkReportsQuery,
+  TppkSchoolParam,
+  TppkTrackResponse,
+} from '@absah/contracts';
 import { fromNodeHeaders } from 'better-auth/node';
 import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
@@ -8,6 +28,7 @@ import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { memoryRateLimit } from '../../../shared/rate-limit';
 import { resolveContext, type Auth } from '../../platform';
+import { addCaseEvent, caseForTeam, casesForTeam, closeCase, openCase, reopenCase, reportForTeam, reportsForTeam } from '../application/tppk-cases';
 import { getTeam, setTeam } from '../application/tppk-members';
 import { fileReport, reportChannel, trackReport } from '../application/tppk-reports';
 
@@ -40,6 +61,43 @@ export function tppkRouter(auth: Auth): Router {
   router.put('/tppk/members', ...staff, idempotent(), async (req, res) => {
     const actor = getActor(req);
     sendContract(res, TppkMemberList, await setTeam(actor, auditContext(req, actor), SetTppkMembersRequest.parse(req.body)));
+  });
+
+  // Members only (KSW-07). Every call is audited inside the use case.
+  router.get('/tppk/reports', ...staff, async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, TppkReportList, await reportsForTeam(actor, auditContext(req, actor), TppkReportsQuery.parse(req.query).status));
+  });
+  router.get('/tppk/reports/:reportId', ...staff, async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, TppkReportDetail, await reportForTeam(actor, auditContext(req, actor), TppkReportIdParam.parse(req.params).reportId));
+  });
+  router.get('/tppk/cases', ...staff, async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, TppkCaseList, await casesForTeam(actor, auditContext(req, actor), TppkCasesQuery.parse(req.query).status));
+  });
+  router.post('/tppk/cases', ...staff, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, TppkCaseDetail, await openCase(actor, auditContext(req, actor), CreateTppkCaseRequest.parse(req.body)));
+  });
+  router.get('/tppk/cases/:caseId', ...staff, async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, TppkCaseDetail, await caseForTeam(actor, auditContext(req, actor), TppkCaseIdParam.parse(req.params).caseId));
+  });
+  router.post('/tppk/cases/:caseId/events', ...staff, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { caseId } = TppkCaseIdParam.parse(req.params);
+    sendContract(res, TppkCaseDetail, await addCaseEvent(actor, auditContext(req, actor), caseId, AddTppkCaseEventRequest.parse(req.body)));
+  });
+  router.post('/tppk/cases/:caseId/close', ...staff, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { caseId } = TppkCaseIdParam.parse(req.params);
+    sendContract(res, TppkCaseDetail, await closeCase(actor, auditContext(req, actor), caseId, TppkCaseNoteRequest.parse(req.body)));
+  });
+  router.post('/tppk/cases/:caseId/reopen', ...staff, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { caseId } = TppkCaseIdParam.parse(req.params);
+    sendContract(res, TppkCaseDetail, await reopenCase(actor, auditContext(req, actor), caseId, TppkCaseNoteRequest.parse(req.body)));
   });
 
   return router;

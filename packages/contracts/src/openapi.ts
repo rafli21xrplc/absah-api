@@ -71,7 +71,27 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
-import { CreateTppkReportRequest, SetTppkMembersRequest, TppkChannel, TppkCodeParam, TppkMemberList, TppkReportReceipt, TppkSchoolParam, TppkTrackResponse } from './student-affairs/tppk';
+import {
+  AddTppkCaseEventRequest,
+  CreateTppkCaseRequest,
+  CreateTppkReportRequest,
+  SetTppkMembersRequest,
+  TppkCaseDetail,
+  TppkCaseIdParam,
+  TppkCaseList,
+  TppkCaseNoteRequest,
+  TppkCasesQuery,
+  TppkChannel,
+  TppkCodeParam,
+  TppkMemberList,
+  TppkReportDetail,
+  TppkReportIdParam,
+  TppkReportList,
+  TppkReportReceipt,
+  TppkReportsQuery,
+  TppkSchoolParam,
+  TppkTrackResponse,
+} from './student-affairs/tppk';
 import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
@@ -937,6 +957,32 @@ function buildRegistry(): OpenAPIRegistry {
     request: { params: TppkCodeParam },
     responses: { 200: json(TppkTrackResponse, 'Status'), ...errors(404, 429) },
   });
+  const tppkMembers = `${tppkNote} TPPK members only (403 for anyone else, admin and kepsek included). Every call writes an audit entry (ids and statuses, never the text).`;
+  const tppkHeaders = [{ ...schoolHeader, required: true }];
+  const tppkWrite = [{ ...schoolHeader, required: true }, idempotencyHeader];
+  const tppkPaths: { method: 'get' | 'post'; path: string; summary: string; request?: object; ok: z.ZodType; label: string; write?: boolean }[] = [
+    { method: 'get', path: '/tppk/reports', summary: 'Reports received, newest first', request: { query: TppkReportsQuery }, ok: TppkReportList, label: 'Reports' },
+    { method: 'get', path: '/tppk/reports/{reportId}', summary: 'One report with the chronology and, when named, the reporter', request: { params: TppkReportIdParam }, ok: TppkReportDetail, label: 'Report' },
+    { method: 'get', path: '/tppk/cases', summary: 'Cases, newest first', request: { query: TppkCasesQuery }, ok: TppkCaseList, label: 'Cases' },
+    { method: 'post', path: '/tppk/cases', summary: 'Open a case (from a report: it becomes ditangani; one case per report)', request: { body: { content: { 'application/json': { schema: CreateTppkCaseRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+    { method: 'get', path: '/tppk/cases/{caseId}', summary: 'A case with its report and every event', request: { params: TppkCaseIdParam }, ok: TppkCaseDetail, label: 'Case' },
+    { method: 'post', path: '/tppk/cases/{caseId}/events', summary: 'Add a note or a step to an open case', request: { params: TppkCaseIdParam, body: { content: { 'application/json': { schema: AddTppkCaseEventRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+    { method: 'post', path: '/tppk/cases/{caseId}/close', summary: 'Close a case (the report becomes selesai)', request: { params: TppkCaseIdParam, body: { content: { 'application/json': { schema: TppkCaseNoteRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+    { method: 'post', path: '/tppk/cases/{caseId}/reopen', summary: 'Reopen a closed case (the report is ditangani again)', request: { params: TppkCaseIdParam, body: { content: { 'application/json': { schema: TppkCaseNoteRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+  ];
+  for (const p of tppkPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['student-affairs'],
+      summary: p.summary,
+      description: tppkMembers,
+      security: [{ session: [] }],
+      parameters: p.write ? tppkWrite : tppkHeaders,
+      ...(p.request ? { request: p.request } : {}),
+      responses: { 200: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
   registry.registerPath({
     method: 'get',
     path: `${API_BASE_PATH}/tppk/members`,
