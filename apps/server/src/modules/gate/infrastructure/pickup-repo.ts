@@ -7,13 +7,13 @@ const pg = schema.pickupGuardians;
 const studentCol = sql.raw('"pickup_guardians"."student_id"');
 
 /** The student's rombel this year (null without an active enrollment). */
-const classNameOf = (student: SQL) => sql<string | null>`(
+export const classNameOf = (student: SQL) => sql<string | null>`(
   select c.name from enrollments e join academic_years y on y.id = e.academic_year_id and y.is_active
     join classes c on c.id = e.class_id
    where e.student_id = ${student} and e.status = 'active' limit 1)`;
 
 /** The user is wali kelas of the student's active rombel. */
-const homeroomOf = (student: SQL, userId: string) => sql<boolean>`exists (
+export const homeroomOf = (student: SQL, userId: string) => sql<boolean>`exists (
   select 1 from enrollments e join academic_years y on y.id = e.academic_year_id and y.is_active
     join classes c on c.id = e.class_id
    where e.student_id = ${student} and e.status = 'active' and c.homeroom_teacher_id = ${userId}::uuid)`;

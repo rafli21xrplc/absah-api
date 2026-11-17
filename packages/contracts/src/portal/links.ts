@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LinkHeldPickup } from '../gate/pickup';
 import { AttendanceStatus, SessionMode } from '../attendance/enums';
 import { LeaveKind, LeaveStatus } from '../leave/leave-requests';
 
@@ -28,6 +29,8 @@ export const ActionLinkContext = z
     canRequestLeave: z.boolean(),
     /** The school uses the gate, so the link can show the student's card. */
     cardAvailable: z.boolean(),
+    /** Unlisted penjemput the kiosk holds today, waiting for this parent (GRB-10), plus today's decided ones. */
+    pickups: z.array(LinkHeldPickup),
   })
   .meta({ id: 'ActionLinkContext' });
 export type ActionLinkContext = z.infer<typeof ActionLinkContext>;

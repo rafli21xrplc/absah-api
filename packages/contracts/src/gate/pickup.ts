@@ -147,3 +147,91 @@ export type KioskCheckoutResult = z.infer<typeof KioskCheckoutResult>;
 
 export const KioskCheckoutResults = z.object({ results: z.array(KioskCheckoutResult) }).meta({ id: 'KioskCheckoutResults' });
 export type KioskCheckoutResults = z.infer<typeof KioskCheckoutResults>;
+
+/**
+ * Unlisted penjemput (GRB-10): the kiosk takes a name and a photo and holds the student until a
+ * parent allows it through the action link or the wali kelas (or admin) does. Online only.
+ */
+export const CreateKioskPickupPhotoRequest = z
+  .object({ fileSize: z.int().positive().max(PICKUP_PHOTO_MAX_BYTES, 'Foto maksimal 2 MB.'), contentType: z.literal(PICKUP_PHOTO_TYPE) })
+  .strict()
+  .meta({ id: 'CreateKioskPickupPhotoRequest' });
+export type CreateKioskPickupPhotoRequest = z.infer<typeof CreateKioskPickupPhotoRequest>;
+
+/** POST /api/v1/kiosk/unlisted-pickups: exactly once per clientEventId. */
+export const KioskUnlistedPickupRequest = z
+  .object({
+    clientEventId: z.uuid(),
+    token: z.string().max(200),
+    name: z.string().trim().min(1, 'Tulis nama penjemput.').max(100),
+    /** photoId from POST /kiosk/pickup-photos, after the JPEG was PUT. */
+    photoId: z.uuid(),
+    requestedAt: z.iso.datetime({ offset: true }),
+  })
+  .strict()
+  .meta({ id: 'KioskUnlistedPickupRequest' });
+export type KioskUnlistedPickupRequest = z.infer<typeof KioskUnlistedPickupRequest>;
+
+export const PICKUP_DECIDERS = ['guardian', 'staff'] as const;
+export const PickupDecider = z.enum(PICKUP_DECIDERS).meta({ id: 'PickupDecider' });
+
+/** What the kiosk polls while it holds a student (GET /kiosk/unlisted-pickups/{id}). */
+export const KioskUnlistedPickup = z
+  .object({
+    id: z.uuid(),
+    status: PickupEventStatus,
+    firstName: z.string(),
+    pickupName: z.string(),
+    decidedVia: PickupDecider.nullable(),
+  })
+  .meta({ id: 'KioskUnlistedPickup' });
+export type KioskUnlistedPickup = z.infer<typeof KioskUnlistedPickup>;
+
+export const PickupEventIdParam = z.object({ pickupEventId: z.uuid() });
+
+/** A check-out as staff see it (GET /pickups). */
+export const PickupEvent = z
+  .object({
+    id: z.uuid(),
+    schoolDate: z.iso.date(),
+    studentId: z.uuid(),
+    studentName: z.string(),
+    className: z.string().nullable(),
+    pickupName: z.string(),
+    /** false: an unlisted penjemput (name and photo taken at the kiosk). */
+    listed: z.boolean(),
+    status: PickupEventStatus,
+    requestedAt: z.iso.datetime({ offset: true }),
+    checkedOutAt: z.iso.datetime({ offset: true }).nullable(),
+    decidedVia: PickupDecider.nullable(),
+    decidedAt: z.iso.datetime({ offset: true }).nullable(),
+    /** An unlisted penjemput's photo is still stored. */
+    hasPhoto: z.boolean(),
+  })
+  .meta({ id: 'PickupEvent' });
+export type PickupEvent = z.infer<typeof PickupEvent>;
+
+/** GET /api/v1/pickups?date=: the day's check-outs, held first (piket, admin, kepsek...: all; a wali kelas: own rombel). */
+export const PickupEventsQuery = z.object({ date: z.iso.date().optional() }).meta({ id: 'PickupEventsQuery' });
+export type PickupEventsQuery = z.infer<typeof PickupEventsQuery>;
+
+export const PickupEventList = z.object({ schoolDate: z.iso.date(), items: z.array(PickupEvent) }).meta({ id: 'PickupEventList' });
+export type PickupEventList = z.infer<typeof PickupEventList>;
+
+/** POST /api/v1/pickups/{id}/{allow|deny} (wali kelas, admin) and POST /api/v1/links/pickups/{id} (parent). */
+export const PICKUP_DECISIONS = ['allow', 'deny'] as const;
+export const PickupDecision = z.enum(PICKUP_DECISIONS).meta({ id: 'PickupDecision' });
+export type PickupDecision = z.infer<typeof PickupDecision>;
+export const PickupEventActionParam = z.object({ pickupEventId: z.uuid(), action: PickupDecision });
+export const LinkPickupDecisionRequest = z.object({ decision: PickupDecision }).strict().meta({ id: 'LinkPickupDecisionRequest' });
+export type LinkPickupDecisionRequest = z.infer<typeof LinkPickupDecisionRequest>;
+
+/** A held request as the parent sees it on the action link page. */
+export const LinkHeldPickup = z
+  .object({ id: z.uuid(), pickupName: z.string(), requestedAt: z.iso.datetime({ offset: true }), status: PickupEventStatus })
+  .meta({ id: 'LinkHeldPickup' });
+export type LinkHeldPickup = z.infer<typeof LinkHeldPickup>;
+
+/** POST /api/v1/links/pickups/{id}: today's requests after the decision. */
+export const LinkHeldPickups = z.object({ pickups: z.array(LinkHeldPickup) }).meta({ id: 'LinkHeldPickups' });
+export type LinkHeldPickups = z.infer<typeof LinkHeldPickups>;

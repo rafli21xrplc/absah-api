@@ -309,7 +309,21 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   not_authorized (not stored). Unique (school, client_event_id) + partial unique released per
   enrollment per day: a second release is duplicate. Each release emits gate.checked_out; consumer
   notify_checked_out sends student_picked_up (pending approval) with pickup_name and time. pickup_name
-  is the name at the time. Unlisted rows (held/denied/expired) use the same table (5.4d).
+  is the name at the time.
+- Unlisted penjemput (GRB-10; application/unlisted-pickups.ts, online only): POST /kiosk/pickup-photos
+  (presigned PUT) then POST /kiosk/unlisted-pickups { clientEventId, token, name, photoId, requestedAt }
+  -> pickup_events status held with unlisted_photo_key (400 unreadable card / photo not uploaded; 409
+  already_released), emits gate.unlisted_pickup -> notify_unlisted_pickup sends unlisted_pickup
+  (pending approval) with each parent's action link. The kiosk polls GET /kiosk/unlisted-pickups/{id}.
+  decideHeldPickup (shared): allow -> released + checked_out_at + gate.checked_out (parents then get
+  student_picked_up); deny -> denied; same decision again no-op; otherwise 409 decided / expired (past
+  school date) / already_released. Deciders: the parent through POST /links/pickups/{id} { decision }
+  (not the link's one write; GET /links/pickups/{id}/photo lets them see who is at the gate, audited),
+  or the student's wali kelas / admin via POST /pickups/{id}/allow|deny. GET /pickups?date: gate
+  viewers (canSeeGateToday) all, anyone else their own rombel as wali kelas; held first.
+  GET /pickups/{id}/photo: wali kelas, piket, admin (audited gate.unlisted_photo_viewed). The link
+  context carries today's unlisted requests (pickups). Job gate.pickup_photos also expires held rows
+  of past school dates (each school's timezone) and removes unlisted photos 30 days after the request.
 
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,
