@@ -153,3 +153,17 @@ export async function writeSettings(tx: Tx, schoolId: string, userId: string, va
     .values({ schoolId, ...values, updatedBy: userId })
     .onConflictDoUpdate({ target: schema.liaisonSettings.schoolId, set: { ...values, updatedBy: userId, updatedAt: new Date() } });
 }
+
+/** Students the user teaches this year whose name contains the text (wildcards escaped), at most 20. */
+export async function searchTaught(tx: Tx, userId: string, text: string) {
+  const term = `%${text.replace(/[%_\\]/g, (x) => `\\${x}`)}%`;
+  const res = await tx.execute<{ id: string; name: string; class_name: string | null }>(sql`
+    select st.id, st.name,
+           (select c.name from enrollments e join academic_years y on y.id = e.academic_year_id and y.is_active
+              join classes c on c.id = e.class_id where e.student_id = st.id and e.status = 'active' limit 1) as class_name
+      from students st
+     where st.name ilike ${term} and ${teaches(sql`st.id`, userId)}
+     order by st.name, st.id
+     limit 20`);
+  return res.rows.map((r) => ({ id: r.id, name: r.name, className: r.class_name }));
+}

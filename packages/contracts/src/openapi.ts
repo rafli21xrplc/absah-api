@@ -71,7 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
-import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentParam, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
+import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStudentParam, LiaisonStudentQuery, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import {
   AddTppkCaseEventRequest,
@@ -959,6 +959,7 @@ function buildRegistry(): OpenAPIRegistry {
   const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
   const liaisonPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
     { method: 'get', path: '/liaison/threads', summary: 'Threads of the user (orang_tua: every child; staff: students they teach; admin: all)', ok: LiaisonThreadList, label: 'Threads' },
+    { method: 'get', path: '/liaison/students', summary: 'Students the user teaches this year, to start a thread (2+ letters)', request: { query: LiaisonStudentQuery }, ok: LiaisonStudentList, label: 'Students' },
     { method: 'get', path: '/liaison/students/{studentId}', summary: 'The thread of a student', request: { params: LiaisonStudentParam }, ok: LiaisonThread, label: 'Thread' },
     { method: 'post', path: '/liaison/students/{studentId}/messages', summary: 'Write a message (participants)', request: { params: LiaisonStudentParam, body: { content: { 'application/json': { schema: PostLiaisonMessageRequest } } } }, ok: LiaisonThread, label: 'Thread', write: true },
     { method: 'post', path: '/liaison/students/{studentId}/read', summary: 'Mark the thread read up to now', request: { params: LiaisonStudentParam }, label: 'Read' },

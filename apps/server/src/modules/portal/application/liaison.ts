@@ -1,4 +1,4 @@
-import { LIAISON_DEFAULT_HOURS, LIAISON_RETRACT_MINUTES, type LiaisonSenderRole, type LiaisonSettings, type UpdateLiaisonSettingsRequest, type LiaisonThread, type LiaisonThreadList, type PostLiaisonMessageRequest } from '@absah/contracts';
+import { LIAISON_DEFAULT_HOURS, LIAISON_RETRACT_MINUTES, type LiaisonSenderRole, type LiaisonSettings, type LiaisonStudentList, type UpdateLiaisonSettingsRequest, type LiaisonThread, type LiaisonThreadList, type PostLiaisonMessageRequest } from '@absah/contracts';
 import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
@@ -15,6 +15,7 @@ import {
   readSettings,
   relationOf,
   retractMessage,
+  searchTaught,
   studentInfo,
   threadIdOf,
   threadsFor,
@@ -134,4 +135,9 @@ export function updateSettings(actor: Actor, auditCtx: AuditContext, input: Upda
     await audit(tx, auditCtx, 'liaison.settings_updated', { type: 'liaison_settings', id: actor.schoolId }, { before: before ? { startsAt: hhmm(before.startsAt), endsAt: hhmm(before.endsAt) } : LIAISON_DEFAULT_HOURS, after: input });
     return input;
   });
+}
+
+/** Students to start a thread with: the ones the user teaches (wali kelas, guru mapel) this year. */
+export function findStudents(actor: Actor, text: string): Promise<LiaisonStudentList> {
+  return withTenant(scope(actor), async (tx) => ({ items: await searchTaught(tx, actor.userId, text) }));
 }

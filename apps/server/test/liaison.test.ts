@@ -83,6 +83,14 @@ describe('buku penghubung (ORT-07)', () => {
     expect(((await get(a.lain as Agent, '/liaison/threads').expect(200)).body as { items: unknown[] }).items).toEqual([]);
   });
 
+  it('finds only students the teacher teaches', async () => {
+    const mine = (await get(a.mapel as Agent, '/liaison/students?q=an').expect(200)).body as { items: { name: string; className: string }[] };
+    expect(mine.items).toEqual([{ id: ani, name: 'ANI', className: '7A' }]);
+    expect(((await get(a.lain as Agent, '/liaison/students?q=an').expect(200)).body as { items: unknown[] }).items).toEqual([]);
+    expect(((await get(a.wali as Agent, '/liaison/students?q=budi').expect(200)).body as { items: unknown[] }).items).toEqual([]);
+    await get(a.wali as Agent, '/liaison/students?q=a').expect(400);
+  });
+
   it('lists threads with unread counts, and marks read', async () => {
     const parentList = (await get(a.ortu as Agent, '/liaison/threads').expect(200)).body as { items: { studentName: string; unread: number }[] };
     expect(parentList.items).toMatchObject([{ studentName: 'ANI', unread: 2 }]);
