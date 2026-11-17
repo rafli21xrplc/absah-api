@@ -15,9 +15,12 @@ export interface ObjectStorage {
   presignUpload(input: { key: string; contentType: string; contentLength: number }): Promise<PresignedUpload>;
   /**
    * A 5-minute GET for showing a stored file in the browser (e.g. an izin attachment). The response
-   * carries contentType and is shown inline. Callers authorize before presigning.
+   * carries contentType and is shown inline, or saved as fileName when given (an export). Callers
+   * authorize before presigning.
    */
-  presignDownload(input: { key: string; contentType: string }): Promise<{ url: string; expiresAt: Date }>;
+  presignDownload(input: { key: string; contentType: string; fileName?: string }): Promise<{ url: string; expiresAt: Date }>;
+  /** Server-side write of a file the worker made (exports); never for client uploads. */
+  write(key: string, body: Buffer, contentType: string): Promise<void>;
   /** null when the object does not exist (not uploaded yet). */
   read(key: string): Promise<Buffer | null>;
   remove(key: string): Promise<void>;
@@ -36,4 +39,11 @@ export function storageKey(schoolId: string, module: string, id: string): string
 
 export function assertStorageKey(key: string): void {
   if (!KEY.test(key)) throw new Error('invalid storage key');
+}
+
+/** Content-Disposition for a download: inline, or attachment with an ASCII-safe file name. */
+export function contentDisposition(fileName?: string): string {
+  if (!fileName) return 'inline';
+  const ascii = fileName.replace(/[^A-Za-z0-9._ -]/g, '_');
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }

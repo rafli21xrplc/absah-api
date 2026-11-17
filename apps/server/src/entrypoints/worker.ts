@@ -8,6 +8,7 @@ import {
   idempotencyCleanupHandler,
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
+import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, reportConsumers } from '../modules/report';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
 import { initCrypto } from '../shared/crypto';
@@ -44,6 +45,9 @@ const storage = createObjectStorage(config);
 await boss.createQueue(IMPORT_RETENTION_QUEUE);
 await boss.work(IMPORT_RETENTION_QUEUE, importRetentionHandler(storage, logger));
 await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(EXPORT_RETENTION_QUEUE);
+await boss.work(EXPORT_RETENTION_QUEUE, exportRetentionHandler(storage, logger));
+await boss.schedule(EXPORT_RETENTION_QUEUE, '50 2 * * *', null, { tz: 'Asia/Jakarta' });
 
 // Attendance jobs run every 5 minutes and act on each school's own clock (UTC cron on purpose).
 for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
@@ -66,6 +70,7 @@ const sender = createMessageSender(config, logger);
 const consumers: Consumer[] = [
   ...academicConsumers(storage),
   ...attendanceConsumers(),
+  ...reportConsumers(storage),
   ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
 ];
 const outbox = await startOutbox(boss, consumers, logger);

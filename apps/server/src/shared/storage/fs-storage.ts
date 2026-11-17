@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import express, { type Router } from 'express';
-import { assertStorageKey, PRESIGN_TTL_SECONDS, type ObjectStorage, type PresignedUpload } from './object-storage';
+import { assertStorageKey, contentDisposition, PRESIGN_TTL_SECONDS, type ObjectStorage, type PresignedUpload } from './object-storage';
 
 /** Largest object the dev upload route accepts. */
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -44,14 +44,15 @@ export class FsObjectStorage implements ObjectStorage {
     });
   }
 
-  presignDownload({ key, contentType }: { key: string; contentType: string }): Promise<{ url: string; expiresAt: Date }> {
+  presignDownload({ key, contentType, fileName }: { key: string; contentType: string; fileName?: string }): Promise<{ url: string; expiresAt: Date }> {
     assertStorageKey(key);
     const expires = Math.floor(Date.now() / 1000) + PRESIGN_TTL_SECONDS;
-    const query = new URLSearchParams({ expires: String(expires), type: contentType, sig: this.sign(key, expires, -1, `GET ${contentType}`) });
+    const name = fileName ?? '';
+    const query = new URLSearchParams({ expires: String(expires), type: contentType, name, sig: this.sign(key, expires, -1, `GET ${contentType} ${name}`) });
     return Promise.resolve({ url: `${this.publicUrl}/api/v1/storage/fs/${key}?${query.toString()}`, expiresAt: new Date(expires * 1000) });
   }
 
-  async write(key: string, body: Buffer): Promise<void> {
+  async write(key: string, body: Buffer, _contentType?: string): Promise<void> {
     const file = this.file(key);
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, body);
@@ -102,12 +103,13 @@ export function fsUploadRouter(storage: FsObjectStorage): Router {
     const key = (req.params as { key: string[] }).key.join('/');
     const expires = Number(req.query.expires);
     const type = typeof req.query.type === 'string' ? req.query.type : '';
-    const body = signatureMatches(storage.sign(key, expires, -1, `GET ${type}`), req.query.sig) && expires * 1000 > Date.now() ? await storage.read(key) : null;
+    const name = typeof req.query.name === 'string' ? req.query.name : '';
+    const body = signatureMatches(storage.sign(key, expires, -1, `GET ${type} ${name}`), req.query.sig) && expires * 1000 > Date.now() ? await storage.read(key) : null;
     if (!body) {
       res.status(403).type('text/plain').send('AccessDenied');
       return;
     }
-    res.status(200).type(type).set('Content-Disposition', 'inline').set('X-Content-Type-Options', 'nosniff').send(body);
+    res.status(200).type(type).set('Content-Disposition', contentDisposition(name || undefined)).set('X-Content-Type-Options', 'nosniff').send(body);
   });
   return router;
 }

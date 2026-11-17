@@ -1,6 +1,6 @@
 import { DeleteObjectCommand, GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { assertStorageKey, PRESIGN_TTL_SECONDS, type ObjectStorage, type PresignedUpload } from './object-storage';
+import { assertStorageKey, contentDisposition, PRESIGN_TTL_SECONDS, type ObjectStorage, type PresignedUpload } from './object-storage';
 
 export interface R2Options {
   accountId: string;
@@ -31,11 +31,21 @@ export class R2ObjectStorage implements ObjectStorage {
     return { url, method: 'PUT', headers: { 'Content-Type': contentType }, expiresAt: new Date(Date.now() + PRESIGN_TTL_SECONDS * 1000) };
   }
 
-  async presignDownload({ key, contentType }: { key: string; contentType: string }): Promise<{ url: string; expiresAt: Date }> {
+  async presignDownload({ key, contentType, fileName }: { key: string; contentType: string; fileName?: string }): Promise<{ url: string; expiresAt: Date }> {
     assertStorageKey(key);
-    const command = new GetObjectCommand({ Bucket: this.options.bucket, Key: key, ResponseContentType: contentType, ResponseContentDisposition: 'inline' });
+    const command = new GetObjectCommand({
+      Bucket: this.options.bucket,
+      Key: key,
+      ResponseContentType: contentType,
+      ResponseContentDisposition: contentDisposition(fileName),
+    });
     const url = await getSignedUrl(this.client, command, { expiresIn: PRESIGN_TTL_SECONDS });
     return { url, expiresAt: new Date(Date.now() + PRESIGN_TTL_SECONDS * 1000) };
+  }
+
+  async write(key: string, body: Buffer, contentType: string): Promise<void> {
+    assertStorageKey(key);
+    await this.client.send(new PutObjectCommand({ Bucket: this.options.bucket, Key: key, Body: body, ContentType: contentType }));
   }
 
   async read(key: string): Promise<Buffer | null> {
