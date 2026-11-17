@@ -29,3 +29,4 @@ export * from './report/exports';
 export * from './report/mbg';
 export * from './billing/enums';
 export * from './billing/invoices';
+export * from './billing/payments';

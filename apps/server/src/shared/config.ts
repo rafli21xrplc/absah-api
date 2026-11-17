@@ -51,6 +51,10 @@ const ConfigSchema = z.object({
   /** Echoed once when the webhook URL is registered (hub.verify_token). */
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   WHATSAPP_OTP_TEMPLATE: z.string().default('absah_login_otp_v1'),
+  /** none = online payment off; fake = dev/test gateway (never in production). Real gateways come later. */
+  PAYMENT_PROVIDER: z.enum(['none', 'fake']).default('none'),
+  /** Verifies payment webhooks (the fake gateway signs with it). */
+  PAYMENT_WEBHOOK_SECRET: z.string().min(16).optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -69,6 +73,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }
     if (c.NODE_ENV === 'production' && c.WHATSAPP_PROVIDER === 'fake') {
       ctx.addIssue({ code: 'custom', path: ['WHATSAPP_PROVIDER'], message: 'must be a real provider in production' });
+    }
+    if (c.NODE_ENV === 'production' && c.PAYMENT_PROVIDER === 'fake') {
+      ctx.addIssue({ code: 'custom', path: ['PAYMENT_PROVIDER'], message: 'fake is not allowed in production' });
+    }
+    if (c.PAYMENT_PROVIDER !== 'none' && !c.PAYMENT_WEBHOOK_SECRET) {
+      ctx.addIssue({ code: 'custom', path: ['PAYMENT_WEBHOOK_SECRET'], message: 'required when PAYMENT_PROVIDER is set' });
     }
     if (c.WHATSAPP_PROVIDER === 'meta_cloud') {
       for (const k of ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_APP_SECRET', 'WHATSAPP_VERIFY_TOKEN'] as const) {
