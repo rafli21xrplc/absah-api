@@ -71,7 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
-import { CreateVisitorRequest, Visitor, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
+import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
 import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance } from './portal/links';
@@ -819,6 +819,17 @@ function buildRegistry(): OpenAPIRegistry {
   });
   registry.registerPath({
     method: 'post',
+    path: `${API_BASE_PATH}/kiosk/visitor-photos`,
+    tags: ['kiosk'],
+    summary: "A presigned PUT for the guest's photo (JPEG, up to 2 MB); send photoId with POST /kiosk/visitors",
+    description: visitorNote,
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreateVisitorPhotoRequest } } } },
+    responses: { 200: json(CreateVisitorPhotoResponse, 'Upload'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
     path: `${API_BASE_PATH}/kiosk/visitors`,
     tags: ['kiosk'],
     summary: 'A guest signs in at the kiosk (buku tamu); the person they came for is told',
@@ -838,6 +849,17 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: gateParams,
     request: { query: VisitorsQuery },
     responses: { 200: json(VisitorList, 'Visitors'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/visitors/{visitorId}/photo`,
+    tags: ['gate'],
+    summary: "A 5-minute link to the guest's photo (piket, admin, operator, wakasek, kepsek)",
+    description: `${visitorNote} 404 when there is no photo or it was removed 30 days after the guest left.`,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: VisitorIdParam },
+    responses: { 200: json(VisitorPhotoLink, 'Link'), ...errors(401, 403, 404) },
   });
   registry.registerPath({
     method: 'patch',

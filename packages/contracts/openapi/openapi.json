@@ -3817,6 +3817,43 @@
           "items"
         ]
       },
+      "CreateVisitorPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "photoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/PresignedUpload"
+          }
+        },
+        "required": [
+          "photoId",
+          "upload"
+        ]
+      },
+      "CreateVisitorPhotoRequest": {
+        "type": "object",
+        "properties": {
+          "fileSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 2097152
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg"
+            ]
+          }
+        },
+        "required": [
+          "fileSize",
+          "contentType"
+        ],
+        "additionalProperties": false
+      },
       "Visitor": {
         "type": "object",
         "properties": {
@@ -3869,6 +3906,9 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "hasPhoto": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -3879,7 +3919,8 @@
           "purpose",
           "host",
           "arrivedAt",
-          "leftAt"
+          "leftAt",
+          "hasPhoto"
         ]
       },
       "CreateVisitorRequest": {
@@ -3904,6 +3945,10 @@
             "maxLength": 200
           },
           "hostUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "photoId": {
             "type": "string",
             "format": "uuid"
           }
@@ -3936,6 +3981,23 @@
           "schoolDate",
           "inside",
           "items"
+        ]
+      },
+      "VisitorPhotoLink": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
         ]
       },
       "NotificationOverview": {
@@ -11414,6 +11476,83 @@
         }
       }
     },
+    "/api/v1/kiosk/visitor-photos": {
+      "post": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "A presigned PUT for the guest's photo (JPEG, up to 2 MB); send photoId with POST /kiosk/visitors",
+        "description": "Requires gate.visitors (404 CAPABILITY_DISABLED otherwise).",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVisitorPhotoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateVisitorPhotoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kiosk/visitors": {
       "post": {
         "tags": [
@@ -11554,6 +11693,83 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/visitors/{visitorId}/photo": {
+      "get": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "A 5-minute link to the guest's photo (piket, admin, operator, wakasek, kepsek)",
+        "description": "Requires gate.visitors (404 CAPABILITY_DISABLED otherwise). 404 when there is no photo or it was removed 30 days after the guest left.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "visitorId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitorPhotoLink"
                 }
               }
             }

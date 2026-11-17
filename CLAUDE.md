@@ -282,7 +282,11 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   visit. Naming a host emits gate.visitor_arrived { visitorId, hostUserId } (no consumer until the staff
   push of NTF-06, prompt 5.7). Piket/admin/operator/wakasek PATCH /visitors/{id}/leave (idempotent, audited
   gate.visitor_left; a second call changes nothing); GET /visitors?date&status=inside|all also for kepsek.
-  visitors.photo_key / photo_removed_at exist for the photo slice (removed 30 days after left_at).
+  Photo: POST /kiosk/visitor-photos (JPEG <= 2 MB, presigned PUT under schools/{id}/visitors/{uuid}; the key
+  comes from the kiosk's school) -> photoId in POST /kiosk/visitors (400 photoId when not uploaded);
+  GET /visitors/{id}/photo gives a 5-minute link and is audited (gate.visitor_photo_viewed). Job
+  gate.visitor_photos (02:55) removes the file and sets photo_removed_at 30 days after left_at, or after
+  arrived_at when nobody signed the guest out. The R2 bucket CORS must allow PUT from KIOSK_ORIGINS.
 
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,

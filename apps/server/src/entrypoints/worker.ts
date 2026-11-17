@@ -8,6 +8,7 @@ import {
   idempotencyCleanupHandler,
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
+import { VISITOR_PHOTOS_QUEUE, visitorPhotosHandler } from '../modules/gate';
 import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, MBG_CUTOFF_CRON, MBG_CUTOFF_QUEUE, mbgCutoffHandler, reportConsumers } from '../modules/report';
 import {
   APPLY_PAYMENTS_CRON,
@@ -58,6 +59,9 @@ await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jaka
 await boss.createQueue(EXPORT_RETENTION_QUEUE);
 await boss.work(EXPORT_RETENTION_QUEUE, exportRetentionHandler(storage, logger));
 await boss.schedule(EXPORT_RETENTION_QUEUE, '50 2 * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(VISITOR_PHOTOS_QUEUE);
+await boss.work(VISITOR_PHOTOS_QUEUE, visitorPhotosHandler(storage, logger));
+await boss.schedule(VISITOR_PHOTOS_QUEUE, '55 2 * * *', null, { tz: 'Asia/Jakarta' });
 // Workspace invoices: 07.00 WIB on the 1st (days 2-7 only catch up).
 await boss.createQueue(ISSUE_INVOICES_QUEUE);
 await boss.work(ISSUE_INVOICES_QUEUE, issueInvoicesHandler(logger));

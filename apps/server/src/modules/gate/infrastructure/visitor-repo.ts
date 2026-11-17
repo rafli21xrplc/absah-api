@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 
 const v = schema.visitors;
 
@@ -15,6 +15,7 @@ const columns = {
   hostName,
   arrivedAt: v.arrivedAt,
   leftAt: v.leftAt,
+  hasPhoto: sql<boolean>`(${v.photoKey} is not null and ${v.photoRemovedAt} is null)`,
 };
 export type VisitorRow = {
   id: string;
@@ -26,6 +27,7 @@ export type VisitorRow = {
   hostName: string | null;
   arrivedAt: Date;
   leftAt: Date | null;
+  hasPhoto: boolean;
 };
 
 export async function findVisitor(tx: Tx, id: string): Promise<VisitorRow | undefined> {
@@ -48,6 +50,7 @@ export interface NewVisitor {
   organization: string | null;
   purpose: string;
   hostUserId: string | null;
+  photoKey: string | null;
 }
 
 /** False when this clientEventId was recorded before (a resend). */
@@ -93,4 +96,23 @@ export async function isHostCandidate(tx: Tx, userId: string): Promise<boolean> 
     select 1 from school_member_directory
     where user_id = ${userId} and status = 'active' and role not in ('orang_tua', 'siswa', 'pembimbing_industri') limit 1`);
   return result.rows.length > 0;
+}
+
+/** The photo object of a visit that still has one. */
+export async function photoKeyOf(tx: Tx, id: string): Promise<string | null | undefined> {
+  const [row] = await tx.select({ key: v.photoKey, removedAt: v.photoRemovedAt }).from(v).where(eq(v.id, id));
+  if (!row) return undefined;
+  return row.removedAt ? null : row.key;
+}
+
+/** Visits whose photo is due for removal (platform job, across schools). */
+export function photosDueForRemoval(tx: Tx, cutoff: Date) {
+  return tx
+    .select({ id: v.id, photoKey: v.photoKey })
+    .from(v)
+    .where(and(isNotNull(v.photoKey), isNull(v.photoRemovedAt), lt(sql`coalesce(${v.leftAt}, ${v.arrivedAt})`, cutoff)));
+}
+
+export async function markPhotoRemoved(tx: Tx, id: string, at: Date): Promise<void> {
+  await tx.update(v).set({ photoRemovedAt: at }).where(eq(v.id, id));
 }

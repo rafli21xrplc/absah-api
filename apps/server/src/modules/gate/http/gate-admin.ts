@@ -1,16 +1,17 @@
-import { Arrival, Visitor, VisitorIdParam, VisitorList, VisitorsQuery, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
+import { Arrival, Visitor, VisitorIdParam, VisitorList, VisitorPhotoLink, VisitorsQuery, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
 import { getActor, getCtx } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
+import type { ObjectStorage } from '../../../shared/storage';
 import { idempotent } from '../../../shared/idempotency';
 import { schoolDate } from '../../../shared/school-date';
 import { resolveContext, type Auth } from '../../platform';
 import { gateToday, recordManualArrival } from '../application/arrivals';
 import { bindCardDevice, getDeviceKeys, getMyCards } from '../application/cards';
 import { createPairing, getKiosks, revoke } from '../application/kiosks';
-import { leaveVisitor, listVisitors } from '../application/visitors';
+import { leaveVisitor, listVisitors, visitorPhotoLink } from '../application/visitors';
 
 function schoolClock(req: Request) {
   const ctx = getCtx(req);
@@ -19,7 +20,7 @@ function schoolClock(req: Request) {
 }
 
 /** Kiosk management (admin), card binding (holders) and piket (GRB-05/06); all behind gate.enabled. */
-export function gateRouter(auth: Auth): Router {
+export function gateRouter(auth: Auth, storage: ObjectStorage): Router {
   const router = Router();
   const gate = [resolveContext(auth, { school: 'required' }), requireCap('gate.enabled')];
 
@@ -59,6 +60,10 @@ export function gateRouter(auth: Auth): Router {
   const visitors = [...gate, requireCap('gate.visitors')];
   router.get('/visitors', ...visitors, async (req, res) => {
     sendContract(res, VisitorList, await listVisitors(getActor(req), schoolClock(req).timezone, VisitorsQuery.parse(req.query)));
+  });
+  router.get('/visitors/:visitorId/photo', ...visitors, async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, VisitorPhotoLink, await visitorPhotoLink(actor, auditContext(req, actor), storage, VisitorIdParam.parse(req.params).visitorId));
   });
   router.patch('/visitors/:visitorId/leave', ...visitors, idempotent(), async (req, res) => {
     const actor = getActor(req);

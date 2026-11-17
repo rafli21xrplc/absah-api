@@ -1,15 +1,16 @@
-import { CreateVisitorRequest, KioskDay, Visitor, VisitorHostList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
+import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, KioskDay, Visitor, VisitorHostList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
 import { Router, type RequestHandler } from 'express';
 import { CapabilityDisabledError } from '../../../shared/errors';
 import { sendContract } from '../../../shared/http';
+import type { ObjectStorage } from '../../../shared/storage';
 import { idempotent } from '../../../shared/idempotency';
 import { heartbeat, pairingSchool, pairKiosk } from '../application/kiosks';
 import { kioskDay, recordScans } from '../application/scans';
-import { registerVisitor, visitorHosts } from '../application/visitors';
+import { createVisitorPhoto, registerVisitor, visitorHosts } from '../application/visitors';
 import { getKiosk, kioskContext, kioskIdempotencyScope } from './kiosk-auth';
 
 /** Calls made by kiosk devices (no user session). */
-export function kioskRouter(): Router {
+export function kioskRouter(storage: ObjectStorage): Router {
   const router = Router();
 
   // The kiosk is not paired yet: Idempotency-Keys are scoped to the school named in the code.
@@ -50,8 +51,11 @@ export function kioskRouter(): Router {
   router.get('/kiosk/visitor-hosts', kioskContext(), visitors, async (req, res) => {
     sendContract(res, VisitorHostList, await visitorHosts(getKiosk(req)));
   });
+  router.post('/kiosk/visitor-photos', kioskContext(), visitors, idempotent(kioskIdempotencyScope), async (req, res) => {
+    sendContract(res, CreateVisitorPhotoResponse, await createVisitorPhoto(getKiosk(req), storage, CreateVisitorPhotoRequest.parse(req.body)));
+  });
   router.post('/kiosk/visitors', kioskContext(), visitors, idempotent(kioskIdempotencyScope), async (req, res) => {
-    sendContract(res, Visitor, await registerVisitor(getKiosk(req), CreateVisitorRequest.parse(req.body)));
+    sendContract(res, Visitor, await registerVisitor(getKiosk(req), storage, CreateVisitorRequest.parse(req.body)));
   });
 
   return router;

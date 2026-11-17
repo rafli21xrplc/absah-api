@@ -4,3 +4,5 @@ export { kioskRouter } from './http/kiosk';
 export { kioskCors } from './http/kiosk-cors';
 export { createLoadFixture } from './application/load-fixture';
 export { linkCardKeys } from './application/cards';
+export { VISITOR_PHOTOS_QUEUE, visitorPhotosHandler } from './jobs/visitor-photos';
+export { purgeVisitorPhotos } from './application/visitors';
