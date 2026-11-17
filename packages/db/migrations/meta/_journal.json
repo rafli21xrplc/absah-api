@@ -365,6 +365,13 @@
       "when": 1794924333862,
       "tag": "0051_activities_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794924698894,
+      "tag": "0052_activity_sessions",
+      "breakpoints": true
     }
   ]
 }

@@ -68,6 +68,24 @@ export const slotsOfDay = (tx: Tx, academicYearId: string, day: number) =>
     .where(and(eq(schema.scheduleSlots.academicYearId, academicYearId), eq(schema.scheduleSlots.day, day)))
     .orderBy(asc(schema.scheduleSlots.period));
 
+export const activitiesOfYear = (tx: Tx, academicYearId: string) =>
+  tx
+    .select({ id: schema.activities.id, days: schema.activities.days, startsOn: schema.activities.startsOn, endsOn: schema.activities.endsOn, active: schema.activities.active })
+    .from(schema.activities)
+    .where(eq(schema.activities.academicYearId, academicYearId));
+
+/** The activity session of a date, if there is one. */
+export async function activitySessionOf(tx: Tx, activityId: string, date: string): Promise<string | null> {
+  const s = schema.attendanceSessions;
+  const [row] = await tx.select({ id: s.id }).from(s).where(and(eq(s.activityId, activityId), eq(s.schoolDate, date), eq(s.mode, 'activity')));
+  return row?.id ?? null;
+}
+
+/** Makes sure the day is known to the lock job (a coach may open a session on a day without lessons). */
+export async function ensureDay(tx: Tx, schoolId: string, date: string): Promise<void> {
+  await tx.insert(schema.attendanceDays).values({ schoolId, schoolDate: date }).onConflictDoNothing();
+}
+
 /** Inserts the planned sessions; ones that already exist (same slot or owner that day) are kept. */
 export async function insertSessions(tx: Tx, schoolId: string, schoolDate: string, plan: PlannedSession[]): Promise<number> {
   if (plan.length === 0) return 0;

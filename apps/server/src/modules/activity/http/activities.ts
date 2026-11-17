@@ -1,11 +1,17 @@
-import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityStudentQuery, CreateActivityRequest, SetActivityMembersRequest, UpdateActivityRequest } from '@absah/contracts';
-import { Router } from 'express';
+import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SessionDetail, SetActivityMembersRequest, UpdateActivityRequest } from '@absah/contracts';
+import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
-import { getActor } from '../../../shared/context';
+import { getActor, getCtx } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
+import { getSession } from '../../attendance';
 import { resolveContext, type Auth } from '../../platform';
-import { createActivity, findStudents, getActivity, getMembers, listForActor, patchActivity, setMembers } from '../application/activities';
+import { activityRecap, createActivity, findStudents, getActivity, getMembers, listForActor, patchActivity, setMembers, startSession } from '../application/activities';
+
+const timezoneOf = (req: Request) => {
+  const ctx = getCtx(req);
+  return ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta';
+};
 
 /** Kegiatan (KEG-01). */
 export function activitiesRouter(auth: Auth): Router {
@@ -36,6 +42,17 @@ export function activitiesRouter(auth: Auth): Router {
   router.put('/activities/:activityId/members', school, idempotent(), async (req, res) => {
     const actor = getActor(req);
     sendContract(res, ActivityMemberList, await setMembers(actor, auditContext(req, actor), ActivityIdParam.parse(req.params).activityId, SetActivityMembersRequest.parse(req.body)));
+  });
+  // Opening twice gives the same session (one per activity per day), so no Idempotency-Key.
+  router.post('/activities/:activityId/sessions', school, async (req, res) => {
+    const actor = getActor(req);
+    const { activityId } = ActivityIdParam.parse(req.params);
+    const sessionId = await startSession(actor, timezoneOf(req), activityId, OpenActivitySessionRequest.parse(req.body ?? {}).date);
+    sendContract(res, SessionDetail, await getSession(actor, sessionId));
+  });
+  router.get('/activities/:activityId/recap', school, async (req, res) => {
+    const { from, to } = ActivityRecapQuery.parse(req.query);
+    sendContract(res, ActivityRecap, await activityRecap(getActor(req), ActivityIdParam.parse(req.params).activityId, from, to));
   });
 
   return router;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLockDue, planSessions, reminderDueAt } from './session-plan';
+import { isLockDue, planActivitySessions, planSessions, reminderDueAt } from './session-plan';
 
 const day = {
   classes: [
@@ -39,5 +39,17 @@ describe('reminders and locking', () => {
     expect(isLockDue('2026-11-16', '2026-11-16', 23 * 60 + 58)).toBe(false);
     expect(isLockDue('2026-11-16', '2026-11-16', 23 * 60 + 59)).toBe(true);
     expect(isLockDue('2026-11-15', '2026-11-16', 1)).toBe(true);
+  });
+});
+
+describe('planActivitySessions', () => {
+  const base = { id: 'a', days: [1, 6], startsOn: null, endsOn: null, active: true };
+  it('plans active activities on their weekdays inside their dates', () => {
+    expect(planActivitySessions([base], '2026-11-23', 1)).toEqual([{ mode: 'activity', ownerType: 'activity', ownerId: 'a', slotId: null, teacherId: null, activityId: 'a' }]);
+    expect(planActivitySessions([base], '2026-11-24', 2)).toEqual([]);
+    expect(planActivitySessions([{ ...base, active: false }], '2026-11-23', 1)).toEqual([]);
+    expect(planActivitySessions([{ ...base, startsOn: '2026-11-24' }], '2026-11-23', 1)).toEqual([]);
+    expect(planActivitySessions([{ ...base, endsOn: '2026-11-22' }], '2026-11-23', 1)).toEqual([]);
+    expect(planActivitySessions([{ ...base, startsOn: '2026-11-23', endsOn: '2026-11-23' }], '2026-11-23', 1)).toHaveLength(1);
   });
 });

@@ -410,6 +410,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - GET /activities (admin, operator, wakasek, kepsek: all; others: the ones they coach), POST and PATCH
   (admin, wakasek; coaches replaced as a whole), GET /activities/{id}, GET|PUT .../members (managers or
   coaches; others 404), GET /activities/students?q= (managers or anyone coaching something).
+- Activity sessions use the attendance engine (mode/owner_type 'activity', activity_id set, teacher_id
+  null; one per activity per day, unique index 0052). prs.generate-sessions plans them per weekday and
+  date range, also on a not_school_day (Sabtu ekskul) but never on a holiday. A coach opens one with
+  POST /activities/{id}/sessions (today or a past unlocked date) and fills it with POST
+  /sessions/{id}/submit (mayFillSession: coachIds). Izin and UKS marks cover them; recomputeDaily and
+  the rombel rekap skip them, and an alpa there emits no attendance.absent_marked (changeMarks).
+  GET /activities/{id}/recap?from&to counts per member from these sessions only.
 
 ## Student affairs (KSW, modules/student-affairs, packages/db/src/schema/student-affairs.ts)
 - UKS (KSW-08, behind student.uks, role petugas_uks only: even admin does not read the notes):

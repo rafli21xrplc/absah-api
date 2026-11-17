@@ -120,3 +120,21 @@ export function searchStudents(tx: Tx, academicYearId: string, text: string) {
     .orderBy(asc(schema.students.name), asc(e.id))
     .limit(20);
 }
+
+/** Status counts per student over the activity's sessions in a range (attendance_records, mode activity). */
+export async function recapCounts(tx: Tx, activityId: string, from: string, to: string) {
+  const res = await tx.execute<{ enrollment_id: string; status: string; n: number }>(sql`
+    select r.enrollment_id, r.status::text as status, count(*)::int as n
+      from attendance_records r
+      join attendance_sessions s on s.id = r.session_id
+     where s.activity_id = ${activityId}::uuid and s.mode = 'activity' and s.school_date between ${from}::date and ${to}::date
+     group by 1, 2`);
+  return res.rows;
+}
+
+export async function sessionCount(tx: Tx, activityId: string, from: string, to: string): Promise<number> {
+  const res = await tx.execute<{ n: number }>(sql`
+    select count(*)::int as n from attendance_sessions
+     where activity_id = ${activityId}::uuid and mode = 'activity' and school_date between ${from}::date and ${to}::date`);
+  return res.rows[0]?.n ?? 0;
+}

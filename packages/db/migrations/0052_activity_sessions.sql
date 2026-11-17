@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "attendance_sessions_activity_date_key" ON "attendance_sessions" USING btree ("school_id","school_date","activity_id") WHERE "attendance_sessions"."mode" = 'activity';
