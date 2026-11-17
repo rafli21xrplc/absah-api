@@ -5,12 +5,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { findScheduleConflicts } from '../src/modules/academic/domain/schedule-conflicts';
 import { findSchool, generateForSchool } from '../src/modules/attendance';
 import { seedPilot } from '../src/modules/platform';
-import { loadConfig } from '../src/shared/config';
 import { getDb, withPlatform, withTenant } from '../src/shared/db';
 import { buildTestApp, signIn } from './harness';
 
 const t = buildTestApp();
-const config = loadConfig();
+const { config } = t;
 const PASSWORD = 'pilot-password-for-tests';
 
 /** The pilot has fixed NPSN and emails: remove what an earlier run left behind. */
