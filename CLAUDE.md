@@ -401,3 +401,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   pdf = archive with H/T/S/I/A and signature blocks (kepala sekolah from the directory, wali kelas).
 - e-Rapor columns (exporters/erapor/columns.ts) are NOT confirmed: TODO(pilot), see
   packages/db/fixtures/erapor/README.md. Do not drop the TODO before a real import succeeded.
+
+## MBG (RKP-08, modules/report, behind requireCap('mbg.enabled'))
+- mbg_settings (one row per school: cutoff_time default 08.30, pic_name, pic_phone encryptedText; the PIC
+  is not an account). GET /mbg/settings (masked number; admin, operator, kepsek, wakasek), PUT (admin,
+  idempotent, audited without the number).
+- mbg_daily_counts: per rombel per school date enrolled, present_at_cutoff (H + T; S/I/A not counted),
+  unrecorded (no attendance yet), forecast_h3 (RKP-09, later), sent_at. Insert-only (no UPDATE/DELETE
+  for absah_app): a correction is a new row with supersedes_id = the row it replaces; the current number
+  is the row nobody supersedes. One cutoff row (supersedes_id null) per rombel and day.
+- GET /mbg/daily?date=: pending = live from daily_attendance, counted = stored rows, not_school_day.
