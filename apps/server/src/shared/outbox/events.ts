@@ -39,6 +39,8 @@ export const EVENTS = {
   'export.requested': z.object({ exportJobId: z.uuid() }),
   /** MBG numbers of a school date were stored (cutoff, or a correction); notify sends them to the PIC (RKP-08). */
   'mbg.count_ready': z.object({ schoolDate: z.iso.date(), correction: z.boolean() }),
+  /** An admin asked to pay an invoice; subscription opens the VA/QRIS at the gateway in the worker (BIL). */
+  'payment.requested': z.object({ paymentId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;

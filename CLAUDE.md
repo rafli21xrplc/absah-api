@@ -439,3 +439,14 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - GET /billing/invoices, GET /billing/invoices/{id} (lines with student name/NISN): admin and kepsek.
 - Ops: `pnpm --filter @absah/server billing:exempt --school <id> --from --to [--name] [--remove]`
   (owner role) marks a long year-end break as exempt holidays; short breaks stay billed.
+  `billing:issue --school <id> --month YYYY-MM` issues one month now (idempotent; ops, e2e).
+- Payments (shared/payments PaymentProvider; PAYMENT_PROVIDER none|fake, fake refused in production,
+  PAYMENT_WEBHOOK_SECRET required with a gateway; a real gateway adapter comes with its sandbox account):
+  POST /billing/invoices/{id}/payments { method va|qris } (admin, idempotent, 202, audited; reuses an
+  open attempt of the same method; 409 already_paid | invoice_void | payments_unavailable) stores a
+  requested payment + payment.requested -> consumer subscription_open_payment calls createCharge with
+  our payment id as external id (retryable errors retry, last attempt -> failed) -> pending with VA
+  number / QR string (24 h). Webhook POST /api/v1/webhooks/payments (raw body, signature; FakePaymentProvider:
+  x-absah-signature sha256 HMAC) -> inbox 'payment:<provider>' -> job bil.apply-payments (every
+  minute) marks the payment paid once (state + unique provider_txn_id) and the invoice paid; less money
+  than due keeps it open (last_error underpaid:<amount>). A pending charge past expires_at reads expired.

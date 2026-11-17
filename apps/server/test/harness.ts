@@ -7,6 +7,7 @@ import { pino } from 'pino';
 import request from 'supertest';
 import { uuidv7 } from 'uuidv7';
 import { createApp } from '../src/app';
+import { FakePaymentProvider } from '../src/shared/payments';
 import { createAuth, createPhoneUser, createStaffUser } from '../src/modules/platform';
 import { loadConfig } from '../src/shared/config';
 import { initCrypto } from '../src/shared/crypto';
@@ -40,8 +41,9 @@ export function buildTestApp() {
   const { db } = initDb(config);
   const messageSender = new FakeMessageSender();
   const auth = createAuth({ db, config, messageSender });
+  const paymentProvider = new FakePaymentProvider(TEST_PAYMENT_SECRET);
   const storage = new FsObjectStorage(mkdtempSync(path.join(tmpdir(), 'absah-storage-')), TEST_ORIGIN, 'test-storage-secret');
-  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' } });
+  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' }, paymentProvider });
 
   const created = { schools: [] as string[], users: [] as string[] };
 
@@ -49,6 +51,7 @@ export function buildTestApp() {
     app,
     auth,
     messageSender,
+    paymentProvider,
     storage,
     /** A cookie-keeping client from its own IP, so auth rate limits do not leak between tests. */
     agent(ip = `10.${rnd()}.${rnd()}.${rnd()}`) {
@@ -89,6 +92,9 @@ export function buildTestApp() {
     },
   };
 }
+
+/** Signs fake gateway webhooks in tests (FakePaymentProvider). */
+export const TEST_PAYMENT_SECRET = 'test-payment-webhook-secret';
 
 export type TestApp = ReturnType<typeof buildTestApp>;
 export type Agent = ReturnType<TestApp['agent']>;
