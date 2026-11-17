@@ -276,6 +276,14 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Load: test/kiosk-load.test.ts (900 scans, 3 kiosks, resent batches, CI) and
   load/kiosk-scans.k6.js with `gate:load-fixture --school <id>` (dev/staging only).
 
+- Buku tamu (GRB-11, behind gate.visitors; application/visitors.ts, table visitors): the kiosk calls
+  GET /kiosk/visitor-hosts (active staff, id + name) and POST /kiosk/visitors { clientEventId, name,
+  organization?, purpose, hostUserId? }; unique (school, client_event_id) makes a resend return the stored
+  visit. Naming a host emits gate.visitor_arrived { visitorId, hostUserId } (no consumer until the staff
+  push of NTF-06, prompt 5.7). Piket/admin/operator/wakasek PATCH /visitors/{id}/leave (idempotent, audited
+  gate.visitor_left; a second call changes nothing); GET /visitors?date&status=inside|all also for kepsek.
+  visitors.photo_key / photo_removed_at exist for the photo slice (removed 30 days after left_at).
+
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,
   provider_name, approval draft|pending|approved|rejected); the app role only reads them, the Absah

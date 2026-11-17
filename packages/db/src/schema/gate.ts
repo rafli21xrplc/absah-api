@@ -125,3 +125,32 @@ export const gateScans = pgTable(
     index('gate_scans_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
   ],
 );
+
+/**
+ * Buku tamu (GRB-11): one row per visit. clientEventId makes the kiosk's resend a no-op. The photo
+ * (optional, photo_key) is removed 30 days after the guest left (photo_removed_at).
+ */
+export const visitors = pgTable(
+  'visitors',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    schoolDate: date('school_date').notNull(),
+    clientEventId: uuid('client_event_id').notNull(),
+    kioskId: uuid('kiosk_id').references(() => kioskDevices.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    organization: text('organization'),
+    purpose: text('purpose').notNull(),
+    hostUserId: userRef('host_user_id'),
+    photoKey: text('photo_key'),
+    photoRemovedAt: at('photo_removed_at'),
+    arrivedAt: at('arrived_at').notNull().defaultNow(),
+    leftAt: at('left_at'),
+    leftBy: userRef('left_by'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('visitors_school_id_client_event_id_key').on(t.schoolId, t.clientEventId),
+    index('visitors_school_id_school_date_idx').on(t.schoolId, t.schoolDate, t.arrivedAt),
+  ],
+);
