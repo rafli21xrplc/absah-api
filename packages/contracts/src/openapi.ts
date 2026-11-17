@@ -99,6 +99,7 @@ import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersRespon
 import { HealthResponse } from './platform/health';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
 import { MbgDaily, MbgDailyQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
+import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
 import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
 
 export const API_BASE_PATH = '/api/v1';
@@ -947,6 +948,25 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: UpdateMbgSettingsRequest } } } },
     responses: { 200: json(MbgSettings, 'Settings'), ...errors(400, 401, 403, 404, 409, 422) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/billing/invoices`,
+    tags: ['billing'],
+    summary: "Absah's monthly invoices to the school, newest first (admin, kepsek)",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(InvoiceList, 'Invoices'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/billing/invoices/{invoiceId}`,
+    tags: ['billing'],
+    summary: 'One invoice with a line per billed student',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: InvoiceIdParam },
+    responses: { 200: json(InvoiceDetail, 'Invoice'), ...errors(401, 403, 404) },
   });
   registry.registerComponent('securitySchemes', 'actionLink', {
     type: 'apiKey',

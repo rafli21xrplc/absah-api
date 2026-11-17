@@ -9,6 +9,7 @@ import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
 import { linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
+import { invoicesRouter } from './modules/subscription';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
@@ -84,6 +85,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(reportsRouter(auth));
   v1.use(exportsRouter(auth, storage));
   v1.use(mbgRouter(auth));
+  v1.use(invoicesRouter(auth));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });

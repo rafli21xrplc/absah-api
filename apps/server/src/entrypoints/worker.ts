@@ -9,6 +9,7 @@ import {
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
 import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, MBG_CUTOFF_CRON, MBG_CUTOFF_QUEUE, mbgCutoffHandler, reportConsumers } from '../modules/report';
+import { ISSUE_INVOICES_CRON, ISSUE_INVOICES_QUEUE, issueInvoicesHandler } from '../modules/subscription';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
 import { initCrypto } from '../shared/crypto';
@@ -48,6 +49,10 @@ await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jaka
 await boss.createQueue(EXPORT_RETENTION_QUEUE);
 await boss.work(EXPORT_RETENTION_QUEUE, exportRetentionHandler(storage, logger));
 await boss.schedule(EXPORT_RETENTION_QUEUE, '50 2 * * *', null, { tz: 'Asia/Jakarta' });
+// Workspace invoices: 07.00 WIB on the 1st (days 2-7 only catch up).
+await boss.createQueue(ISSUE_INVOICES_QUEUE);
+await boss.work(ISSUE_INVOICES_QUEUE, issueInvoicesHandler(logger));
+await boss.schedule(ISSUE_INVOICES_QUEUE, ISSUE_INVOICES_CRON, null, { tz: 'Asia/Jakarta' });
 
 // Attendance jobs run every 5 minutes and act on each school's own clock (UTC cron on purpose).
 for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
