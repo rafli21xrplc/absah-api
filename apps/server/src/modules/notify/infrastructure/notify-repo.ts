@@ -49,6 +49,13 @@ export async function releasedPickup(tx: Tx, pickupEventId: string) {
   return row?.status === 'released' && row.checkedOutAt ? { ...row, checkedOutAt: row.checkedOutAt } : null;
 }
 
+/** A held unlisted penjemput (GRB-10): who is at the gate and since when. */
+export async function heldPickup(tx: Tx, pickupEventId: string) {
+  const pe = schema.pickupEvents;
+  const [row] = await tx.select({ enrollmentId: pe.enrollmentId, pickupName: pe.pickupName, createdAt: pe.createdAt, status: pe.status }).from(pe).where(eq(pe.id, pickupEventId));
+  return row?.status === 'held' ? row : null;
+}
+
 /** The PIC MBG's WhatsApp number (RKP-08), if the school set one. */
 export async function mbgPicPhone(tx: Tx): Promise<string | null> {
   const [row] = await tx.select({ phone: schema.mbgSettings.picPhone }).from(schema.mbgSettings);

@@ -75,7 +75,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   const openapi = generateOpenApiDocument(version);
   const v1 = express.Router();
   v1.use(healthRouter(version));
-  v1.use(linksRouter());
+  v1.use(linksRouter(storage));
   v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
   v1.use(importsRouter(auth, storage));

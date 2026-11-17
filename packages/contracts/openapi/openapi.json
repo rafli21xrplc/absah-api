@@ -3807,6 +3807,125 @@
         ],
         "additionalProperties": false
       },
+      "CreatePickupPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "photoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/PresignedUpload"
+          }
+        },
+        "required": [
+          "photoId",
+          "upload"
+        ]
+      },
+      "CreateKioskPickupPhotoRequest": {
+        "type": "object",
+        "properties": {
+          "fileSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 2097152
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg"
+            ]
+          }
+        },
+        "required": [
+          "fileSize",
+          "contentType"
+        ],
+        "additionalProperties": false
+      },
+      "KioskUnlistedPickup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PickupEventStatus"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "pickupName": {
+            "type": "string"
+          },
+          "decidedVia": {
+            "$ref": "#/components/schemas/PickupDecider"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "firstName",
+          "pickupName",
+          "decidedVia"
+        ]
+      },
+      "PickupEventStatus": {
+        "type": "string",
+        "enum": [
+          "released",
+          "held",
+          "denied",
+          "expired"
+        ]
+      },
+      "PickupDecider": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "guardian",
+          "staff",
+          null
+        ]
+      },
+      "KioskUnlistedPickupRequest": {
+        "type": "object",
+        "properties": {
+          "clientEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "photoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "clientEventId",
+          "token",
+          "name",
+          "photoId",
+          "requestedAt"
+        ],
+        "additionalProperties": false
+      },
       "Arrival": {
         "type": "object",
         "properties": {
@@ -4170,22 +4289,6 @@
           "expiresAt"
         ]
       },
-      "CreatePickupPhotoResponse": {
-        "type": "object",
-        "properties": {
-          "photoId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "upload": {
-            "$ref": "#/components/schemas/PresignedUpload"
-          }
-        },
-        "required": [
-          "photoId",
-          "upload"
-        ]
-      },
       "CreatePickupPhotoRequest": {
         "type": "object",
         "properties": {
@@ -4351,6 +4454,106 @@
         "required": [
           "url",
           "expiresAt"
+        ]
+      },
+      "PickupEventList": {
+        "type": "object",
+        "properties": {
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PickupEvent"
+            }
+          }
+        },
+        "required": [
+          "schoolDate",
+          "items"
+        ]
+      },
+      "PickupEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentName": {
+            "type": "string"
+          },
+          "className": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pickupName": {
+            "type": "string"
+          },
+          "listed": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PickupEventStatus"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkedOutAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "decidedVia": {
+            "$ref": "#/components/schemas/PickupDecider"
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "hasPhoto": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "schoolDate",
+          "studentId",
+          "studentName",
+          "className",
+          "pickupName",
+          "listed",
+          "status",
+          "requestedAt",
+          "checkedOutAt",
+          "decidedVia",
+          "decidedAt",
+          "hasPhoto"
+        ]
+      },
+      "PickupDecision": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "deny"
         ]
       },
       "UksStudentList": {
@@ -5855,6 +6058,7 @@
           "mbg_forecast",
           "student_sent_home",
           "student_picked_up",
+          "unlisted_pickup",
           "tppk_report_received",
           "tppk_team_changed"
         ]
@@ -7415,6 +7619,12 @@
           },
           "cardAvailable": {
             "type": "boolean"
+          },
+          "pickups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinkHeldPickup"
+            }
           }
         },
         "required": [
@@ -7424,7 +7634,33 @@
           "today",
           "leaves",
           "canRequestLeave",
-          "cardAvailable"
+          "cardAvailable",
+          "pickups"
+        ]
+      },
+      "LinkHeldPickup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pickupName": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PickupEventStatus"
+          }
+        },
+        "required": [
+          "id",
+          "pickupName",
+          "requestedAt",
+          "status"
         ]
       },
       "ActionLinkLeave": {
@@ -7493,6 +7729,32 @@
             "default": false
           }
         },
+        "additionalProperties": false
+      },
+      "LinkHeldPickups": {
+        "type": "object",
+        "properties": {
+          "pickups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinkHeldPickup"
+            }
+          }
+        },
+        "required": [
+          "pickups"
+        ]
+      },
+      "LinkPickupDecisionRequest": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/PickupDecision"
+          }
+        },
+        "required": [
+          "decision"
+        ],
         "additionalProperties": false
       }
     },
@@ -13172,6 +13434,227 @@
         }
       }
     },
+    "/api/v1/kiosk/pickup-photos": {
+      "post": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "A presigned PUT for an unlisted penjemput's photo (JPEG, up to 2 MB)",
+        "description": "Requires gate.pickup (404 CAPABILITY_DISABLED otherwise).",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKioskPickupPhotoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePickupPhotoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kiosk/unlisted-pickups": {
+      "post": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "Hold a student for an unlisted penjemput (name + photo required); online only",
+        "description": "Requires gate.pickup. Exactly once per clientEventId. Emits gate.unlisted_pickup (parents get unlisted_pickup with an action link). 400 for an unreadable card or a photo not uploaded; 409 already_released when the student left today.",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KioskUnlistedPickupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Held",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskUnlistedPickup"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kiosk/unlisted-pickups/{pickupEventId}": {
+      "get": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "The held request as the kiosk polls it: held, released (allowed), denied or expired",
+        "description": "Requires gate.pickup.",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pickupEventId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskUnlistedPickup"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/gate/arrivals": {
       "post": {
         "tags": [
@@ -14275,6 +14758,245 @@
             },
             "required": true,
             "name": "pickupGuardianId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupPhotoLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pickups": {
+      "get": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "The day's check-outs, held first (gate viewers: all; a wali kelas: own rombel)",
+        "description": "Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Callers outside the student (not their parent, wali kelas, or admin) get 404.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check-outs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupEventList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pickups/{pickupEventId}/{action}": {
+      "post": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "allow or deny a held unlisted penjemput (the student's wali kelas, admin)",
+        "description": "Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Callers outside the student (not their parent, wali kelas, or admin) get 404. allow releases the student and emits gate.checked_out. The same decision again changes nothing; 409 otherwise (decided, expired, already released). Audited.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pickupEventId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/PickupDecision"
+            },
+            "required": true,
+            "name": "action",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check-out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pickups/{pickupEventId}/photo": {
+      "get": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "A 5-minute link to an unlisted penjemput's photo (wali kelas, piket, admin; audited)",
+        "description": "Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Callers outside the student (not their parent, wali kelas, or admin) get 404. Removed 30 days after the request.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pickupEventId",
             "in": "path"
           }
         ],
@@ -19307,6 +20029,168 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/links/pickups/{pickupEventId}": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Action link: allow or deny an unlisted penjemput the kiosk holds for the student today (GRB-10)",
+        "description": "Not the link's one write. The same decision again changes nothing; 409 when already decided otherwise, expired, or the student left with someone else. Audited.",
+        "security": [
+          {
+            "actionLink": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pickupEventId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkPickupDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Today's requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkHeldPickups"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/links/pickups/{pickupEventId}/photo": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Action link: a 5-minute link to the unlisted penjemput's photo (audited)",
+        "security": [
+          {
+            "actionLink": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pickupEventId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupPhotoLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {

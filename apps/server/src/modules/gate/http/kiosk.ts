@@ -1,4 +1,4 @@
-import { KioskCheckoutBatch, KioskCheckoutResults, CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, KioskDay, Visitor, VisitorHostList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
+import { CreateKioskPickupPhotoRequest, CreatePickupPhotoResponse, KioskUnlistedPickup, KioskUnlistedPickupRequest, PickupEventIdParam, KioskCheckoutBatch, KioskCheckoutResults, CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, KioskDay, Visitor, VisitorHostList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
 import { Router, type RequestHandler } from 'express';
 import { CapabilityDisabledError } from '../../../shared/errors';
 import { sendContract } from '../../../shared/http';
@@ -7,6 +7,7 @@ import { idempotent } from '../../../shared/idempotency';
 import { heartbeat, pairingSchool, pairKiosk } from '../application/kiosks';
 import { kioskDay, recordScans } from '../application/scans';
 import { recordCheckouts } from '../application/checkouts';
+import { createKioskPickupPhoto, kioskUnlistedPickup, requestUnlistedPickup } from '../application/unlisted-pickups';
 import { createVisitorPhoto, registerVisitor, visitorHosts } from '../application/visitors';
 import { getKiosk, kioskContext, kioskIdempotencyScope } from './kiosk-auth';
 
@@ -68,6 +69,16 @@ export function kioskRouter(storage: ObjectStorage): Router {
   const pickup = kioskCap('gate.pickup');
   router.post('/kiosk/checkouts', kioskContext(), pickup, idempotent(kioskIdempotencyScope), async (req, res) => {
     sendContract(res, KioskCheckoutResults, await recordCheckouts(getKiosk(req), KioskCheckoutBatch.parse(req.body)));
+  });
+  router.post('/kiosk/pickup-photos', kioskContext(), pickup, idempotent(kioskIdempotencyScope), async (req, res) => {
+    sendContract(res, CreatePickupPhotoResponse, await createKioskPickupPhoto(getKiosk(req), storage, CreateKioskPickupPhotoRequest.parse(req.body)));
+  });
+  router.post('/kiosk/unlisted-pickups', kioskContext(), pickup, idempotent(kioskIdempotencyScope), async (req, res) => {
+    sendContract(res, KioskUnlistedPickup, await requestUnlistedPickup(getKiosk(req), storage, KioskUnlistedPickupRequest.parse(req.body)));
+  });
+  router.get('/kiosk/unlisted-pickups/:pickupEventId', kioskContext(), pickup, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    sendContract(res, KioskUnlistedPickup, await kioskUnlistedPickup(getKiosk(req), PickupEventIdParam.parse(req.params).pickupEventId));
   });
 
   return router;

@@ -9,3 +9,4 @@ export { VISITOR_PHOTOS_QUEUE, visitorPhotosHandler } from './jobs/visitor-photo
 export { purgeVisitorPhotos } from './application/visitors';
 export { PICKUP_PHOTOS_QUEUE, pickupPhotosHandler } from './jobs/pickup-photos';
 export { purgePickupPhotos } from './application/pickup-guardians';
+export { decideHeldPickup, expireAndPurgeUnlisted, linkPickupPhoto, linkPickups } from './application/unlisted-pickups';

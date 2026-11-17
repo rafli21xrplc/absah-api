@@ -95,7 +95,7 @@ import {
   TppkTrackResponse,
 } from './student-affairs/tppk';
 import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
-import { KioskCheckoutBatch, KioskCheckoutResults, CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
+import { CreateKioskPickupPhotoRequest, KioskUnlistedPickup, KioskUnlistedPickupRequest, LinkHeldPickups, LinkPickupDecisionRequest, PickupEvent, PickupEventActionParam, PickupEventIdParam, PickupEventList, PickupEventsQuery, KioskCheckoutBatch, KioskCheckoutResults, CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
@@ -826,6 +826,38 @@ function buildRegistry(): OpenAPIRegistry {
   });
   registry.registerPath({
     method: 'post',
+    path: `${API_BASE_PATH}/kiosk/pickup-photos`,
+    tags: ['kiosk'],
+    summary: "A presigned PUT for an unlisted penjemput's photo (JPEG, up to 2 MB)",
+    description: 'Requires gate.pickup (404 CAPABILITY_DISABLED otherwise).',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreateKioskPickupPhotoRequest } } } },
+    responses: { 200: json(CreatePickupPhotoResponse, 'Upload'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/unlisted-pickups`,
+    tags: ['kiosk'],
+    summary: 'Hold a student for an unlisted penjemput (name + photo required); online only',
+    description: 'Requires gate.pickup. Exactly once per clientEventId. Emits gate.unlisted_pickup (parents get unlisted_pickup with an action link). 400 for an unreadable card or a photo not uploaded; 409 already_released when the student left today.',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: KioskUnlistedPickupRequest } } } },
+    responses: { 200: json(KioskUnlistedPickup, 'Held'), ...errors(400, 401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/kiosk/unlisted-pickups/{pickupEventId}`,
+    tags: ['kiosk'],
+    summary: 'The held request as the kiosk polls it: held, released (allowed), denied or expired',
+    description: 'Requires gate.pickup.',
+    security: [{ kiosk: [] }],
+    request: { params: PickupEventIdParam },
+    responses: { 200: json(KioskUnlistedPickup, 'Request'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
     path: `${API_BASE_PATH}/gate/arrivals`,
     tags: ['gate'],
     summary: 'Piket enters an arrival without a card scan (reason required, today only)',
@@ -975,6 +1007,39 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: gateParams,
     request: { params: PickupGuardianIdParam },
+    responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickups`,
+    tags: ['gate'],
+    summary: "The day's check-outs, held first (gate viewers: all; a wali kelas: own rombel)",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { query: PickupEventsQuery },
+    responses: { 200: json(PickupEventList, 'Check-outs'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/pickups/{pickupEventId}/{action}`,
+    tags: ['gate'],
+    summary: 'allow or deny a held unlisted penjemput (the student\'s wali kelas, admin)',
+    description: `${pickupNote} allow releases the student and emits gate.checked_out. The same decision again changes nothing; 409 otherwise (decided, expired, already released). Audited.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: PickupEventActionParam },
+    responses: { 200: json(PickupEvent, 'Check-out'), ...errors(401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickups/{pickupEventId}/photo`,
+    tags: ['gate'],
+    summary: "A 5-minute link to an unlisted penjemput's photo (wali kelas, piket, admin; audited)",
+    description: `${pickupNote} Removed 30 days after the request.`,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: PickupEventIdParam },
     responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404) },
   });
   const uksNote = 'petugas_uks only, behind student.uks (404 CAPABILITY_DISABLED otherwise). Notes are encrypted at rest.';
@@ -1389,6 +1454,25 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ actionLink: [] }],
     request: { body: { content: { 'application/json': { schema: ActionLinkCardRequest } } } },
     responses: { 200: json(CardDeviceKeys, 'Card keys'), ...errors(401, 404, 409, 410) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/links/pickups/{pickupEventId}`,
+    tags: ['portal'],
+    summary: 'Action link: allow or deny an unlisted penjemput the kiosk holds for the student today (GRB-10)',
+    description: 'Not the link\'s one write. The same decision again changes nothing; 409 when already decided otherwise, expired, or the student left with someone else. Audited.',
+    security: [{ actionLink: [] }],
+    request: { params: PickupEventIdParam, body: { content: { 'application/json': { schema: LinkPickupDecisionRequest } } } },
+    responses: { 200: json(LinkHeldPickups, "Today's requests"), ...errors(400, 401, 404, 409, 410) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/links/pickups/{pickupEventId}/photo`,
+    tags: ['portal'],
+    summary: "Action link: a 5-minute link to the unlisted penjemput's photo (audited)",
+    security: [{ actionLink: [] }],
+    request: { params: PickupEventIdParam },
+    responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404, 410) },
   });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',

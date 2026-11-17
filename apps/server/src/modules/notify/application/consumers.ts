@@ -6,6 +6,7 @@ import { schoolMinutes } from '../../../shared/school-date';
 import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine, releaseTime } from '../domain/messages';
 import {
   guardiansOf,
+  heldPickup,
   homeroomContact,
   leaveOf,
   liaisonNotice,
@@ -190,6 +191,34 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
   });
 
   /**
+   * GRB-10: an unlisted penjemput waits at the gate. Each parent gets an action link to allow or deny
+   * (the wali kelas can decide on the web too). Only the penjemput's name, the child's first name and
+   * the time.
+   */
+  const unlistedPickup = defineConsumer({
+    name: 'notify_unlisted_pickup',
+    event: 'gate.unlisted_pickup',
+    async handle(tx, event) {
+      const pickup = await heldPickup(tx, event.payload.pickupEventId);
+      if (!pickup) return;
+      const [school, guardians] = await Promise.all([schoolOf(tx, event.schoolId), guardiansOf(tx, pickup.enrollmentId)]);
+      if (!school || guardians.length === 0) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'unlisted_pickup',
+        enrollmentId: pickup.enrollmentId,
+        recipients: guardians,
+        dedupKey: (r) => `unlisted_pickup:${event.payload.pickupEventId}:${r.guardianId}`,
+        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), pickup_name: pickup.pickupName, time: clockLabel(schoolMinutes(school.timezone, pickup.createdAt)) },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  /**
    * KSW-06: a new TPPK report reaches the TPPK members only (never the kepsek or a wali kelas, in case
    * the report is about staff). The message says nothing about the report; the details are behind
    * login. Members without a WhatsApp number wait for staff push (NTF-06).
@@ -287,5 +316,5 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
 }
