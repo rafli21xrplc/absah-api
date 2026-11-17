@@ -97,6 +97,7 @@ import {
 } from './platform/invitations';
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
+import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
 
 export const API_BASE_PATH = '/api/v1';
 
@@ -828,6 +829,45 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
     responses: { 200: json(PortalAttendance, 'History'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/reports/semesters`,
+    tags: ['report'],
+    summary: 'Semesters of the active year (period picker for rekap and exports)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(ReportSemesterList, 'Semesters'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/reports/attendance/classes`,
+    tags: ['report'],
+    summary: 'Rekap S/I/A per rombel for a period (RKP-01); wali kelas see their own rombel',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: ReportPeriodQuery },
+    responses: { 200: json(ClassRecapList, 'Rekap per rombel'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/reports/attendance/classes/{classId}`,
+    tags: ['report'],
+    summary: 'Rekap S/I/A per student of one rombel for a period (RKP-01, RKP-02)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: RecapClassIdParam, query: ReportPeriodQuery },
+    responses: { 200: json(ClassRecapDetail, 'Rekap per siswa'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/reports/session-compliance`,
+    tags: ['report'],
+    summary: 'Session filling compliance per teacher and day (RKP-04, wakasek and kepsek)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: ReportPeriodQuery },
+    responses: { 200: json(SessionCompliance, 'Compliance'), ...errors(400, 401, 403) },
   });
   registry.registerComponent('securitySchemes', 'actionLink', {
     type: 'apiKey',
