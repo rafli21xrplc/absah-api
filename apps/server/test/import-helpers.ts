@@ -1,5 +1,5 @@
 import { XLSX_CONTENT_TYPE } from '@absah/contracts';
-import { dapodikFixture } from '@absah/db/fixtures';
+import { dapodikFixture, emisFixture } from '@absah/db/fixtures';
 import { readFile } from 'node:fs/promises';
 import { uuidv7 } from 'uuidv7';
 import { academicConsumers } from '../src/modules/academic';
@@ -20,13 +20,14 @@ export type Preview = {
 };
 
 export const fixture = (name: 'daftar-pd-awal.xlsx' | 'daftar-pd-perubahan.xlsx') => readFile(dapodikFixture(name));
+export const emisFile = () => readFile(emisFixture('data-siswa.xlsx'));
 
 /** Import helpers for one agent in one school, mirroring what the web app does. */
-export function importer(t: TestApp, agent: Agent, school: string) {
+export function importer(t: TestApp, agent: Agent, school: string, source: 'dapodik' | 'emis' = 'dapodik') {
   const start = async (file: Buffer) =>
     (
       await agent
-        .post('/api/v1/imports/dapodik')
+        .post(`/api/v1/imports/${source}`)
         .set('X-School-Id', school)
         .set('Idempotency-Key', `import-${uuidv7()}`)
         .send({ fileName: 'daftar-pd.xlsx', fileSize: file.length, contentType: XLSX_CONTENT_TYPE })

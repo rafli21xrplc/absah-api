@@ -340,6 +340,20 @@ function buildRegistry(): OpenAPIRegistry {
   });
   registry.registerPath({
     method: 'post',
+    path: `${API_BASE_PATH}/imports/emis`,
+    tags: ['academic'],
+    summary: 'Start an EMIS import (madrasah): returns a presigned PUT for the .xlsx (admin, operator)',
+    description: 'Needs data.source = emis (AKD-09). Same flow as Dapodik: upload, POST /imports/{importId}/parse, preview, commit. Column layout provisional (TODO(pilot)).',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateImportRequest } } } },
+    responses: {
+      201: { description: 'Created', content: { 'application/json': { schema: CreateImportResponse } } },
+      ...errors(400, 401, 403, 404, 409, 422),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
     path: `${API_BASE_PATH}/imports/{importId}/parse`,
     tags: ['academic'],
     summary: 'Queue parsing of the uploaded file, or refresh a ready preview (admin, operator)',
