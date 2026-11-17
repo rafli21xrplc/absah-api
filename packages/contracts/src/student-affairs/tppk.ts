@@ -111,3 +111,82 @@ export type TppkTrackResponse = z.infer<typeof TppkTrackResponse>;
 
 export const TppkSchoolParam = z.object({ schoolId: z.uuid() });
 export const TppkCodeParam = z.object({ code: z.string().max(40) });
+
+// --- Members only (KSW-07): reports and cases. Every read and write is audited. ---
+
+const Person = z.object({ id: z.uuid(), name: z.string() });
+
+export const TppkReportSummary = z
+  .object({
+    id: z.uuid(),
+    category: TppkReportCategory,
+    status: TppkReportStatus,
+    receivedAt: z.iso.datetime({ offset: true }),
+    occurredOn: z.iso.date().nullable(),
+    reporterRelation: TppkReporterRelation,
+    isAnonymous: z.boolean(),
+    caseId: z.uuid().nullable(),
+  })
+  .meta({ id: 'TppkReportSummary' });
+export type TppkReportSummary = z.infer<typeof TppkReportSummary>;
+
+export const TppkReportDetail = TppkReportSummary.extend({
+  chronology: z.string(),
+  /** Null when anonymous. account: the signed-in user who filed it under their name. */
+  reporter: z.object({ name: z.string().nullable(), contact: z.string().nullable(), account: Person.nullable() }).nullable(),
+}).meta({ id: 'TppkReportDetail' });
+export type TppkReportDetail = z.infer<typeof TppkReportDetail>;
+
+/** GET /api/v1/tppk/reports?status=: newest first. */
+export const TppkReportsQuery = z.object({ status: TppkReportStatus.optional() }).meta({ id: 'TppkReportsQuery' });
+export const TppkReportList = z.object({ items: z.array(TppkReportSummary) }).meta({ id: 'TppkReportList' });
+export type TppkReportList = z.infer<typeof TppkReportList>;
+export const TppkReportIdParam = z.object({ reportId: z.uuid() });
+
+export const TppkCaseEvent = z
+  .object({ id: z.uuid(), kind: TppkEventKind, note: z.string(), createdAt: z.iso.datetime({ offset: true }), createdBy: Person.nullable() })
+  .meta({ id: 'TppkCaseEvent' });
+export type TppkCaseEvent = z.infer<typeof TppkCaseEvent>;
+
+export const TppkCaseSummary = z
+  .object({
+    id: z.uuid(),
+    reportId: z.uuid().nullable(),
+    category: TppkReportCategory.nullable(),
+    summary: z.string(),
+    status: TppkCaseStatus,
+    openedAt: z.iso.datetime({ offset: true }),
+    openedBy: Person.nullable(),
+    closedAt: z.iso.datetime({ offset: true }).nullable(),
+  })
+  .meta({ id: 'TppkCaseSummary' });
+export type TppkCaseSummary = z.infer<typeof TppkCaseSummary>;
+
+export const TppkCaseDetail = TppkCaseSummary.extend({ report: TppkReportDetail.nullable(), events: z.array(TppkCaseEvent) }).meta({ id: 'TppkCaseDetail' });
+export type TppkCaseDetail = z.infer<typeof TppkCaseDetail>;
+
+/** GET /api/v1/tppk/cases?status=: open first by default order of opening, newest first. */
+export const TppkCasesQuery = z.object({ status: TppkCaseStatus.optional() }).meta({ id: 'TppkCasesQuery' });
+export const TppkCaseList = z.object({ items: z.array(TppkCaseSummary) }).meta({ id: 'TppkCaseList' });
+export type TppkCaseList = z.infer<typeof TppkCaseList>;
+export const TppkCaseIdParam = z.object({ caseId: z.uuid() });
+
+/** POST /api/v1/tppk/cases: from a report (it becomes "ditangani"), or without one (seen directly). */
+export const CreateTppkCaseRequest = z
+  .object({ reportId: z.uuid().optional(), summary: z.string().trim().min(5, 'Tulis ringkasan kasus.').max(300) })
+  .strict()
+  .meta({ id: 'CreateTppkCaseRequest' });
+export type CreateTppkCaseRequest = z.infer<typeof CreateTppkCaseRequest>;
+
+const Note = z.string().trim().min(2, 'Tulis catatannya.').max(4000);
+
+/** POST /api/v1/tppk/cases/{caseId}/events: a note or a step taken. Open cases only. */
+export const AddTppkCaseEventRequest = z
+  .object({ kind: z.enum(['catatan', 'langkah']), note: Note })
+  .strict()
+  .meta({ id: 'AddTppkCaseEventRequest' });
+export type AddTppkCaseEventRequest = z.infer<typeof AddTppkCaseEventRequest>;
+
+/** POST /api/v1/tppk/cases/{caseId}/close and /reopen: why, kept as an event. */
+export const TppkCaseNoteRequest = z.object({ note: Note }).strict().meta({ id: 'TppkCaseNoteRequest' });
+export type TppkCaseNoteRequest = z.infer<typeof TppkCaseNoteRequest>;
