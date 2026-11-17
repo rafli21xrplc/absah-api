@@ -427,6 +427,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   reads every thread incl. retracted text (audited liaison.thread_viewed) and cannot write.
 - Retract only by the sender within LIAISON_RETRACT_MINUTES (15); afterwards permanent (409).
   Each message emits liaison.message_posted.
+- notify_liaison_message: a parent's message goes to the wali kelas (view homeroom_contacts, phone
+  only), a staff message to guardians WITH a portal account (guardians.user_id) and a phone; never
+  the text, no action link (params.url to /penghubung or /portal/penghubung). Service hours
+  (liaison_settings, default 06.00-18.00, GET|PUT /liaison/settings admin, migrations 0055-0056)
+  hold notifications via queueMessages({ window }); releaseTime clamps any window inside the quiet
+  hours. Dedup: one per recipient per thread per release hour. Template liaison_message pending.
 - Retention (2 tahun ajaran) is not implemented yet.
 
 ## Student affairs (KSW, modules/student-affairs, packages/db/src/schema/student-affairs.ts)

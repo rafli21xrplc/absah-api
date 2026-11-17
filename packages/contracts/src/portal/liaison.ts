@@ -58,3 +58,15 @@ export const PostLiaisonMessageRequest = z
   .strict()
   .meta({ id: 'PostLiaisonMessageRequest' });
 export type PostLiaisonMessageRequest = z.infer<typeof PostLiaisonMessageRequest>;
+
+const Clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Format jam HH:MM.');
+
+/** Service hours: WhatsApp notifications outside them wait for the next start; messages are never held. */
+export const LiaisonSettings = z.object({ startsAt: Clock, endsAt: Clock }).meta({ id: 'LiaisonSettings' });
+export type LiaisonSettings = z.infer<typeof LiaisonSettings>;
+export const LIAISON_DEFAULT_HOURS: LiaisonSettings = { startsAt: '06:00', endsAt: '18:00' };
+
+export const UpdateLiaisonSettingsRequest = LiaisonSettings.strict()
+  .refine((v) => v.startsAt < v.endsAt, { message: 'Jam selesai harus setelah jam mulai.', path: ['endsAt'] })
+  .meta({ id: 'UpdateLiaisonSettingsRequest' });
+export type UpdateLiaisonSettingsRequest = z.infer<typeof UpdateLiaisonSettingsRequest>;

@@ -1,5 +1,5 @@
 import { LIAISON_SENDER_ROLES } from '@absah/contracts';
-import { index, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, pgEnum, pgTable, primaryKey, text, time, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
 import { user } from './auth';
 import { guardians, students } from './academic';
@@ -96,3 +96,14 @@ export const communicationReads = pgTable(
   },
   (t) => [primaryKey({ columns: [t.threadId, t.userId] })],
 );
+
+/** Service hours of the buku penghubung (ORT-07): notifications outside them wait; messages do not. */
+export const liaisonSettings = pgTable('liaison_settings', {
+  schoolId: schoolId()
+    .primaryKey()
+    .references(() => schools.id, { onDelete: 'cascade' }),
+  startsAt: time('starts_at').notNull().default('06:00'),
+  endsAt: time('ends_at').notNull().default('18:00'),
+  updatedBy: uuid('updated_by').references(() => user.id, { onDelete: 'set null' }),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+});

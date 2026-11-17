@@ -1,4 +1,4 @@
-import { LIAISON_RETRACT_MINUTES, type LiaisonSenderRole, type LiaisonThread, type LiaisonThreadList, type PostLiaisonMessageRequest } from '@absah/contracts';
+import { LIAISON_DEFAULT_HOURS, LIAISON_RETRACT_MINUTES, type LiaisonSenderRole, type LiaisonSettings, type UpdateLiaisonSettingsRequest, type LiaisonThread, type LiaisonThreadList, type PostLiaisonMessageRequest } from '@absah/contracts';
 import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
@@ -6,7 +6,21 @@ import { withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../../shared/errors';
 import { emit } from '../../../shared/outbox';
 import { anyRole, type Actor } from '../../../shared/policy';
-import { ensureThread, insertMessage, lockMessage, markRead, messagesOf, relationOf, retractMessage, studentInfo, threadIdOf, threadsFor, type Relation } from '../infrastructure/liaison-repo';
+import {
+  ensureThread,
+  insertMessage,
+  lockMessage,
+  markRead,
+  messagesOf,
+  readSettings,
+  relationOf,
+  retractMessage,
+  studentInfo,
+  threadIdOf,
+  threadsFor,
+  writeSettings,
+  type Relation,
+} from '../infrastructure/liaison-repo';
 
 /** Reads every thread, retracted messages included, for disputes; never writes. */
 const isAdmin = anyRole('admin');
@@ -99,5 +113,25 @@ export function retract(actor: Actor, auditCtx: AuditContext, messageId: string,
     await retractMessage(tx, messageId, now);
     await audit(tx, auditCtx, 'liaison.message_retracted', { type: 'liaison_message', id: messageId }, {});
     return view(tx, actor, auditCtx, m.studentId, now);
+  });
+}
+
+const hhmm = (t: string) => t.slice(0, 5);
+
+/** Service hours; anyone in the school may read them (the page tells parents when replies come). */
+export function getSettings(actor: Actor): Promise<LiaisonSettings> {
+  return withTenant(scope(actor), async (tx) => {
+    const row = await readSettings(tx);
+    return row ? { startsAt: hhmm(row.startsAt), endsAt: hhmm(row.endsAt) } : LIAISON_DEFAULT_HOURS;
+  });
+}
+
+export function updateSettings(actor: Actor, auditCtx: AuditContext, input: UpdateLiaisonSettingsRequest): Promise<LiaisonSettings> {
+  if (!isAdmin.allows(actor)) throw new ForbiddenError('Jam layanan diatur oleh admin.');
+  return withTenant(scope(actor), async (tx) => {
+    const before = await readSettings(tx);
+    await writeSettings(tx, actor.schoolId, actor.userId, input);
+    await audit(tx, auditCtx, 'liaison.settings_updated', { type: 'liaison_settings', id: actor.schoolId }, { before: before ? { startsAt: hhmm(before.startsAt), endsAt: hhmm(before.endsAt) } : LIAISON_DEFAULT_HOURS, after: input });
+    return input;
   });
 }

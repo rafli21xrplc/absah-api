@@ -137,3 +137,43 @@ export async function markFailed(tx: Tx, id: string, error: string, attempts: nu
 /** Schools with due unreleased notifications. Platform read for the release job only. */
 export const dueSchoolsSql = (now: Date) =>
   sql`select distinct school_id from notifications where released_at is null and scheduled_for <= ${now.toISOString()}::timestamptz`;
+
+/** A buku penghubung message for its notification: who wrote about which student (never the text). */
+export async function liaisonNotice(tx: Tx, messageId: string) {
+  const res = await tx.execute<{ thread_id: string; student_id: string; student_name: string; sender_id: string | null; sender_role: string; created_at: Date; class_id: string | null }>(sql`
+    select m.thread_id, t.student_id, st.name as student_name, m.sender_id, m.sender_role::text as sender_role, m.created_at,
+           (select e.class_id from enrollments e join academic_years y on y.id = e.academic_year_id and y.is_active
+             where e.student_id = t.student_id and e.status = 'active' limit 1) as class_id
+      from communication_messages m
+      join communication_threads t on t.id = m.thread_id
+      join students st on st.id = t.student_id
+     where m.id = ${messageId}::uuid`);
+  const r = res.rows[0];
+  return r
+    ? { threadId: r.thread_id, studentId: r.student_id, studentName: r.student_name, senderId: r.sender_id, senderRole: r.sender_role, createdAt: new Date(r.created_at), classId: r.class_id }
+    : undefined;
+}
+
+/** Service hours as local minutes (06.00-18.00 until the admin sets them). */
+export async function liaisonWindow(tx: Tx): Promise<{ start: number; end: number }> {
+  const [row] = await tx.select({ startsAt: schema.liaisonSettings.startsAt, endsAt: schema.liaisonSettings.endsAt }).from(schema.liaisonSettings);
+  const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  return { start: minutes(row?.startsAt ?? '06:00'), end: minutes(row?.endsAt ?? '18:00') };
+}
+
+export async function homeroomContact(tx: Tx, classId: string): Promise<{ userId: string; phone: string } | undefined> {
+  const res = await tx.execute<{ user_id: string; phone_number: string | null }>(sql`select user_id, phone_number from homeroom_contacts where class_id = ${classId}::uuid`);
+  const r = res.rows[0];
+  return r?.phone_number ? { userId: r.user_id, phone: r.phone_number } : undefined;
+}
+
+/** Guardians of the student who can sign in to read the thread (a portal account) and have a number. */
+export async function portalGuardians(tx: Tx, studentId: string): Promise<{ guardianId: string; userId: string; phone: string }[]> {
+  const rows = await tx
+    .select({ guardianId: schema.guardians.id, userId: schema.guardians.userId, phone: schema.guardians.phone })
+    .from(schema.studentGuardians)
+    .innerJoin(schema.guardians, eq(schema.guardians.id, schema.studentGuardians.guardianId))
+    .where(and(eq(schema.studentGuardians.studentId, studentId), isNotNull(schema.guardians.userId), isNotNull(schema.guardians.phone)))
+    .orderBy(asc(schema.guardians.id));
+  return rows.flatMap((r) => (r.phone && r.userId ? [{ guardianId: r.guardianId, userId: r.userId, phone: r.phone.reveal() }] : []));
+}

@@ -3,12 +3,27 @@ import { defineConsumer, type Consumer } from '../../../shared/outbox';
 import { firstName } from '../../../shared/names';
 import type { MessageSender } from '../../../shared/messaging';
 import { schoolMinutes } from '../../../shared/school-date';
-import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine } from '../domain/messages';
-import { guardiansOf, leaveOf, mbgCurrentCounts, mbgPicPhone, schoolOf, sentHomeVisit, sessionDate, staffNames, tppkContacts } from '../infrastructure/notify-repo';
+import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine, releaseTime } from '../domain/messages';
+import {
+  guardiansOf,
+  homeroomContact,
+  leaveOf,
+  liaisonNotice,
+  liaisonWindow,
+  mbgCurrentCounts,
+  mbgPicPhone,
+  portalGuardians,
+  schoolOf,
+  sentHomeVisit,
+  sessionDate,
+  staffNames,
+  tppkContacts,
+} from '../infrastructure/notify-repo';
 import { deliverConsumer } from './deliver';
 import { queueMessages } from './queue';
 
 const KIND_LABELS: Record<LeaveKind, string> = { sakit: 'sakit', izin: 'izin' };
+const SENDER_LABELS: Record<string, string> = { orang_tua: 'orang tua', wali_kelas: 'wali kelas', guru: 'guru' };
 
 export interface NotifyDeps {
   sender: MessageSender;
@@ -175,5 +190,48 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, sentHome, tppkReport, tppkTeam, deliverConsumer(deps.sender)];
+  /**
+   * ORT-07: a parent's message reaches the wali kelas; a teacher's reaches the guardians who can sign
+   * in. Outside the school's service hours it waits for the next start. At most one message per
+   * recipient per thread per release hour, so a busy conversation is not a stream of WhatsApps.
+   */
+  const liaison = defineConsumer({
+    name: 'notify_liaison_message',
+    event: 'liaison.message_posted',
+    async handle(tx, event) {
+      const notice = await liaisonNotice(tx, event.payload.messageId);
+      if (!notice) return;
+      const [school, window] = await Promise.all([schoolOf(tx, event.schoolId), liaisonWindow(tx)]);
+      if (!school) return;
+      const fromParent = notice.senderRole === 'orang_tua';
+      const homeroom = fromParent && notice.classId ? await homeroomContact(tx, notice.classId) : undefined;
+      const people = fromParent ? (homeroom ? [homeroom] : []) : await portalGuardians(tx, notice.studentId);
+      const recipients = people.filter((p) => p.userId !== notice.senderId);
+      if (recipients.length === 0) return;
+      const now = deps.now?.() ?? new Date();
+      const hour = releaseTime(now, schoolMinutes(school.timezone, now), window).toISOString().slice(0, 13);
+      const userOf = new Map(recipients.map((r) => [r.phone, r.userId]));
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'liaison_message',
+        enrollmentId: null,
+        // Phones only: the reader signs in to the thread, so no action link is minted.
+        recipients: recipients.map((r) => ({ phone: r.phone })),
+        dedupKey: (r) => `liaison:${notice.threadId}:${userOf.get(r.phone) ?? ''}:${hour}`,
+        params: {
+          school: school.name,
+          first_name: firstName(notice.studentName),
+          sender: SENDER_LABELS[notice.senderRole] ?? 'sekolah',
+          url: fromParent ? `${deps.appUrl}/penghubung/${notice.studentId}` : `${deps.appUrl}/portal/penghubung/${notice.studentId}`,
+        },
+        appUrl: deps.appUrl,
+        now,
+        window,
+      });
+    },
+  });
+
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, sentHome, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
 }

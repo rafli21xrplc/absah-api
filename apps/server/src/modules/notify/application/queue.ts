@@ -3,7 +3,7 @@ import { sensitive, type Tx } from '@absah/db';
 import { mintActionLink } from '../../../shared/action-links';
 import { emit } from '../../../shared/outbox';
 import { schoolMinutes } from '../../../shared/school-date';
-import { releaseTime } from '../domain/messages';
+import { releaseTime, type SendWindow } from '../domain/messages';
 import { insertNotifications, markReleased, usedDedupKeys } from '../infrastructure/notify-repo';
 
 /** A guardian of a student (gets an action link), or a contact outside the student data such as the PIC MBG. */
@@ -29,10 +29,12 @@ export async function queueMessages(
     /** Web origin for the action link; the `link` param is filled per guardian. */
     appUrl: string;
     now?: Date;
+    /** Narrower sending hours than the default (buku penghubung service hours). */
+    window?: SendWindow;
   },
 ): Promise<number> {
   const now = input.now ?? new Date();
-  const scheduledFor = releaseTime(now, schoolMinutes(input.timezone, now));
+  const scheduledFor = releaseTime(now, schoolMinutes(input.timezone, now), input.window);
   const used = await usedDedupKeys(tx, input.recipients.map(input.dedupKey));
   const rows = [];
   for (const r of input.recipients.filter((x) => !used.has(input.dedupKey(x)))) {
