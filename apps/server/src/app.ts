@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { correctionsRouter, journalRouter, sessionsRouter } from './modules/attendance';
-import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
+import { gateRouter, kioskCors, kioskRouter, pickupRouter } from './modules/gate';
 import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { activitiesRouter } from './modules/activity';
@@ -91,6 +91,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(tppkRouter(auth));
   v1.use(activitiesRouter(auth));
   v1.use(gateRouter(auth, storage));
+  v1.use(pickupRouter(auth, storage));
   v1.use(kioskRouter(storage));
   v1.use(notificationsRouter(auth));
   v1.use(portalRouter(auth));

@@ -95,6 +95,7 @@ import {
   TppkTrackResponse,
 } from './student-affairs/tppk';
 import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
+import { CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
@@ -895,6 +896,73 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [...gateParams, idempotencyHeader],
     request: { params: VisitorIdParam },
     responses: { 200: json(Visitor, 'Visit'), ...errors(401, 403, 404) },
+  });
+  const pickupNote = 'Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Callers outside the student (not their parent, wali kelas, or admin) get 404.';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/pickup-guardian-photos`,
+    tags: ['gate'],
+    summary: "A presigned PUT for a penjemput's photo (JPEG, up to 2 MB); send photoId with the registration",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, { ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreatePickupPhotoRequest } } } },
+    responses: { 200: json(CreatePickupPhotoResponse, 'Upload'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/students/{studentId}/pickup-guardians`,
+    tags: ['gate'],
+    summary: "The student's penjemput in every status (parent, wali kelas, admin, piket)",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: StudentIdParam },
+    responses: { 200: json(PickupGuardianList, 'Penjemput'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/students/{studentId}/pickup-guardians`,
+    tags: ['gate'],
+    summary: 'Register a penjemput resmi (GRB-09): pending from a parent, approved from the wali kelas or admin',
+    description: `${pickupNote} At most 6 pending or approved per student (409 too_many). The number is encrypted and masked in responses.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, { ...idempotencyHeader, required: true }],
+    request: { params: StudentIdParam, body: { content: { 'application/json': { schema: CreatePickupGuardianRequest } } } },
+    responses: { 201: json(PickupGuardian, 'Registered'), ...errors(400, 401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickup-guardians`,
+    tags: ['gate'],
+    summary: 'Penjemput by status, oldest first: the admin sees every student, others their own rombel as wali kelas',
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { query: PickupGuardiansQuery },
+    responses: { 200: json(PickupGuardianList, 'Queue'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/pickup-guardians/{pickupGuardianId}/{action}`,
+    tags: ['gate'],
+    summary: 'approve or reject a pending penjemput (wali kelas, admin); deactivate a pending or approved one (also the parent)',
+    description: `${pickupNote} Repeating an action changes nothing; any other status change is 409. Audited. The photo is removed 30 days after reject or deactivate.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: PickupGuardianActionParam },
+    responses: { 200: json(PickupGuardian, 'Penjemput'), ...errors(401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickup-guardians/{pickupGuardianId}/photo`,
+    tags: ['gate'],
+    summary: "A 5-minute link to the penjemput's photo (the student's wali kelas, piket, admin; audited)",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: PickupGuardianIdParam },
+    responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404) },
   });
   const uksNote = 'petugas_uks only, behind student.uks (404 CAPABILITY_DISABLED otherwise). Notes are encrypted at rest.';
   registry.registerPath({

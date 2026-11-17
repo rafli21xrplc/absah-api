@@ -1,4 +1,4 @@
-import { ARRIVAL_OUTCOMES, CARD_HOLDERS, SCAN_METHODS, SCAN_REJECT_REASONS, SCAN_RESULTS } from '@absah/contracts';
+import { ARRIVAL_OUTCOMES, CARD_HOLDERS, PICKUP_GUARDIAN_STATUSES, PICKUP_RELATIONS, SCAN_METHODS, SCAN_REJECT_REASONS, SCAN_RESULTS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { date, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
@@ -12,6 +12,8 @@ export const scanMethod = pgEnum('scan_method', SCAN_METHODS);
 export const scanResult = pgEnum('scan_result', SCAN_RESULTS);
 export const scanRejectReason = pgEnum('scan_reject_reason', SCAN_REJECT_REASONS);
 export const arrivalOutcome = pgEnum('arrival_outcome', ARRIVAL_OUTCOMES);
+export const pickupRelation = pgEnum('pickup_relation', PICKUP_RELATIONS);
+export const pickupGuardianStatus = pgEnum('pickup_guardian_status', PICKUP_GUARDIAN_STATUSES);
 
 const at = (name: string) => timestamp(name, { withTimezone: true });
 const schoolRef = () => schoolId().references(() => schools.id, { onDelete: 'cascade' });
@@ -153,4 +155,33 @@ export const visitors = pgTable(
     unique('visitors_school_id_client_event_id_key').on(t.schoolId, t.clientEventId),
     index('visitors_school_id_school_date_idx').on(t.schoolId, t.schoolDate, t.arrivedAt),
   ],
+);
+
+/**
+ * Penjemput resmi (GRB-09). A parent's entry starts pending; the wali kelas or admin decides. The
+ * phone is encrypted; the photo (R2, photo_key) is removed 30 days after ended_at (rejected or
+ * deactivated), marked by photo_removed_at.
+ */
+export const pickupGuardians = pgTable(
+  'pickup_guardians',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    relation: pickupRelation('relation').notNull(),
+    phone: encryptedText('phone', 'pickup_guardians.phone').notNull(),
+    photoKey: text('photo_key').notNull(),
+    photoRemovedAt: at('photo_removed_at'),
+    validUntil: date('valid_until'),
+    status: pickupGuardianStatus('status').notNull().default('pending'),
+    registeredBy: userRef('registered_by'),
+    decidedBy: userRef('decided_by'),
+    decidedAt: at('decided_at'),
+    endedAt: at('ended_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('pickup_guardians_school_id_student_id_idx').on(t.schoolId, t.studentId), index('pickup_guardians_school_id_status_idx').on(t.schoolId, t.status)],
 );
