@@ -4163,6 +4163,120 @@
           "items"
         ]
       },
+      "TppkChannel": {
+        "type": "object",
+        "properties": {
+          "schoolName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schoolName"
+        ]
+      },
+      "TppkReportReceipt": {
+        "type": "object",
+        "properties": {
+          "trackingCode": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10
+          },
+          "status": {
+            "$ref": "#/components/schemas/TppkReportStatus"
+          }
+        },
+        "required": [
+          "trackingCode",
+          "status"
+        ]
+      },
+      "TppkReportStatus": {
+        "type": "string",
+        "enum": [
+          "diterima",
+          "ditangani",
+          "selesai"
+        ]
+      },
+      "CreateTppkReportRequest": {
+        "type": "object",
+        "properties": {
+          "schoolId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "$ref": "#/components/schemas/TppkReportCategory"
+          },
+          "chronology": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 5000
+          },
+          "occurredOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "reporterRelation": {
+            "$ref": "#/components/schemas/TppkReporterRelation"
+          },
+          "anonymous": {
+            "type": "boolean"
+          },
+          "reporterName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "reporterContact": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "schoolId",
+          "category",
+          "chronology",
+          "reporterRelation",
+          "anonymous"
+        ],
+        "additionalProperties": false
+      },
+      "TppkReportCategory": {
+        "type": "string",
+        "enum": [
+          "fisik",
+          "psikis",
+          "perundungan",
+          "seksual",
+          "diskriminasi",
+          "kebijakan",
+          "lainnya"
+        ]
+      },
+      "TppkReporterRelation": {
+        "type": "string",
+        "enum": [
+          "siswa",
+          "orang_tua",
+          "guru",
+          "tenaga_kependidikan",
+          "lainnya"
+        ]
+      },
+      "TppkTrackResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TppkReportStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "TppkMemberList": {
         "type": "object",
         "properties": {
@@ -12377,6 +12491,180 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tppk/channel/{schoolId}": {
+      "get": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "The school a report form is for (public, from the QR poster)",
+        "description": "Public, no login. Rate limited per client in memory (429 RATE_LIMITED); the IP is never stored or logged. 404 when the school is unknown or student.tppk is off (same answer).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "schoolId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TppkChannel"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this client (RATE_LIMITED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tppk/reports": {
+      "post": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "File a report to the TPPK (public; anonymous allowed)",
+        "description": "Public, no login. Rate limited per client in memory (429 RATE_LIMITED); the IP is never stored or logged. The tracking code is returned once; only its keyed hash is kept. A named report from a signed-in user keeps the account; an anonymous one keeps nothing about the reporter. Only TPPK members are told (tppk.report_received).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTppkReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TppkReportReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this client (RATE_LIMITED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tppk/reports/track/{code}": {
+      "get": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Status of a report by its tracking code (public)",
+        "description": "Public, no login. Rate limited per client in memory (429 RATE_LIMITED); the IP is never stored or logged. Unknown and malformed codes get the same 404. The code is masked in request logs.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "required": true,
+            "name": "code",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TppkTrackResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this client (RATE_LIMITED)",
             "content": {
               "application/json": {
                 "schema": {

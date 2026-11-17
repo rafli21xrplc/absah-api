@@ -427,6 +427,18 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   emits tppk.members_changed {added, removed} so the team sees every change).
   Pitfall: in sql`(select ... from school_member_directory d where d.user_id = ${col})` a column
   named user_id renders bare and binds to the view's own column; qualify it by hand.
+- TPPK public flow (no login; application/tppk-reports.ts): GET /tppk/channel/{schoolId} (school name,
+  same 404 for unknown or student.tppk off), POST /tppk/reports (201 {trackingCode, status}), GET
+  /tppk/reports/track/{code} (status only, via withAnonymous + tppk.report_status). Tracking code: 10
+  Crockford base32 chars (normalizeTrackingCode: upper case, no dashes, O->0, I/L->1), stored as
+  hashValue('tppk-tracking:' + code), shown once. Malformed and unknown codes do the same lookup and
+  get the same 404. Anonymous: the session is not even read, audit tppk.report_filed has no actor and
+  omitIp. No Idempotency-Key on the public POST (the stored answer would hold the code); a lost answer
+  means the reporter may file twice. Emits tppk.report_received {reportId} (consumer in 5.2d).
+- shared/rate-limit.ts memoryRateLimit: per process, key = hashValue(name + clientIp), never stored or
+  logged (report 5/h, track 30/10 min, channel 60/h). Cloudflare rules on /api/v1/tppk/* stay the first
+  line. maskPath (shared/logger.ts) replaces the code in logged request paths; test/tppk-report.test.ts
+  captures the log and checks no IP, chronology or code (buildTestApp({ logger })).
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,

@@ -3,7 +3,7 @@ import type { Role } from '@absah/contracts';
 import { base32 } from '@better-auth/utils/base32';
 import { createOTP } from '@better-auth/utils/otp';
 import { inArray } from 'drizzle-orm';
-import { pino } from 'pino';
+import { pino, type Logger } from 'pino';
 import request from 'supertest';
 import { uuidv7 } from 'uuidv7';
 import { createApp } from '../src/app';
@@ -23,7 +23,8 @@ export const PASSWORD = 'kata-sandi-uji-123';
 /** Fixed test-only key (32 zero-ish bytes); never used outside tests. */
 export const TEST_ENCRYPTION_KEYS = `test1:${Buffer.alloc(32, 7).toString('base64')}`;
 
-export function buildTestApp() {
+/** logger: pass a capturing logger to assert what reaches the request log (silent by default). */
+export function buildTestApp(options: { logger?: Logger } = {}) {
   const url = process.env.TEST_DATABASE_URL;
   if (!url) throw new Error('TEST_DATABASE_URL is not set');
   const config = loadConfig({
@@ -43,7 +44,7 @@ export function buildTestApp() {
   const auth = createAuth({ db, config, messageSender });
   const paymentProvider = new FakePaymentProvider(TEST_PAYMENT_SECRET);
   const storage = new FsObjectStorage(mkdtempSync(path.join(tmpdir(), 'absah-storage-')), TEST_ORIGIN, 'test-storage-secret');
-  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' }, paymentProvider });
+  const app = createApp({ logger: options.logger ?? pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' }, paymentProvider });
 
   const created = { schools: [] as string[], users: [] as string[] };
 

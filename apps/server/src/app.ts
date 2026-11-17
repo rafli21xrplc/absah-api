@@ -15,6 +15,7 @@ import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig 
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
+import { maskPath } from './shared/logger';
 import { errorHandler, notFoundHandler } from './shared/http';
 import { serializeErr } from './shared/logger';
 import { requestId } from './shared/request-id';
@@ -53,7 +54,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
       customProps: (req) => ({ requestId: (req as express.Request).requestId }),
       // Only method + path: query strings and bodies can contain personal data.
       serializers: {
-        req: (req: { method: string; url: string }) => ({ method: req.method, path: req.url.split('?')[0] }),
+        req: (req: { method: string; url: string }) => ({ method: req.method, path: maskPath(req.url.split('?')[0] ?? '') }),
         res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
         err: serializeErr,
       },

@@ -45,6 +45,8 @@ export const EVENTS = {
   'gate.visitor_arrived': z.object({ visitorId: z.uuid(), hostUserId: z.uuid() }),
   /** UKS sent a student home (KSW-08): attendance marks the rest of the day S (source uks), notify tells the parents. */
   'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
+  /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
+  'tppk.report_received': z.object({ reportId: z.uuid() }),
   /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */
   'tppk.members_changed': z.object({ added: z.array(z.uuid()), removed: z.array(z.uuid()) }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
