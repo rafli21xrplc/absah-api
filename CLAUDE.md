@@ -401,6 +401,16 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
   the last 30 days of daily_attendance with counts.
 
+## Activity (KEG, modules/activity, packages/db/src/schema/activity.ts)
+- activities (per academic year: name unique, kind ekskul|upacara|ibadah|lainnya, location
+  sekolah|luar_sekolah, days smallint[] ISO weekdays, optional starts_on/ends_on, active),
+  activity_coaches (pembina = any active staff, not the membership role), activity_members (active
+  enrollments of that year). Migrations 0050-0051; attendance_sessions.activity_id now has an FK
+  (on delete restrict: deactivate activities, never delete them).
+- GET /activities (admin, operator, wakasek, kepsek: all; others: the ones they coach), POST and PATCH
+  (admin, wakasek; coaches replaced as a whole), GET /activities/{id}, GET|PUT .../members (managers or
+  coaches; others 404), GET /activities/students?q= (managers or anyone coaching something).
+
 ## Student affairs (KSW, modules/student-affairs, packages/db/src/schema/student-affairs.ts)
 - UKS (KSW-08, behind student.uks, role petugas_uks only: even admin does not read the notes):
   uks_visits (enrollment, school_date, visited_at, complaint + action encryptedText, outcome

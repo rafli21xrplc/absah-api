@@ -351,6 +351,20 @@
       "when": 1794921409919,
       "tag": "0049_tppk_notify",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794924333173,
+      "tag": "0050_activities",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1794924333862,
+      "tag": "0051_activities_rls",
+      "breakpoints": true
     }
   ]
 }

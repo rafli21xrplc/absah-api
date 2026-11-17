@@ -2,6 +2,7 @@ import { ATTENDANCE_SOURCES, ATTENDANCE_STATUSES, CORRECTION_STATUSES, SESSION_M
 import { sql } from 'drizzle-orm';
 import { date, index, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { enrollments } from './academic';
+import { activities } from './activity';
 import { createdAt, id, schoolId } from './_shared';
 import { user } from './auth';
 import { schools } from './platform';
@@ -35,7 +36,7 @@ export const attendanceSessions = pgTable(
     teacherId: userRef('teacher_id'),
     status: sessionStatus('status').notNull().default('open'),
     topic: text('topic'),
-    activityId: uuid('activity_id'),
+    activityId: uuid('activity_id').references(() => activities.id, { onDelete: 'restrict' }),
     pklPlacementId: uuid('pkl_placement_id'),
     submittedAt: at('submitted_at'),
     submittedBy: userRef('submitted_by'),
