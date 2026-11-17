@@ -1,4 +1,5 @@
-// Minimal dev seed: one collection and one SMA school. Idempotent. The pilot seeder is prompt 4.4.
+// Minimal dev seed: one collection and one empty SMA school. Idempotent. For a full school with
+// students, teachers and a timetable use `pnpm --filter @absah/server pilot:seed` (packages/db/seed).
 import { eq } from 'drizzle-orm';
 import { createDb } from '../src/client';
 import { loadLocalEnv, requireEnv } from '../src/env';
@@ -14,12 +15,12 @@ try {
   } else {
     const [collection] = await handle.db.insert(collections).values({ name: 'Yayasan Absah Uji' }).returning();
     await handle.db.insert(schools).values({
-      name: 'SMA Absah Uji 1',
+      name: 'SMA Absah Dev',
       level: 'sma',
       npsn,
       collectionId: collection?.id,
     });
-    console.log('seed: created SMA Absah Uji 1');
+    console.log('seed: created SMA Absah Dev');
   }
 } finally {
   await handle.close();
