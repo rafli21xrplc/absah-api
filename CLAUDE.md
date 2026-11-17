@@ -300,6 +300,16 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   wali kelas). Piket also reads a student's list and opens photos; GET /pickup-guardians/{id}/photo is
   for wali kelas, piket, admin (5-minute link, audited gate.pickup_photo_viewed). Job gate.pickup_photos
   (02:50) removes photos 30 days after ended_at.
+- Check-out (GRB-10; application/checkouts.ts, table pickup_events, migrations 0061-0062): GET /kiosk/day
+  carries pickup (null without gate.pickup): approved, still-valid penjemput per cardId with 5-minute
+  photo links the kiosk downloads at once. POST /kiosk/checkouts (gate.pickup) { checkouts: [{
+  clientEventId, token, pickupGuardianId, checkedOutAt }] }: card checked like a scan (verifyCardAt),
+  then the penjemput must belong to the student, have been approved (decided_at; status approved or
+  inactive: deactivated after the morning sync still counts) and be valid that date, else
+  not_authorized (not stored). Unique (school, client_event_id) + partial unique released per
+  enrollment per day: a second release is duplicate. Each release emits gate.checked_out; consumer
+  notify_checked_out sends student_picked_up (pending approval) with pickup_name and time. pickup_name
+  is the name at the time. Unlisted rows (held/denied/expired) use the same table (5.4d).
 
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,

@@ -14,6 +14,7 @@ import {
   mbgForecastRows,
   mbgPicPhone,
   portalGuardians,
+  releasedPickup,
   schoolOf,
   sentHomeVisit,
   sessionDate,
@@ -164,6 +165,30 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
+  /** GRB-10: parents hear who picked their child up and when ("Ani dijemput oleh Pak Darto pukul 13.05"). */
+  const pickedUp = defineConsumer({
+    name: 'notify_checked_out',
+    event: 'gate.checked_out',
+    async handle(tx, event) {
+      const pickup = await releasedPickup(tx, event.payload.pickupEventId);
+      if (!pickup) return;
+      const [school, guardians] = await Promise.all([schoolOf(tx, event.schoolId), guardiansOf(tx, pickup.enrollmentId)]);
+      if (!school || guardians.length === 0) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'student_picked_up',
+        enrollmentId: pickup.enrollmentId,
+        recipients: guardians,
+        dedupKey: (r) => `picked_up:${event.payload.pickupEventId}:${r.guardianId}`,
+        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), pickup_name: pickup.pickupName, time: clockLabel(schoolMinutes(school.timezone, pickup.checkedOutAt)) },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
   /**
    * KSW-06: a new TPPK report reaches the TPPK members only (never the kepsek or a wali kelas, in case
    * the report is about staff). The message says nothing about the report; the details are behind
@@ -262,5 +287,5 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
 }

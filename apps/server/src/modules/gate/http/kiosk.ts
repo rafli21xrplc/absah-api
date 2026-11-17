@@ -1,4 +1,4 @@
-import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, KioskDay, Visitor, VisitorHostList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
+import { KioskCheckoutBatch, KioskCheckoutResults, CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, KioskDay, Visitor, VisitorHostList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
 import { Router, type RequestHandler } from 'express';
 import { CapabilityDisabledError } from '../../../shared/errors';
 import { sendContract } from '../../../shared/http';
@@ -6,8 +6,21 @@ import type { ObjectStorage } from '../../../shared/storage';
 import { idempotent } from '../../../shared/idempotency';
 import { heartbeat, pairingSchool, pairKiosk } from '../application/kiosks';
 import { kioskDay, recordScans } from '../application/scans';
+import { recordCheckouts } from '../application/checkouts';
 import { createVisitorPhoto, registerVisitor, visitorHosts } from '../application/visitors';
 import { getKiosk, kioskContext, kioskIdempotencyScope } from './kiosk-auth';
+
+/** A capability of the kiosk's school on top of gate.enabled (404 CAPABILITY_DISABLED otherwise). */
+function kioskCap(name: 'gate.visitors' | 'gate.pickup'): RequestHandler {
+  return (req, _res, next) => {
+    try {
+      if (!getKiosk(req).caps[name]) throw new CapabilityDisabledError(name);
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
 
 /** Calls made by kiosk devices (no user session). */
 export function kioskRouter(storage: ObjectStorage): Router {
@@ -32,7 +45,7 @@ export function kioskRouter(storage: ObjectStorage): Router {
   });
 
   router.get('/kiosk/day', kioskContext(), async (req, res) => {
-    sendContract(res, KioskDay, await kioskDay(getKiosk(req)));
+    sendContract(res, KioskDay, await kioskDay(getKiosk(req), storage));
   });
 
   router.post('/kiosk/scans', kioskContext(), idempotent(kioskIdempotencyScope), async (req, res) => {
@@ -40,14 +53,7 @@ export function kioskRouter(storage: ObjectStorage): Router {
   });
 
   /** Buku tamu (GRB-11): needs gate.visitors on top of gate.enabled. */
-  const visitors: RequestHandler = (req, _res, next) => {
-    try {
-      if (!getKiosk(req).caps['gate.visitors']) throw new CapabilityDisabledError('gate.visitors');
-      next();
-    } catch (err) {
-      next(err);
-    }
-  };
+  const visitors = kioskCap('gate.visitors');
   router.get('/kiosk/visitor-hosts', kioskContext(), visitors, async (req, res) => {
     sendContract(res, VisitorHostList, await visitorHosts(getKiosk(req)));
   });
@@ -56,6 +62,12 @@ export function kioskRouter(storage: ObjectStorage): Router {
   });
   router.post('/kiosk/visitors', kioskContext(), visitors, idempotent(kioskIdempotencyScope), async (req, res) => {
     sendContract(res, Visitor, await registerVisitor(getKiosk(req), storage, CreateVisitorRequest.parse(req.body)));
+  });
+
+  /** Check-out with a penjemput (GRB-10): needs gate.pickup on top of gate.enabled. */
+  const pickup = kioskCap('gate.pickup');
+  router.post('/kiosk/checkouts', kioskContext(), pickup, idempotent(kioskIdempotencyScope), async (req, res) => {
+    sendContract(res, KioskCheckoutResults, await recordCheckouts(getKiosk(req), KioskCheckoutBatch.parse(req.body)));
   });
 
   return router;

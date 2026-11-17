@@ -95,7 +95,7 @@ import {
   TppkTrackResponse,
 } from './student-affairs/tppk';
 import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
-import { CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
+import { KioskCheckoutBatch, KioskCheckoutResults, CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
@@ -796,6 +796,7 @@ function buildRegistry(): OpenAPIRegistry {
     path: `${API_BASE_PATH}/kiosk/day`,
     tags: ['kiosk'],
     summary: 'Morning download for offline work: day keys (today, tomorrow), late time, bound cards',
+    description: 'With gate.pickup also the approved penjemput per card, with 5-minute photo links the kiosk downloads at once (GRB-10); pickup is null otherwise.',
     security: [{ kiosk: [] }],
     responses: { 200: json(KioskDay, 'Day'), ...errors(401, 404) },
   });
@@ -810,6 +811,18 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...idempotencyHeader, required: true }],
     request: { body: { content: { 'application/json': { schema: KioskScanBatch } } } },
     responses: { 200: json(KioskScanResults, 'Results'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/checkouts`,
+    tags: ['kiosk'],
+    summary: 'Queued check-outs with a listed penjemput (GRB-10), exactly once per clientEventId',
+    description:
+      'Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Results per check-out: released (emits gate.checked_out; parents get student_picked_up), duplicate (the student was already released that day), or rejected with a card reason or not_authorized (the penjemput was never approved for this student). A penjemput deactivated after the morning sync still counts.',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: KioskCheckoutBatch } } } },
+    responses: { 200: json(KioskCheckoutResults, 'Results'), ...errors(400, 401, 404) },
   });
   registry.registerPath({
     method: 'post',

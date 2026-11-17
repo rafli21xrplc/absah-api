@@ -3510,6 +3510,15 @@
                 "className"
               ]
             }
+          },
+          "pickup": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/KioskPickupStudent"
+            }
           }
         },
         "required": [
@@ -3517,7 +3526,63 @@
           "timezone",
           "lateAfter",
           "keys",
-          "cards"
+          "cards",
+          "pickup"
+        ]
+      },
+      "KioskPickupStudent": {
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "guardians": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "relation": {
+                  "$ref": "#/components/schemas/PickupRelation"
+                },
+                "photoUrl": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "relation",
+                "photoUrl"
+              ]
+            }
+          }
+        },
+        "required": [
+          "cardId",
+          "guardians"
+        ]
+      },
+      "PickupRelation": {
+        "type": "string",
+        "enum": [
+          "ayah",
+          "ibu",
+          "kakek",
+          "nenek",
+          "kakak",
+          "paman",
+          "bibi",
+          "sopir",
+          "lainnya"
         ]
       },
       "KioskScanResults": {
@@ -3634,6 +3699,111 @@
         },
         "required": [
           "scans"
+        ],
+        "additionalProperties": false
+      },
+      "KioskCheckoutResults": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KioskCheckoutResult"
+            }
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
+      "KioskCheckoutResult": {
+        "type": "object",
+        "properties": {
+          "clientEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "released",
+              "duplicate",
+              "rejected"
+            ]
+          },
+          "rejectReason": {
+            "$ref": "#/components/schemas/CheckoutRejectReason"
+          },
+          "firstName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "clientEventId",
+          "result",
+          "rejectReason",
+          "firstName"
+        ]
+      },
+      "CheckoutRejectReason": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "malformed",
+          "expired",
+          "no_key",
+          "bad_signature",
+          "unknown_card",
+          "wrong_device",
+          "not_enrolled",
+          "not_authorized",
+          null
+        ]
+      },
+      "KioskCheckoutBatch": {
+        "type": "object",
+        "properties": {
+          "checkouts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "clientEventId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "token": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "pickupGuardianId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "checkedOutAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "clientEventId",
+                "token",
+                "pickupGuardianId",
+                "checkedOutAt"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "checkouts"
         ],
         "additionalProperties": false
       },
@@ -4123,20 +4293,6 @@
           "hasPhoto",
           "registeredAt",
           "decidedAt"
-        ]
-      },
-      "PickupRelation": {
-        "type": "string",
-        "enum": [
-          "ayah",
-          "ibu",
-          "kakek",
-          "nenek",
-          "kakak",
-          "paman",
-          "bibi",
-          "sopir",
-          "lainnya"
         ]
       },
       "PickupGuardianStatus": {
@@ -5698,6 +5854,7 @@
           "liaison_message",
           "mbg_forecast",
           "student_sent_home",
+          "student_picked_up",
           "tppk_report_received",
           "tppk_team_changed"
         ]
@@ -12821,6 +12978,7 @@
           "kiosk"
         ],
         "summary": "Morning download for offline work: day keys (today, tomorrow), late time, bound cards",
+        "description": "With gate.pickup also the approved penjemput per card, with 5-minute photo links the kiosk downloads at once (GRB-10); pickup is null otherwise.",
         "security": [
           {
             "kiosk": []
@@ -12900,6 +13058,83 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/KioskScanResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kiosk/checkouts": {
+      "post": {
+        "tags": [
+          "kiosk"
+        ],
+        "summary": "Queued check-outs with a listed penjemput (GRB-10), exactly once per clientEventId",
+        "description": "Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Results per check-out: released (emits gate.checked_out; parents get student_picked_up), duplicate (the student was already released that day), or rejected with a card reason or not_authorized (the penjemput was never approved for this student). A penjemput deactivated after the morning sync still counts.",
+        "security": [
+          {
+            "kiosk": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KioskCheckoutBatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskCheckoutResults"
                 }
               }
             }

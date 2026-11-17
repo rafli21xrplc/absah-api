@@ -1,4 +1,4 @@
-import { ARRIVAL_OUTCOMES, CARD_HOLDERS, PICKUP_GUARDIAN_STATUSES, PICKUP_RELATIONS, SCAN_METHODS, SCAN_REJECT_REASONS, SCAN_RESULTS } from '@absah/contracts';
+import { ARRIVAL_OUTCOMES, CARD_HOLDERS, PICKUP_EVENT_STATUSES, PICKUP_GUARDIAN_STATUSES, PICKUP_RELATIONS, SCAN_METHODS, SCAN_REJECT_REASONS, SCAN_RESULTS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { date, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
@@ -14,6 +14,7 @@ export const scanRejectReason = pgEnum('scan_reject_reason', SCAN_REJECT_REASONS
 export const arrivalOutcome = pgEnum('arrival_outcome', ARRIVAL_OUTCOMES);
 export const pickupRelation = pgEnum('pickup_relation', PICKUP_RELATIONS);
 export const pickupGuardianStatus = pgEnum('pickup_guardian_status', PICKUP_GUARDIAN_STATUSES);
+export const pickupEventStatus = pgEnum('pickup_event_status', PICKUP_EVENT_STATUSES);
 
 const at = (name: string) => timestamp(name, { withTimezone: true });
 const schoolRef = () => schoolId().references(() => schools.id, { onDelete: 'cascade' });
@@ -184,4 +185,43 @@ export const pickupGuardians = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('pickup_guardians_school_id_student_id_idx').on(t.schoolId, t.studentId), index('pickup_guardians_school_id_status_idx').on(t.schoolId, t.status)],
+);
+
+/**
+ * Check-out (GRB-10): one row per kiosk event. A listed penjemput is released at once; an unlisted
+ * one (unlisted_photo_key set, pickup_guardian_id null) is held until a parent or the wali kelas
+ * decides (released or denied), or expires at the end of the day. pickup_name is the name at the
+ * time. One release per student per day (partial unique index).
+ */
+export const pickupEvents = pgTable(
+  'pickup_events',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    schoolDate: date('school_date').notNull(),
+    clientEventId: uuid('client_event_id').notNull(),
+    kioskId: uuid('kiosk_id').references(() => kioskDevices.id, { onDelete: 'set null' }),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    pickupGuardianId: uuid('pickup_guardian_id').references(() => pickupGuardians.id, { onDelete: 'set null' }),
+    pickupName: text('pickup_name').notNull(),
+    unlistedPhotoKey: text('unlisted_photo_key'),
+    photoRemovedAt: at('photo_removed_at'),
+    status: pickupEventStatus('status').notNull(),
+    checkedOutAt: at('checked_out_at'),
+    decidedBy: userRef('decided_by'),
+    /** guardian (through the action link) or staff (wali kelas, admin). */
+    decidedVia: text('decided_via'),
+    decidedAt: at('decided_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('pickup_events_school_id_client_event_id_key').on(t.schoolId, t.clientEventId),
+    uniqueIndex('pickup_events_released_key').on(t.schoolId, t.enrollmentId, t.schoolDate).where(sql`${t.status} = 'released'`),
+    index('pickup_events_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
+  ],
 );

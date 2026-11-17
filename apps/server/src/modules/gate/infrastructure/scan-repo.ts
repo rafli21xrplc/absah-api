@@ -22,7 +22,7 @@ export function kioskRoster(tx: Tx) {
 /** The card, its bound device and the student's active enrollment. */
 export async function cardForScan(tx: Tx, cardId: string) {
   const [row] = await tx
-    .select({ cardId: c.id, activeDeviceId: c.activeDeviceId, enrollmentId: e.id, name: schema.students.name })
+    .select({ cardId: c.id, activeDeviceId: c.activeDeviceId, enrollmentId: e.id, studentId: c.studentId, name: schema.students.name })
     .from(c)
     .innerJoin(schema.students, eq(schema.students.id, c.studentId))
     .leftJoin(e, and(eq(e.studentId, c.studentId), eq(e.status, 'active')))

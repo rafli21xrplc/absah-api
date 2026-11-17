@@ -42,6 +42,13 @@ export async function sentHomeVisit(tx: Tx, uksVisitId: string) {
   return row?.outcome === 'dipulangkan' ? row : null;
 }
 
+/** A released check-out (GRB-10): who picked the student up and when. */
+export async function releasedPickup(tx: Tx, pickupEventId: string) {
+  const pe = schema.pickupEvents;
+  const [row] = await tx.select({ enrollmentId: pe.enrollmentId, pickupName: pe.pickupName, checkedOutAt: pe.checkedOutAt, status: pe.status }).from(pe).where(eq(pe.id, pickupEventId));
+  return row?.status === 'released' && row.checkedOutAt ? { ...row, checkedOutAt: row.checkedOutAt } : null;
+}
+
 /** The PIC MBG's WhatsApp number (RKP-08), if the school set one. */
 export async function mbgPicPhone(tx: Tx): Promise<string | null> {
   const [row] = await tx.select({ phone: schema.mbgSettings.picPhone }).from(schema.mbgSettings);

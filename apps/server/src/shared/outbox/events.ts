@@ -45,6 +45,8 @@ export const EVENTS = {
   'payment.requested': z.object({ paymentId: z.uuid() }),
   /** A guest signed in at the kiosk for a staff member (GRB-11); the push to them arrives with NTF-06 (5.7). */
   'gate.visitor_arrived': z.object({ visitorId: z.uuid(), hostUserId: z.uuid() }),
+  /** A student left with a penjemput (GRB-10): notify tells the parents who and when. */
+  'gate.checked_out': z.object({ pickupEventId: z.uuid() }),
   /** UKS sent a student home (KSW-08): attendance marks the rest of the day S (source uks), notify tells the parents. */
   'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
   /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
