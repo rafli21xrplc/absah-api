@@ -11,7 +11,7 @@ import { activeStaff, addMembers, listMembers, removeMembers } from '../infrastr
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 
 async function team(tx: Tx): Promise<TppkMemberList> {
-  const items = (await listMembers(tx)).map((r) => ({ userId: r.userId, name: r.name, appointedAt: r.appointedAt.toISOString() }));
+  const items = (await listMembers(tx)).map((r) => ({ userId: r.userId, name: r.name, appointedAt: r.appointedAt.toISOString(), canBeNotified: r.canBeNotified }));
   return { items, minimum: TPPK_MIN_MEMBERS, belowMinimum: items.length < TPPK_MIN_MEMBERS };
 }
 

@@ -60,6 +60,24 @@ export function mbgCurrentCounts(tx: Tx, date: string) {
     .orderBy(asc(c.grade), asc(c.name));
 }
 
+/** The school's TPPK members with a WhatsApp number (view tppk.member_contacts: TPPK members only). */
+export async function tppkContacts(tx: Tx): Promise<{ userId: string; phone: string }[]> {
+  const res = await tx.execute<{ user_id: string; phone_number: string }>(
+    sql`select user_id, phone_number from tppk.member_contacts where phone_number is not null order by user_id`,
+  );
+  return res.rows.map((r) => ({ userId: r.user_id, phone: r.phone_number }));
+}
+
+/** Display names of staff of the current school, in the given order (missing ones skipped). */
+export async function staffNames(tx: Tx, userIds: string[]): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const res = await tx.execute<{ user_id: string; name: string }>(
+    sql`select distinct on (user_id) user_id, name from school_member_directory where user_id in (${sql.join(userIds.map((id) => sql`${id}::uuid`), sql`, `)})`,
+  );
+  const byId = new Map(res.rows.map((r) => [r.user_id, r.name]));
+  return userIds.flatMap((id) => (byId.has(id) ? [byId.get(id) ?? ''] : []));
+}
+
 export type NewNotification = typeof n.$inferInsert;
 
 /** Inserts the rows not seen before (dedup_key); returns the new ids with their release time. */

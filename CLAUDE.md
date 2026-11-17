@@ -445,6 +445,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   langkah, open cases only), POST .../close and .../reopen (each an event too). Report status follows:
   case opened -> ditangani, closed -> selesai, reopened -> ditangani. One case per report (409).
   Every read and write audits tppk.<verb> with ids, counts and statuses only.
+- TPPK notifications (migration 0049): view tppk.member_contacts (security_barrier, owned by the
+  migration role because absah_app cannot read "user") gives user_id, name, phone of the current
+  school's TPPK members only. Notify consumers notify_tppk_report_received (template
+  tppk_report_received: school + link to /tppk, nothing about the report) and notify_tppk_team_changed
+  (tppk_team_changed: added/removed names to the CURRENT team). Both templates pending approval.
+  Members without a phone get nothing until staff push (NTF-06); TppkMember.canBeNotified shows it.
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,

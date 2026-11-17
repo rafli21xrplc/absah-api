@@ -4773,12 +4773,16 @@
           "appointedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "canBeNotified": {
+            "type": "boolean"
           }
         },
         "required": [
           "userId",
           "name",
-          "appointedAt"
+          "appointedAt",
+          "canBeNotified"
         ]
       },
       "SetTppkMembersRequest": {
@@ -4898,7 +4902,9 @@
           "login_otp",
           "mbg_count",
           "mbg_count_corrected",
-          "student_sent_home"
+          "student_sent_home",
+          "tppk_report_received",
+          "tppk_team_changed"
         ]
       },
       "StudentContacts": {

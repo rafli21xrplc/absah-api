@@ -6,8 +6,10 @@ const m = schema.tppkMembers;
 // Qualified by hand: a bare "user_id" here would resolve to the view's own column.
 const memberName = sql<string>`(select d.name from school_member_directory d where d.user_id = "members"."user_id" limit 1)`;
 
+const reachable = sql<boolean>`exists (select 1 from tppk.member_contacts c where c.user_id = "members"."user_id" and c.phone_number is not null)`;
+
 export const listMembers = (tx: Tx) =>
-  tx.select({ userId: m.userId, name: memberName, appointedAt: m.createdAt }).from(m).orderBy(asc(m.createdAt), asc(m.userId));
+  tx.select({ userId: m.userId, name: memberName, appointedAt: m.createdAt, canBeNotified: reachable }).from(m).orderBy(asc(m.createdAt), asc(m.userId));
 
 /** Of these users, the ones with an active staff membership in the school (RLS scopes the view). */
 export async function activeStaff(tx: Tx, userIds: string[]): Promise<Set<string>> {

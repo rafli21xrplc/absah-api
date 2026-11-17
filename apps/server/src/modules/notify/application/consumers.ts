@@ -4,7 +4,7 @@ import { firstName } from '../../../shared/names';
 import type { MessageSender } from '../../../shared/messaging';
 import { schoolMinutes } from '../../../shared/school-date';
 import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine } from '../domain/messages';
-import { guardiansOf, leaveOf, mbgCurrentCounts, mbgPicPhone, schoolOf, sentHomeVisit, sessionDate } from '../infrastructure/notify-repo';
+import { guardiansOf, leaveOf, mbgCurrentCounts, mbgPicPhone, schoolOf, sentHomeVisit, sessionDate, staffNames, tppkContacts } from '../infrastructure/notify-repo';
 import { deliverConsumer } from './deliver';
 import { queueMessages } from './queue';
 
@@ -120,5 +120,60 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, sentHome, deliverConsumer(deps.sender)];
+  /**
+   * KSW-06: a new TPPK report reaches the TPPK members only (never the kepsek or a wali kelas, in case
+   * the report is about staff). The message says nothing about the report; the details are behind
+   * login. Members without a WhatsApp number wait for staff push (NTF-06).
+   */
+  const tppkReport = defineConsumer({
+    name: 'notify_tppk_report_received',
+    event: 'tppk.report_received',
+    async handle(tx, event) {
+      const [school, contacts] = await Promise.all([schoolOf(tx, event.schoolId), tppkContacts(tx)]);
+      if (!school || contacts.length === 0) return;
+      const userOf = new Map(contacts.map((c) => [c.phone, c.userId]));
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'tppk_report_received',
+        enrollmentId: null,
+        recipients: contacts.map((c) => ({ phone: c.phone })),
+        dedupKey: (r) => `tppk_report:${event.payload.reportId}:${userOf.get(r.phone) ?? ''}`,
+        params: { school: school.name, link: `${deps.appUrl}/tppk` },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  /** The team hears of every change to it, so no one is added (an admin included) without the others knowing. */
+  const tppkTeam = defineConsumer({
+    name: 'notify_tppk_team_changed',
+    event: 'tppk.members_changed',
+    async handle(tx, event) {
+      const [school, contacts, added, removed] = await Promise.all([
+        schoolOf(tx, event.schoolId),
+        tppkContacts(tx),
+        staffNames(tx, event.payload.added),
+        staffNames(tx, event.payload.removed),
+      ]);
+      if (!school || contacts.length === 0) return;
+      const userOf = new Map(contacts.map((c) => [c.phone, c.userId]));
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'tppk_team_changed',
+        enrollmentId: null,
+        recipients: contacts.map((c) => ({ phone: c.phone })),
+        dedupKey: (r) => `tppk_team:${event.id}:${userOf.get(r.phone) ?? ''}`,
+        params: { school: school.name, added: added.join(', ') || '-', removed: removed.join(', ') || '-', link: `${deps.appUrl}/tppk` },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, sentHome, tppkReport, tppkTeam, deliverConsumer(deps.sender)];
 }
