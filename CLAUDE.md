@@ -420,3 +420,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - notify_mbg_count sends template mbg_count / mbg_count_corrected to the PIC (no guardian, no action
   link; queueMessages recipients without guardianId get none): total present + "1A 28, 1B 25 (3 belum
   diisi)" on one line (template params cannot hold line breaks). Templates added in migration 0039.
+
+## Workspace billing (BIL, modules/subscription, packages/db/src/schema/subscription.ts)
+- Pure rules in domain/invoice.ts computeInvoice(enrollments, exemptDays, month): Rp10.000 per active
+  student per month, pro rata per calendar day (active days / days in month), a student counts once per
+  day across enrollments, billing_exempt days are not billed, rounded once on the total (never per
+  student). Table tests in invoice.test.ts; change the rules only together with them.
+- invoices (one per school and month, whole rupiah, status issued|paid|void), invoice_lines (days +
+  exact share numeric(14,4)), payments (VA/QRIS attempt; unique (provider, provider_txn_id) so a
+  webhook delivered twice records one payment). The app role cannot delete invoices or lines, nor
+  update lines.
+- calendar_days.billing_exempt: only the Absah team (owner role) sets, clears or deletes exempt days;
+  trigger calendar_days_guard_billing_exempt raises for absah_app. Ordinary holidays stay the school's.

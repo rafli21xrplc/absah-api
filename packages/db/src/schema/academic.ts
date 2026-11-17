@@ -86,6 +86,8 @@ export const calendarDays = pgTable(
     date: date('date').notNull(),
     kind: calendarDayKind('kind').notNull(),
     name: text('name').notNull(),
+    /** Not billed (BIL: long year-end break). Only the Absah team (owner role) sets or removes it; a trigger stops the app role. */
+    billingExempt: boolean('billing_exempt').notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.schoolId, t.date] })],
