@@ -6799,6 +6799,9 @@
                 "grade": {
                   "type": "integer"
                 },
+                "stream": {
+                  "$ref": "#/components/schemas/ClassStream"
+                },
                 "homeroom": {
                   "type": [
                     "object",
@@ -6830,6 +6833,7 @@
                 "id",
                 "name",
                 "grade",
+                "stream",
                 "homeroom",
                 "students"
               ]
@@ -7238,6 +7242,9 @@
               "name"
             ]
           },
+          "stream": {
+            "$ref": "#/components/schemas/ClassStream"
+          },
           "status": {
             "$ref": "#/components/schemas/ExportStatus"
           },
@@ -7271,6 +7278,7 @@
           "format",
           "semester",
           "class",
+          "stream",
           "status",
           "fileName",
           "error",
@@ -7314,6 +7322,9 @@
           "classId": {
             "type": "string",
             "format": "uuid"
+          },
+          "stream": {
+            "$ref": "#/components/schemas/ClassStream"
           }
         },
         "required": [

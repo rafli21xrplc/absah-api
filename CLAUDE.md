@@ -552,6 +552,10 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   enrollment; a student who changed rombel shows in each with the days there). One day = rekap harian,
   semester dates = rekap semester. Managers (admin, operator, kepsek, wakasek) see every rombel, a wali
   kelas (classes.homeroom_teacher_id) their own; presentRate = (H + T) / days.
+- Jurusan (AKD-11): ClassRecapList items carry stream; GET /reports/attendance/classes?stream=ipa|ips|bahasa|
+  keagamaan keeps one jurusan (a wali kelas is still refused without a rombel, then filtered). POST /exports
+  takes stream (whole-year exports only; with classId 400), stored in export_jobs.stream (0066); the file
+  has only that jurusan's rombel and is named ...-jurusan-IPA.xlsx.
 - GET /reports/session-compliance (RKP-04, wakasek/kepsek/admin): class and daily sessions per teacher
   and day: filled (submitted/locked), filledLate (submitted after reminded_at), missed, open.
 - Exports (export_jobs): POST /exports { format xlsx|pdf, semesterId, classId? } (idempotent, 202,

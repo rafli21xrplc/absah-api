@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClassStream } from '../academic/enums';
 import { AttendanceStatus } from '../attendance/enums';
 
 /** Rekap (RKP-01, RKP-02, RKP-04). All counts are school days from daily_attendance. */
@@ -56,6 +57,8 @@ export const ClassRecapList = z
         id: z.uuid(),
         name: z.string(),
         grade: z.int(),
+        /** Jurusan (AKD-11), null for rombel without one. */
+        stream: ClassStream.nullable(),
         homeroom: Person.nullable(),
         /** Students enrolled in the rombel at some point of the period. */
         students: z.int().nonnegative(),
@@ -64,6 +67,10 @@ export const ClassRecapList = z
   })
   .meta({ id: 'ClassRecapList' });
 export type ClassRecapList = z.infer<typeof ClassRecapList>;
+
+/** ?stream= on GET /reports/attendance/classes: only rombel of one jurusan (AKD-11). */
+export const RecapStreamQuery = z.object({ stream: ClassStream.optional() }).meta({ id: 'RecapStreamQuery' });
+export type RecapStreamQuery = z.infer<typeof RecapStreamQuery>;
 
 export const RecapClassIdParam = z.object({ classId: z.uuid() });
 

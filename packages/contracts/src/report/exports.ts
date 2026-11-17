@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClassStream } from '../academic/enums';
 
 /** Ekspor rekap semester (RKP-02, RKP-03): built by the worker, downloaded through a presigned URL. */
 
@@ -25,8 +26,9 @@ export const EXPORT_RETENTION_DAYS = 7;
  * semester's year when classId is left out (managers only). Answers 202 with the queued job.
  */
 export const CreateExportRequest = z
-  .object({ format: ExportFormat, semesterId: z.uuid(), classId: z.uuid().optional() })
+  .object({ format: ExportFormat, semesterId: z.uuid(), classId: z.uuid().optional(), stream: ClassStream.optional() })
   .strict()
+  .refine((r) => !(r.classId && r.stream), { message: 'Pilih satu rombel atau satu jurusan.', path: ['stream'] })
   .meta({ id: 'CreateExportRequest' });
 export type CreateExportRequest = z.infer<typeof CreateExportRequest>;
 
@@ -38,6 +40,8 @@ export const ExportJob = z
     semester: z.object({ id: z.uuid(), academicYear: z.string(), number: z.int() }),
     /** null: every rombel of the year. */
     class: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+    /** AKD-11: every rombel of this jurusan; null with a class or for the whole year. */
+    stream: ClassStream.nullable(),
     status: ExportStatus,
     fileName: z.string().nullable(),
     /** Message for staff when failed. */
