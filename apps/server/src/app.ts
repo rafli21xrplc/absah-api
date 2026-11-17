@@ -8,7 +8,7 @@ import { correctionsRouter, sessionsRouter } from './modules/attendance';
 import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
 import { linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
-import { reportsRouter } from './modules/report';
+import { exportsRouter, reportsRouter } from './modules/report';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
@@ -82,6 +82,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(notificationsRouter(auth));
   v1.use(portalRouter(auth));
   v1.use(reportsRouter(auth));
+  v1.use(exportsRouter(auth, storage));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });
