@@ -71,6 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
@@ -871,6 +872,40 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [...gateParams, idempotencyHeader],
     request: { params: VisitorIdParam },
     responses: { 200: json(Visitor, 'Visit'), ...errors(401, 403, 404) },
+  });
+  const uksNote = 'petugas_uks only, behind student.uks (404 CAPABILITY_DISABLED otherwise). Notes are encrypted at rest.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/uks/students`,
+    tags: ['student-affairs'],
+    summary: 'Find an active student by name to record a UKS visit',
+    description: uksNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: UksStudentQuery },
+    responses: { 200: json(UksStudentList, 'Students'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/uks/visits`,
+    tags: ['student-affairs'],
+    summary: 'Record a UKS visit: complaint, action and outcome',
+    description: `${uksNote} Outcome dipulangkan emits uks.sent_home: the rest of the day is marked S and the parents are told.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateUksVisitRequest } } } },
+    responses: { 200: json(UksVisit, 'Recorded'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/uks/visits`,
+    tags: ['student-affairs'],
+    summary: "The day's UKS visits, newest first",
+    description: uksNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: UksVisitsQuery },
+    responses: { 200: json(UksVisitList, 'Visits'), ...errors(400, 401, 403, 404) },
   });
   registry.registerPath({
     method: 'get',
