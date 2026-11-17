@@ -4262,7 +4262,8 @@
           "leave_rejected",
           "login_otp",
           "mbg_count",
-          "mbg_count_corrected"
+          "mbg_count_corrected",
+          "student_sent_home"
         ]
       },
       "StudentContacts": {
