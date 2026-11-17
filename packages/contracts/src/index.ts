@@ -13,6 +13,7 @@ export * from './academic/schedule-import';
 export * from './attendance/enums';
 export * from './attendance/sessions';
 export * from './attendance/corrections';
+export * from './attendance/journal';
 export * from './leave/leave-requests';
 export * from './gate/card-token';
 export * from './gate/enums';

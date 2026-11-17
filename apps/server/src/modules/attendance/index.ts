@@ -11,6 +11,7 @@ export {
   remindUnfilled,
 } from './jobs/session-jobs';
 export { sessionsRouter } from './http/sessions';
+export { journalRouter } from './http/journal';
 export { correctionsRouter } from './http/corrections';
 export { findSchool } from './infrastructure/session-repo';
 export { attendanceConsumers } from './application/consumers';

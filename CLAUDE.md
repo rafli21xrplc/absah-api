@@ -220,6 +220,13 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sessions, so izin approved earlier fill sessions created later. Locked sessions are included
   (a sick note arriving the next day is normal); backdating is capped at 7 days by the leave module.
 
+- Jurnal mengajar (PRS-09, application/journal.ts): POST /sessions/{id}/submit takes an optional `topic`
+  (max 200, trimmed; omitted keeps it, empty clears it; per_period sessions only, else 400). It is also on
+  SessionSummary.topic. GET /teaching-journal?month=YYYY-MM[&teacherId] lists per_period sessions of the
+  month (topic null = not written yet) with totals; a guru sees only their own, admin/kepsek/wakasek any
+  teacher or all (canReadAllJournals). GET /teaching-journal/export.xlsx is one teacher-month built
+  synchronously (small), teacherId required for managers.
+
 ## Leave (IZN, modules/leave, packages/db/src/schema/leave.ts)
 - leave_requests (enrollment, kind sakit|izin, starts_on..ends_on inclusive, reason encryptedText,
   attachment_key/type, status pending|approved|rejected|cancelled, requested/decided/cancelled by+at).

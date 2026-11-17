@@ -66,6 +66,7 @@ import {
   CreateCorrectionsRequest,
   DecideCorrectionRequest,
 } from './attendance/corrections';
+import { JournalQuery, JournalResponse } from './attendance/journal';
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
@@ -536,6 +537,31 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SubmitSessionRequest } } } },
     responses: { 200: json(SessionDetail, 'Filled session'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teaching-journal`,
+    tags: ['attendance'],
+    summary: 'Jurnal mengajar of one month: per-period sessions with their topic (PRS-09)',
+    description: 'A guru sees only their own sessions. admin, kepsek and wakasek may pass teacherId, or omit it for every teacher.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: JournalQuery },
+    responses: { 200: json(JournalResponse, 'Journal entries'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teaching-journal/export.xlsx`,
+    tags: ['attendance'],
+    summary: 'Excel of one teacher\'s jurnal mengajar for a month',
+    description: 'teacherId is required for managers; a guru gets their own.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: JournalQuery },
+    responses: {
+      200: { description: 'Excel workbook', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } },
+      ...errors(400, 401, 403, 404),
+    },
   });
 
   registry.registerPath({

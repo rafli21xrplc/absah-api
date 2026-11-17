@@ -4,7 +4,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
-import { correctionsRouter, sessionsRouter } from './modules/attendance';
+import { correctionsRouter, journalRouter, sessionsRouter } from './modules/attendance';
 import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
 import { linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
@@ -80,6 +80,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(scheduleRouter(auth));
   v1.use(learningGroupsRouter(auth));
   v1.use(sessionsRouter(auth));
+  v1.use(journalRouter(auth));
   v1.use(correctionsRouter(auth));
   v1.use(leaveRouter(auth, storage));
   v1.use(gateRouter(auth));
