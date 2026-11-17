@@ -9,7 +9,17 @@ import {
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
 import { VISITOR_PHOTOS_QUEUE, visitorPhotosHandler } from '../modules/gate';
-import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, MBG_CUTOFF_CRON, MBG_CUTOFF_QUEUE, mbgCutoffHandler, reportConsumers } from '../modules/report';
+import {
+  EXPORT_RETENTION_QUEUE,
+  exportRetentionHandler,
+  MBG_CUTOFF_CRON,
+  MBG_CUTOFF_QUEUE,
+  MBG_FORECAST_CRON,
+  MBG_FORECAST_QUEUE,
+  mbgCutoffHandler,
+  mbgForecastHandler,
+  reportConsumers,
+} from '../modules/report';
 import {
   APPLY_PAYMENTS_CRON,
   APPLY_PAYMENTS_QUEUE,
@@ -78,6 +88,9 @@ for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
 await boss.createQueue(MBG_CUTOFF_QUEUE);
 await boss.work(MBG_CUTOFF_QUEUE, mbgCutoffHandler(logger));
 await boss.schedule(MBG_CUTOFF_QUEUE, MBG_CUTOFF_CRON, null, { tz: 'UTC' });
+await boss.createQueue(MBG_FORECAST_QUEUE);
+await boss.work(MBG_FORECAST_QUEUE, mbgForecastHandler(logger));
+await boss.schedule(MBG_FORECAST_QUEUE, MBG_FORECAST_CRON, null, { tz: 'UTC' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);

@@ -400,6 +400,20 @@
       "when": 1794925877916,
       "tag": "0056_liaison_notify",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1794926185795,
+      "tag": "0057_mbg_forecasts",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794926186530,
+      "tag": "0058_mbg_forecasts_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -48,6 +48,13 @@ export async function mbgPicPhone(tx: Tx): Promise<string | null> {
   return row?.phone?.reveal() ?? null;
 }
 
+/** The stored H-3 forecast of a date per rombel (RKP-09). */
+export function mbgForecastRows(tx: Tx, date: string) {
+  const f = schema.mbgForecasts;
+  const c = schema.classes;
+  return tx.select({ name: c.name, forecast: f.forecast }).from(f).innerJoin(c, eq(c.id, f.classId)).where(eq(f.schoolDate, date)).orderBy(asc(c.grade), asc(c.name));
+}
+
 /** Current MBG numbers of a date per rombel: rows no correction supersedes. */
 export function mbgCurrentCounts(tx: Tx, date: string) {
   const m = schema.mbgDailyCounts;

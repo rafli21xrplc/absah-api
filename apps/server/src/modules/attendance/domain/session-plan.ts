@@ -24,13 +24,16 @@ export interface PlannableActivity {
   active: boolean;
 }
 
+/** On its weekdays; an activity without weekdays but with both dates (kemah) meets every day of the range. */
+const meets = (a: PlannableActivity, weekday: number) => (a.days.length === 0 ? a.startsOn !== null && a.endsOn !== null : a.days.includes(weekday));
+
 /**
- * Activity sessions of a date (KEG-01): active activities meeting on that weekday, inside their
- * date range. No teacher: every coach of the activity may fill it.
+ * Activity sessions of a date (KEG-01): active activities meeting that day, inside their date
+ * range. No teacher: every coach of the activity may fill it.
  */
 export function planActivitySessions(activities: PlannableActivity[], date: string, weekday: number): PlannedSession[] {
   return activities
-    .filter((a) => a.active && a.days.includes(weekday) && (!a.startsOn || a.startsOn <= date) && (!a.endsOn || date <= a.endsOn))
+    .filter((a) => a.active && meets(a, weekday) && (!a.startsOn || a.startsOn <= date) && (!a.endsOn || date <= a.endsOn))
     .map((a) => activitySession(a.id));
 }
 

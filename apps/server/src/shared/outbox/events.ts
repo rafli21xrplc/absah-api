@@ -39,6 +39,8 @@ export const EVENTS = {
   'export.requested': z.object({ exportJobId: z.uuid() }),
   /** MBG numbers of a school date were stored (cutoff, or a correction); notify sends them to the PIC (RKP-08). */
   'mbg.count_ready': z.object({ schoolDate: z.iso.date(), correction: z.boolean() }),
+  /** The H-3 forecast of a school date was stored (13.00, three days before); notify sends it to the PIC (RKP-09). */
+  'mbg.forecast_ready': z.object({ schoolDate: z.iso.date() }),
   /** An admin asked to pay an invoice; subscription opens the VA/QRIS at the gateway in the worker (BIL). */
   'payment.requested': z.object({ paymentId: z.uuid() }),
   /** A guest signed in at the kiosk for a staff member (GRB-11); the push to them arrives with NTF-06 (5.7). */

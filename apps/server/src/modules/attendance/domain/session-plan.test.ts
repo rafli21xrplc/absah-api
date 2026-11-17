@@ -51,5 +51,10 @@ describe('planActivitySessions', () => {
     expect(planActivitySessions([{ ...base, startsOn: '2026-11-24' }], '2026-11-23', 1)).toEqual([]);
     expect(planActivitySessions([{ ...base, endsOn: '2026-11-22' }], '2026-11-23', 1)).toEqual([]);
     expect(planActivitySessions([{ ...base, startsOn: '2026-11-23', endsOn: '2026-11-23' }], '2026-11-23', 1)).toHaveLength(1);
+    // Kemah: no weekdays, a date range: every day of it; without both dates never.
+    const kemah = { ...base, days: [], startsOn: '2026-11-24', endsOn: '2026-11-26' };
+    expect(planActivitySessions([kemah], '2026-11-25', 3)).toHaveLength(1);
+    expect(planActivitySessions([kemah], '2026-11-27', 5)).toEqual([]);
+    expect(planActivitySessions([{ ...base, days: [] }], '2026-11-25', 3)).toEqual([]);
   });
 });

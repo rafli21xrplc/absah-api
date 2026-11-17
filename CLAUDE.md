@@ -525,6 +525,14 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - notify_mbg_count sends template mbg_count / mbg_count_corrected to the PIC (no guardian, no action
   link; queueMessages recipients without guardianId get none): total present + "1A 28, 1B 25 (3 belum
   diisi)" on one line (template params cannot hold line breaks). Templates added in migration 0039.
+- Prakiraan H-3 (RKP-09): job rkp.mbg-forecast (every 5 min, each school from 13.00 local) stores
+  mbg_forecasts for today + 3 calendar days when that is a school day (attendance schoolDayOf), once
+  per date: per rombel enrolled - approved izin - members of an active luar_sekolah activity meeting
+  that day (izin wins when both). Insert-only (0057-0058; forecast_h3 dropped from
+  mbg_daily_counts). Emits mbg.forecast_ready; notify_mbg_forecast sends template mbg_forecast
+  (pending) to the PIC. GET /mbg/forecast?date= (default today + 3): computed | pending.
+- An activity without weekdays but with both dates (kemah) meets every day of its range: sessions
+  (planActivitySessions) and the forecast use the same rule.
 
 ## Pilot data (prompt 4.4, packages/db/seed)
 - pilotPlan() (seed/pilot-plan.ts) is pure and deterministic (seed 20270111): "SMA Absah Uji 1" (NPSN
