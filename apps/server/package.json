@@ -17,6 +17,7 @@
     "pilot:seed": "tsx src/entrypoints/pilot-seed.ts",
     "gate:load-fixture": "tsx src/entrypoints/gate-load-fixture.ts",
     "notify:last-link": "tsx src/entrypoints/notify-last-link.ts",
+    "auth:last-otp": "tsx src/entrypoints/auth-last-otp.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
