@@ -24,3 +24,6 @@ export function mayViewSession(actor: Actor, session: SessionOwnership): boolean
 
 /** Decides correction requests on locked sessions (PRS-05). */
 export const canDecideCorrections = anyRole('wakasek', 'kepsek');
+
+/** Reads every teacher's jurnal mengajar (PRS-09); a guru reads only their own. */
+export const canReadAllJournals = anyRole('admin', 'kepsek', 'wakasek');

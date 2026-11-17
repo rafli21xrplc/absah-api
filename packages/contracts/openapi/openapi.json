@@ -2189,6 +2189,12 @@
               "absent"
             ]
           },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "canFill": {
             "type": "boolean"
           }
@@ -2203,6 +2209,7 @@
           "subject",
           "teacher",
           "counts",
+          "topic",
           "canFill"
         ]
       },
@@ -2349,6 +2356,12 @@
               "absent"
             ]
           },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "canFill": {
             "type": "boolean"
           },
@@ -2403,6 +2416,7 @@
           "subject",
           "teacher",
           "counts",
+          "topic",
           "canFill",
           "students"
         ]
@@ -2464,12 +2478,145 @@
               ]
             },
             "maxItems": 300
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 200
           }
         },
         "required": [
           "exceptions"
         ],
         "additionalProperties": false
+      },
+      "JournalResponse": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JournalEntry"
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "sessions": {
+                "type": "integer"
+              },
+              "withTopic": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "sessions",
+              "withTopic"
+            ]
+          }
+        },
+        "required": [
+          "month",
+          "entries",
+          "totals"
+        ]
+      },
+      "JournalEntry": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "period": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "number": {
+                "type": "integer"
+              },
+              "startsAt": {
+                "type": "string"
+              },
+              "endsAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "number",
+              "startsAt",
+              "endsAt"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "teacher": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "schoolDate",
+          "period",
+          "className",
+          "subject",
+          "teacher",
+          "status",
+          "topic"
+        ]
       },
       "CorrectionList": {
         "type": "object",
@@ -9030,6 +9177,189 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teaching-journal": {
+      "get": {
+        "tags": [
+          "attendance"
+        ],
+        "summary": "Jurnal mengajar of one month: per-period sessions with their topic (PRS-09)",
+        "description": "A guru sees only their own sessions. admin, kepsek and wakasek may pass teacherId, or omit it for every teacher.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            },
+            "required": true,
+            "name": "month",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "teacherId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Journal entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teaching-journal/export.xlsx": {
+      "get": {
+        "tags": [
+          "attendance"
+        ],
+        "summary": "Excel of one teacher's jurnal mengajar for a month",
+        "description": "teacherId is required for managers; a guru gets their own.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            },
+            "required": true,
+            "name": "month",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "teacherId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excel workbook",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {

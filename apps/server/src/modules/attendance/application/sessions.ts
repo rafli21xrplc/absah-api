@@ -22,6 +22,7 @@ function toSummary(actor: Actor, r: SessionRow): SessionSummary {
     subject: r.subjectId && r.subjectName ? { id: r.subjectId, name: r.subjectName } : null,
     teacher: r.teacherId ? { id: r.teacherId, name: r.teacherName ?? '' } : null,
     counts: { students: r.students, filled: r.filled, absent: r.absent },
+    topic: r.topic,
     canFill: r.lockedAt === null && mayFillSession(actor, r),
   };
 }
@@ -63,6 +64,7 @@ export async function submitSession(actor: Actor, sessionId: string, input: Subm
     if (!session || !row || !mayViewSession(actor, row)) throw new NotFoundError('Sesi tidak ditemukan.');
     if (!mayFillSession(actor, row)) throw new ForbiddenError('Sesi ini diisi oleh guru pengampu atau wali kelas.');
     if (session.lockedAt) throw new SessionLockedError();
+    if (input.topic && row.mode !== 'per_period') throw new ValidationError([{ path: 'topic', message: 'Topik hanya untuk sesi per jam pelajaran.' }]);
 
     const students = await roster(tx, row);
     const onRoster = new Set(students.map((st) => st.enrollmentId));
@@ -83,7 +85,7 @@ export async function submitSession(actor: Actor, sessionId: string, input: Subm
       return [{ sessionId, enrollmentId: st.enrollmentId, source: 'teacher' as const, status, recordedBy: actor.userId }];
     });
     await changeMarks(tx, actor.schoolId, { write, touch: students.map((st) => ({ sessionId, enrollmentId: st.enrollmentId })) });
-    await markSubmitted(tx, sessionId, actor.userId);
+    await markSubmitted(tx, sessionId, actor.userId, input.topic === undefined ? undefined : input.topic || null);
     return detail(tx, actor, sessionId);
   });
 }

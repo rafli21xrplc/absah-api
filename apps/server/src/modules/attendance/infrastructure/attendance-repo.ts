@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, lte, or, sql, type SQL } from 'drizzle-orm';
 
 const s = schema.attendanceSessions;
 const classes = schema.classes;
@@ -19,6 +19,8 @@ export interface SessionFilter {
   id?: string;
   /** Sessions the user teaches, or daily sessions of the rombel the user is wali kelas of. */
   forUser?: string;
+  /** Jurnal mengajar: per-period sessions of one teacher (or all) between two school dates, inclusive. */
+  journal?: { from: string; to: string; teacherId?: string };
 }
 
 export async function listSessions(tx: Tx, filter: SessionFilter) {
@@ -29,9 +31,14 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
     const mine = or(eq(s.teacherId, filter.forUser), and(eq(s.mode, 'daily'), eq(classes.homeroomTeacherId, filter.forUser)));
     if (mine) where.push(mine);
   }
+  if (filter.journal) {
+    where.push(eq(s.mode, 'per_period'), gte(s.schoolDate, filter.journal.from), lte(s.schoolDate, filter.journal.to));
+    if (filter.journal.teacherId) where.push(eq(s.teacherId, filter.journal.teacherId));
+  }
   return tx
     .select({
       id: s.id,
+      topic: s.topic,
       schoolDate: s.schoolDate,
       mode: s.mode,
       status: s.status,
@@ -94,6 +101,16 @@ export const recordsOf = (tx: Tx, sessionId: string) =>
     .from(schema.attendanceRecords)
     .where(eq(schema.attendanceRecords.sessionId, sessionId));
 
-export async function markSubmitted(tx: Tx, id: string, userId: string): Promise<void> {
-  await tx.update(s).set({ status: 'submitted', submittedAt: new Date(), submittedBy: userId }).where(eq(s.id, id));
+/** `topic`: undefined keeps the current one, null clears it. */
+export async function markSubmitted(tx: Tx, id: string, userId: string, topic?: string | null): Promise<void> {
+  await tx
+    .update(s)
+    .set({ status: 'submitted', submittedAt: new Date(), submittedBy: userId, ...(topic === undefined ? {} : { topic }) })
+    .where(eq(s.id, id));
+}
+
+/** Name of a school member (school_member_directory view), for file names and headings. */
+export async function memberName(tx: Tx, userId: string): Promise<string | null> {
+  const rows = await tx.execute<{ name: string }>(sql`select name from school_member_directory where user_id = ${userId} limit 1`);
+  return rows.rows[0]?.name ?? null;
 }
