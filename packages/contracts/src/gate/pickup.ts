@@ -88,3 +88,62 @@ export const PickupGuardianIdParam = z.object({ pickupGuardianId: z.uuid() });
 /** GET /api/v1/pickup-guardians/{id}/photo: a 5-minute link (audited). */
 export const PickupPhotoLink = z.object({ url: z.url(), expiresAt: z.iso.datetime({ offset: true }) }).meta({ id: 'PickupPhotoLink' });
 export type PickupPhotoLink = z.infer<typeof PickupPhotoLink>;
+
+/**
+ * Check-out (GRB-10). The kiosk keeps each student's approved penjemput from the morning sync (photos
+ * downloaded at once from the 5-minute links) so it can release a student offline.
+ */
+export const KioskPickupStudent = z
+  .object({
+    cardId: z.uuid(),
+    guardians: z.array(z.object({ id: z.uuid(), name: z.string(), relation: PickupRelation, photoUrl: z.url() })),
+  })
+  .meta({ id: 'KioskPickupStudent' });
+export type KioskPickupStudent = z.infer<typeof KioskPickupStudent>;
+
+export const PICKUP_EVENT_STATUSES = ['released', 'held', 'denied', 'expired'] as const;
+export const PickupEventStatus = z.enum(PICKUP_EVENT_STATUSES).meta({ id: 'PickupEventStatus' });
+export type PickupEventStatus = z.infer<typeof PickupEventStatus>;
+
+export const KIOSK_CHECKOUT_BATCH_MAX = 200;
+
+/** POST /api/v1/kiosk/checkouts: queued check-outs with a listed penjemput, exactly once per clientEventId. */
+export const KioskCheckoutBatch = z
+  .object({
+    checkouts: z
+      .array(
+        z
+          .object({
+            clientEventId: z.uuid(),
+            /** The card token as scanned. */
+            token: z.string().max(200),
+            pickupGuardianId: z.uuid(),
+            checkedOutAt: z.iso.datetime({ offset: true }),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(KIOSK_CHECKOUT_BATCH_MAX),
+  })
+  .strict()
+  .meta({ id: 'KioskCheckoutBatch' });
+export type KioskCheckoutBatch = z.infer<typeof KioskCheckoutBatch>;
+
+/** The card reasons of a scan, plus not_authorized: the penjemput is not an approved one of this student. */
+export const CHECKOUT_REJECT_REASONS = ['malformed', 'expired', 'no_key', 'bad_signature', 'unknown_card', 'wrong_device', 'not_enrolled', 'not_authorized'] as const;
+export const CheckoutRejectReason = z.enum(CHECKOUT_REJECT_REASONS).meta({ id: 'CheckoutRejectReason' });
+export type CheckoutRejectReason = z.infer<typeof CheckoutRejectReason>;
+
+/** released: recorded (parents told); duplicate: the student was already released today. */
+export const KioskCheckoutResult = z
+  .object({
+    clientEventId: z.uuid(),
+    result: z.enum(['released', 'duplicate', 'rejected']),
+    rejectReason: CheckoutRejectReason.nullable(),
+    firstName: z.string().nullable(),
+  })
+  .meta({ id: 'KioskCheckoutResult' });
+export type KioskCheckoutResult = z.infer<typeof KioskCheckoutResult>;
+
+export const KioskCheckoutResults = z.object({ results: z.array(KioskCheckoutResult) }).meta({ id: 'KioskCheckoutResults' });
+export type KioskCheckoutResults = z.infer<typeof KioskCheckoutResults>;
