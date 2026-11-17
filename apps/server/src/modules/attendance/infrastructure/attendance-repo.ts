@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, eq, gte, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lte, or, sql, type SQL } from 'drizzle-orm';
 
 const s = schema.attendanceSessions;
 const classes = schema.classes;
@@ -26,6 +26,8 @@ export interface SessionFilter {
   forUser?: string;
   /** Jurnal mengajar: per-period sessions of one teacher (or all) between two school dates, inclusive. */
   journal?: { from: string; to: string; teacherId?: string };
+  /** AKD-10: sessions of a rombel and of learning groups with any of its active students (no activities). */
+  forClass?: string;
 }
 
 export async function listSessions(tx: Tx, filter: SessionFilter) {
@@ -36,6 +38,12 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
     const coaching = sql`exists (select 1 from activity_coaches ac where ac.activity_id = ${s.activityId} and ac.user_id = ${filter.forUser}::uuid)`;
     const mine = or(eq(s.teacherId, filter.forUser), and(eq(s.mode, 'daily'), eq(classes.homeroomTeacherId, filter.forUser)), and(eq(s.mode, 'activity'), coaching));
     if (mine) where.push(mine);
+  }
+  if (filter.forClass) {
+    const groupOfClass = sql`exists (select 1 from learning_group_members m join enrollments e on e.id = m.enrollment_id
+      where m.learning_group_id = ${s.ownerId} and e.class_id = ${filter.forClass}::uuid and e.status = 'active')`;
+    const owned = or(and(eq(s.ownerType, 'class'), eq(s.ownerId, filter.forClass)), and(eq(s.ownerType, 'group'), groupOfClass));
+    if (owned) where.push(owned);
   }
   if (filter.journal) {
     where.push(eq(s.mode, 'per_period'), gte(s.schoolDate, filter.journal.from), lte(s.schoolDate, filter.journal.to));
@@ -129,3 +137,41 @@ export async function memberName(tx: Tx, userId: string): Promise<string | null>
   const rows = await tx.execute<{ name: string }>(sql`select name from school_member_directory where user_id = ${userId} limit 1`);
   return rows.rows[0]?.name ?? null;
 }
+
+/** Active students of a rombel with their daily status on a date (AKD-10). */
+export const classStudentsOn = (tx: Tx, classId: string, date: string) => {
+  const e = schema.enrollments;
+  const d = schema.dailyAttendance;
+  return tx
+    .select({ enrollmentId: e.id, studentId: e.studentId, name: schema.students.name, daily: d.status })
+    .from(e)
+    .innerJoin(schema.students, eq(schema.students.id, e.studentId))
+    .leftJoin(d, and(eq(d.enrollmentId, e.id), eq(d.schoolDate, date)))
+    .where(and(eq(e.classId, classId), eq(e.status, 'active')))
+    .orderBy(asc(schema.students.name));
+};
+
+/** Learning group memberships of a rombel's active students: which group sessions apply to whom. */
+export const groupMembersOfClass = (tx: Tx, classId: string) => {
+  const m = schema.learningGroupMembers;
+  const e = schema.enrollments;
+  return tx
+    .select({ groupId: m.learningGroupId, enrollmentId: m.enrollmentId })
+    .from(m)
+    .innerJoin(e, eq(e.id, m.enrollmentId))
+    .where(and(eq(e.classId, classId), eq(e.status, 'active')));
+};
+
+/** Records of many sessions at once. */
+export const recordsOfSessions = (tx: Tx, sessionIds: string[]) =>
+  sessionIds.length === 0
+    ? Promise.resolve([])
+    : tx
+        .select({ sessionId: schema.attendanceRecords.sessionId, enrollmentId: schema.attendanceRecords.enrollmentId, status: schema.attendanceRecords.status })
+        .from(schema.attendanceRecords)
+        .where(inArray(schema.attendanceRecords.sessionId, sessionIds));
+
+export const classHeader = async (tx: Tx, classId: string) => {
+  const [row] = await tx.select({ id: classes.id, name: classes.name, homeroomTeacherId: classes.homeroomTeacherId }).from(classes).where(eq(classes.id, classId));
+  return row ?? null;
+};
