@@ -1,4 +1,4 @@
-import { LiaisonMessageParam, LiaisonStudentParam, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest } from '@absah/contracts';
+import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentParam, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from '@absah/contracts';
 import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -6,7 +6,7 @@ import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
-import { getThread, listThreads, postMessage, readThread, retract } from '../application/liaison';
+import { getSettings, getThread, listThreads, postMessage, readThread, retract, updateSettings } from '../application/liaison';
 
 /** Buku penghubung (ORT-07): orang tua in the PWA, wali kelas and guru mapel on the staff web. */
 export function liaisonRouter(auth: Auth): Router {
@@ -33,6 +33,13 @@ export function liaisonRouter(auth: Auth): Router {
   router.post('/liaison/messages/:messageId/retract', ...guard, idempotent(), async (req, res) => {
     const actor = getActor(req);
     sendContract(res, LiaisonThread, await retract(actor, auditContext(req, actor), LiaisonMessageParam.parse(req.params).messageId));
+  });
+  router.get('/liaison/settings', ...guard, async (req, res) => {
+    sendContract(res, LiaisonSettings, await getSettings(getActor(req)));
+  });
+  router.put('/liaison/settings', ...guard, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, LiaisonSettings, await updateSettings(actor, auditContext(req, actor), UpdateLiaisonSettingsRequest.parse(req.body)));
   });
 
   return router;

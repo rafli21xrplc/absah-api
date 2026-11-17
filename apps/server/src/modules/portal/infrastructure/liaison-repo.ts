@@ -141,3 +141,15 @@ export async function threadsFor(tx: Tx, userId: string, as: 'parent' | 'staff' 
     unread: r.unread ?? 0,
   }));
 }
+
+export async function readSettings(tx: Tx) {
+  const [row] = await tx.select({ startsAt: schema.liaisonSettings.startsAt, endsAt: schema.liaisonSettings.endsAt }).from(schema.liaisonSettings);
+  return row;
+}
+
+export async function writeSettings(tx: Tx, schoolId: string, userId: string, values: { startsAt: string; endsAt: string }): Promise<void> {
+  await tx
+    .insert(schema.liaisonSettings)
+    .values({ schoolId, ...values, updatedBy: userId })
+    .onConflictDoUpdate({ target: schema.liaisonSettings.schoolId, set: { ...values, updatedBy: userId, updatedAt: new Date() } });
+}

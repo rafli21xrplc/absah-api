@@ -39,14 +39,24 @@ export function dateRangeLabel(start: string, end: string): string {
 /** No messages to parents between 21.00 and 06.00 school time; they wait for the morning. */
 export const QUIET_HOURS = { start: 21 * 60, end: 6 * 60 } as const;
 
+/** Local minutes [start, end) in which a message may go out. */
+export interface SendWindow {
+  start: number;
+  end: number;
+}
+const OUTSIDE_QUIET_HOURS: SendWindow = { start: QUIET_HOURS.end, end: QUIET_HOURS.start };
+
 /**
- * When a message created at `now` may go out: now, or 06.00 school time when now is in the
- * quiet hours. `minutes` is the school clock at now (schoolMinutes).
+ * When a message created at `now` may go out: now inside the window (default: outside the quiet
+ * hours), else the next window start, school time. `minutes` is the school clock at now
+ * (schoolMinutes). A window narrower than the quiet hours (buku penghubung service hours) is
+ * clamped into them, so no message goes out at night.
  */
-export function releaseTime(now: Date, minutes: number): Date {
-  const quiet = minutes >= QUIET_HOURS.start || minutes < QUIET_HOURS.end;
-  if (!quiet) return now;
-  const wait = (minutes >= QUIET_HOURS.start ? 24 * 60 - minutes + QUIET_HOURS.end : QUIET_HOURS.end - minutes) * 60_000;
+export function releaseTime(now: Date, minutes: number, window: SendWindow = OUTSIDE_QUIET_HOURS): Date {
+  const start = Math.max(window.start, OUTSIDE_QUIET_HOURS.start);
+  const end = Math.min(window.end, OUTSIDE_QUIET_HOURS.end);
+  if (minutes >= start && minutes < end) return now;
+  const wait = (minutes < start ? start - minutes : 24 * 60 - minutes + start) * 60_000;
   // Whole minutes: drop the seconds of now so the release lands on 06.00 exactly.
   return new Date(Math.floor(now.getTime() / 60_000) * 60_000 + wait);
 }

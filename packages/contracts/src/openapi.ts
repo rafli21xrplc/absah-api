@@ -71,7 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
-import { LiaisonMessageParam, LiaisonStudentParam, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest } from './portal/liaison';
+import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentParam, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import {
   AddTppkCaseEventRequest,
@@ -957,11 +957,13 @@ function buildRegistry(): OpenAPIRegistry {
     });
   }
   const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
-  const liaisonPaths: { method: 'get' | 'post'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
+  const liaisonPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
     { method: 'get', path: '/liaison/threads', summary: 'Threads of the user (orang_tua: every child; staff: students they teach; admin: all)', ok: LiaisonThreadList, label: 'Threads' },
     { method: 'get', path: '/liaison/students/{studentId}', summary: 'The thread of a student', request: { params: LiaisonStudentParam }, ok: LiaisonThread, label: 'Thread' },
     { method: 'post', path: '/liaison/students/{studentId}/messages', summary: 'Write a message (participants)', request: { params: LiaisonStudentParam, body: { content: { 'application/json': { schema: PostLiaisonMessageRequest } } } }, ok: LiaisonThread, label: 'Thread', write: true },
     { method: 'post', path: '/liaison/students/{studentId}/read', summary: 'Mark the thread read up to now', request: { params: LiaisonStudentParam }, label: 'Read' },
+    { method: 'get', path: '/liaison/settings', summary: 'Service hours (WhatsApp notifications outside them wait)', ok: LiaisonSettings, label: 'Settings' },
+    { method: 'put', path: '/liaison/settings', summary: 'Set the service hours (admin)', request: { body: { content: { 'application/json': { schema: UpdateLiaisonSettingsRequest } } } }, ok: LiaisonSettings, label: 'Settings', write: true },
     { method: 'post', path: '/liaison/messages/{messageId}/retract', summary: 'Retract an own message within 15 minutes', request: { params: LiaisonMessageParam }, ok: LiaisonThread, label: 'Thread', write: true },
   ];
   for (const p of liaisonPaths) {
