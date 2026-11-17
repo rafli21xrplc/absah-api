@@ -32,7 +32,13 @@ export type TppkEventKind = z.infer<typeof TppkEventKind>;
 export const TPPK_MIN_MEMBERS = 3;
 
 export const TppkMember = z
-  .object({ userId: z.uuid(), name: z.string(), appointedAt: z.iso.datetime({ offset: true }) })
+  .object({
+    userId: z.uuid(),
+    name: z.string(),
+    appointedAt: z.iso.datetime({ offset: true }),
+    /** Has a WhatsApp number, so new reports reach them (until staff push arrives with NTF-06). */
+    canBeNotified: z.boolean(),
+  })
   .meta({ id: 'TppkMember' });
 export type TppkMember = z.infer<typeof TppkMember>;
 
