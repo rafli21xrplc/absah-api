@@ -396,8 +396,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   students.user_id and sets an active `siswa` membership (platform.setPortalMembership; no
   invitation, the OTP is the proof). null suspends it. A number owned by another account → 409
   phone_taken. Audit records which numbers changed, never the numbers; responses mask them.
-- Parent logins (orang_tua with guardians.user_id) come with the parent portal (prompt 5.7); the
-  portal endpoints already serve them.
+- Parent logins: guardians[].portal on the same PUT (phone optional = unchanged). portal true needs
+  a number (400 otherwise) and links guardians.user_id to the account that OWNS the number
+  (platform.guardianLogin: reused, so siblings and other schools share one login) plus an active
+  orang_tua membership; a student's own login is refused (409 phone_student). portal false or a
+  null number unlinks; the membership is suspended only when no other guardian row of the school
+  still uses that account. Audit after.guardianPortal [{guardianId, portal on|off}].
 - GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
   the last 30 days of daily_attendance with counts.
 

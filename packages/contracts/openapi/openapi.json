@@ -5559,13 +5559,17 @@
                     "string",
                     "null"
                   ]
+                },
+                "portal": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "id",
                 "name",
                 "relation",
-                "phone"
+                "phone",
+                "portal"
               ]
             }
           }
@@ -5611,11 +5615,13 @@
                     "null"
                   ],
                   "pattern": "^\\+628\\d{7,12}$"
+                },
+                "portal": {
+                  "type": "boolean"
                 }
               },
               "required": [
-                "guardianId",
-                "phone"
+                "guardianId"
               ],
               "additionalProperties": false
             },

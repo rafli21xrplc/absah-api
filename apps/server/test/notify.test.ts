@@ -126,8 +126,10 @@ describe('notify (NTF)', () => {
     expect(held.every((r) => r.releasedAt === null)).toBe(true);
     expect(await queuedEvents(held.map((r) => r.id))).toHaveLength(0);
 
-    expect(await releaseDueNotifications(new Date(night.getTime() + 60 * 60_000))).toBe(0);
-    expect(await releaseDueNotifications(new Date(night.getTime() + 8 * 60 * 60_000))).toBe(2); // 06.30 WIB
+    // The release runs over every school, so other test files' held rows may be released too.
+    await releaseDueNotifications(new Date(night.getTime() + 60 * 60_000));
+    expect(await queuedEvents(held.map((r) => r.id))).toHaveLength(0);
+    expect(await releaseDueNotifications(new Date(night.getTime() + 8 * 60 * 60_000))).toBeGreaterThanOrEqual(2); // 06.30 WIB
     const events = await queuedEvents(held.map((r) => r.id));
     expect(events).toHaveLength(2);
     for (const e of events) await run('notify_send', e);

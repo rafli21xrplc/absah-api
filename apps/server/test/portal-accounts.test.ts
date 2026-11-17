@@ -134,3 +134,65 @@ describe('student contacts and portal logins (ORT-02)', () => {
     expect(history.items.map((i) => i.name)).toEqual(['BAYU SAPUTRA']);
   });
 });
+
+describe('guardian portal access (ORT-02, needed by GRB-09 and KEG-02)', () => {
+  const parentPhone = testPhone();
+  phones.push(parentPhone);
+  let citra: string;
+  let eka: string;
+  let citraGuardian: string;
+  let ekaGuardian: string;
+  const names = async (agent: Agent) => bodyOf<PortalAttendance>(await agent.get('/api/v1/portal/attendance').set('X-School-Id', school).expect(200)).items.map((i) => i.name);
+
+  beforeAll(async () => {
+    citra = students['CITRA DEWI']?.id ?? '';
+    await withTenant({ schoolId: school, userId: null }, async (tx) => {
+      const [enr] = await tx.select().from(schema.enrollments).where(eq(schema.enrollments.studentId, citra));
+      const [s] = await tx.insert(schema.students).values({ schoolId: school, name: 'EKA DEWI' }).returning();
+      eka = s?.id ?? '';
+      await tx.insert(schema.enrollments).values({ schoolId: school, studentId: eka, classId: enr?.classId ?? '', academicYearId: enr?.academicYearId ?? '', startsOn: '2026-07-13' });
+      // Dapodik keeps one guardian row per student, so siblings' mother appears twice.
+      const [g1, g2] = await tx.insert(schema.guardians).values([{ schoolId: school, name: 'Ibu Dewi' }, { schoolId: school, name: 'Ibu Dewi' }]).returning();
+      citraGuardian = g1?.id ?? '';
+      ekaGuardian = g2?.id ?? '';
+      await tx.insert(schema.studentGuardians).values([
+        { schoolId: school, studentId: citra, guardianId: citraGuardian, relation: 'ibu', isPrimary: true },
+        { schoolId: school, studentId: eka, guardianId: ekaGuardian, relation: 'ibu', isPrimary: true },
+      ]);
+    });
+  });
+
+  it('opens and closes the parent login, one account for siblings', async () => {
+    await put(wali, citra, { guardians: [{ guardianId: citraGuardian, portal: true }] }).expect(400);
+
+    const on = bodyOf<StudentContacts>(await put(wali, citra, { guardians: [{ guardianId: citraGuardian, phone: parentPhone, portal: true }] }).expect(200));
+    expect(on.guardians[0]).toMatchObject({ id: citraGuardian, portal: true });
+    const parent = await otpLogin(parentPhone);
+    expect(await names(parent)).toEqual(['CITRA DEWI']);
+
+    // The sibling's guardian row with the same number reuses the same login.
+    await put(admin, eka, { guardians: [{ guardianId: ekaGuardian, phone: parentPhone, portal: true }] }).expect(200);
+    expect((await names(parent)).sort()).toEqual(['CITRA DEWI', 'EKA DEWI']);
+
+    // Closing one keeps the other; closing both ends the membership. The number stays for messages.
+    const off = bodyOf<StudentContacts>(await put(wali, citra, { guardians: [{ guardianId: citraGuardian, portal: false }] }).expect(200));
+    expect(off.guardians[0]).toMatchObject({ portal: false, phone: `${parentPhone.slice(0, 6)}****${parentPhone.slice(-4)}` });
+    expect(await names(parent)).toEqual(['EKA DEWI']);
+    await put(admin, eka, { guardians: [{ guardianId: ekaGuardian, phone: null }] }).expect(200);
+    await parent.get('/api/v1/portal/attendance').set('X-School-Id', school).expect(403);
+
+    const logs = await getDb().db.select().from(schema.auditLogs).where(and(eq(schema.auditLogs.schoolId, school), eq(schema.auditLogs.entityId, citra))).orderBy(schema.auditLogs.createdAt);
+    expect(logs.map((l) => (l.after as { guardianPortal?: unknown }).guardianPortal).filter(Boolean)).toEqual([
+      [{ guardianId: citraGuardian, portal: 'on' }],
+      [{ guardianId: citraGuardian, portal: 'off' }],
+    ]);
+  });
+
+  it("refuses a student's own login as a parent account", async () => {
+    const studentPhone = testPhone();
+    phones.push(studentPhone);
+    await put(wali, eka, { studentPhone }).expect(200);
+    const res = await put(wali, citra, { guardians: [{ guardianId: citraGuardian, phone: studentPhone, portal: true }] }).expect(409);
+    expect(bodyOf<{ details: unknown }>(res).details).toEqual({ reason: 'phone_student' });
+  });
+});
