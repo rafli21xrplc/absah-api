@@ -71,6 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { LiaisonMessageParam, LiaisonStudentParam, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import {
   AddTppkCaseEventRequest,
@@ -953,6 +954,27 @@ function buildRegistry(): OpenAPIRegistry {
       parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
       ...(p.request ? { request: p.request } : {}),
       responses: { 200: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
+  const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
+  const liaisonPaths: { method: 'get' | 'post'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
+    { method: 'get', path: '/liaison/threads', summary: 'Threads of the user (orang_tua: every child; staff: students they teach; admin: all)', ok: LiaisonThreadList, label: 'Threads' },
+    { method: 'get', path: '/liaison/students/{studentId}', summary: 'The thread of a student', request: { params: LiaisonStudentParam }, ok: LiaisonThread, label: 'Thread' },
+    { method: 'post', path: '/liaison/students/{studentId}/messages', summary: 'Write a message (participants)', request: { params: LiaisonStudentParam, body: { content: { 'application/json': { schema: PostLiaisonMessageRequest } } } }, ok: LiaisonThread, label: 'Thread', write: true },
+    { method: 'post', path: '/liaison/students/{studentId}/read', summary: 'Mark the thread read up to now', request: { params: LiaisonStudentParam }, label: 'Read' },
+    { method: 'post', path: '/liaison/messages/{messageId}/retract', summary: 'Retract an own message within 15 minutes', request: { params: LiaisonMessageParam }, ok: LiaisonThread, label: 'Thread', write: true },
+  ];
+  for (const p of liaisonPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['portal'],
+      summary: p.summary,
+      description: liaisonNote,
+      security: [{ session: [] }],
+      parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      ...(p.request ? { request: p.request } : {}),
+      responses: { ...(p.ok ? { 200: json(p.ok, p.label) } : { 204: { description: p.label } }), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
     });
   }
   const tppkNote = 'Behind student.tppk (404 CAPABILITY_DISABLED otherwise). Reports and cases are readable only by TPPK members (RLS), never by the admin or kepsek through their role.';

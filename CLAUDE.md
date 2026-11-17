@@ -418,6 +418,17 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   the rombel rekap skip them, and an alpa there emits no attendance.absent_marked (changeMarks).
   GET /activities/{id}/recap?from&to counts per member from these sessions only.
 
+## Buku penghubung (ORT-07, modules/portal, packages/db/src/schema/portal.ts)
+- communication_threads (one per student, all years), communication_messages (body encrypted,
+  sender_role orang_tua|wali_kelas|guru, retracted_at), communication_reads (read cursor per user).
+  Migrations 0053-0054, capability portal.liaison (default true).
+- Participants are not stored: guardians of the student (orang_tua role), wali kelas of the active
+  enrollment's rombel, teachers of its lessons (rombel or learning group). Others 404. The admin
+  reads every thread incl. retracted text (audited liaison.thread_viewed) and cannot write.
+- Retract only by the sender within LIAISON_RETRACT_MINUTES (15); afterwards permanent (409).
+  Each message emits liaison.message_posted.
+- Retention (2 tahun ajaran) is not implemented yet.
+
 ## Student affairs (KSW, modules/student-affairs, packages/db/src/schema/student-affairs.ts)
 - UKS (KSW-08, behind student.uks, role petugas_uks only: even admin does not read the notes):
   uks_visits (enrollment, school_date, visited_at, complaint + action encryptedText, outcome

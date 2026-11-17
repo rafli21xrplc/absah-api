@@ -1,4 +1,7 @@
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { LIAISON_SENDER_ROLES } from '@absah/contracts';
+import { index, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { encryptedText } from '../crypto';
+import { user } from './auth';
 import { guardians, students } from './academic';
 import { cardDevices } from './gate';
 import { leaveRequests } from './leave';
@@ -34,4 +37,62 @@ export const actionLinks = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('action_links_token_hash_key').on(t.tokenHash), index('action_links_school_id_expires_at_idx').on(t.schoolId, t.expiresAt)],
+);
+
+export const liaisonSenderRole = pgEnum('liaison_sender_role', LIAISON_SENDER_ROLES);
+
+/**
+ * Buku penghubung (ORT-07): one thread per student, across academic years. Participants are not
+ * stored: they follow the data (guardians of the student, wali kelas and guru mapel of the active
+ * enrollment), so a new wali kelas sees the history and a former one no longer does.
+ */
+export const communicationThreads = pgTable(
+  'communication_threads',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    lastMessageAt: at('last_message_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('communication_threads_student_key').on(t.schoolId, t.studentId), index('communication_threads_last_message_idx').on(t.schoolId, t.lastMessageAt)],
+);
+
+/**
+ * Messages. The sender may retract within 15 minutes; afterwards a message is permanent. A
+ * retracted message keeps its body: participants see "ditarik", the admin sees the text (sengketa).
+ */
+export const communicationMessages = pgTable(
+  'communication_messages',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => communicationThreads.id, { onDelete: 'cascade' }),
+    senderId: uuid('sender_id').references(() => user.id, { onDelete: 'set null' }),
+    senderRole: liaisonSenderRole('sender_role').notNull(),
+    body: encryptedText('body', 'communication_messages.body').notNull(),
+    retractedAt: at('retracted_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('communication_messages_thread_idx').on(t.threadId, t.createdAt)],
+);
+
+/** How far each participant has read a thread (unread counts). */
+export const communicationReads = pgTable(
+  'communication_reads',
+  {
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => communicationThreads.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    readAt: at('read_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.threadId, t.userId] })],
 );
