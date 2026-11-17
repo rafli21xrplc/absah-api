@@ -71,6 +71,7 @@ import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayR
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityStudentQuery, CreateActivityRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import {
   AddTppkCaseEventRequest,
   CreateTppkCaseRequest,
@@ -928,6 +929,30 @@ function buildRegistry(): OpenAPIRegistry {
     request: { query: UksVisitsQuery },
     responses: { 200: json(UksVisitList, 'Visits'), ...errors(400, 401, 403, 404) },
   });
+  const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
+  const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });
+  const activityPaths: { method: 'get' | 'post' | 'patch' | 'put'; path: string; summary: string; request?: object; ok: z.ZodType; label: string; write?: boolean }[] = [
+    { method: 'get', path: '/activities', summary: 'Activities the user may see', ok: ActivityList, label: 'Activities' },
+    { method: 'post', path: '/activities', summary: 'Create an activity with its coaches (admin, wakasek)', request: activityBody(CreateActivityRequest), ok: Activity, label: 'Created', write: true },
+    { method: 'get', path: '/activities/students', summary: 'Find active students to add as members', request: { query: ActivityStudentQuery }, ok: ActivityMemberList, label: 'Students' },
+    { method: 'get', path: '/activities/{activityId}', summary: 'One activity', request: { params: ActivityIdParam }, ok: Activity, label: 'Activity' },
+    { method: 'patch', path: '/activities/{activityId}', summary: 'Edit an activity, its coaches or deactivate it (admin, wakasek)', request: { params: ActivityIdParam, ...activityBody(UpdateActivityRequest) }, ok: Activity, label: 'Updated', write: true },
+    { method: 'get', path: '/activities/{activityId}/members', summary: 'Members of an activity', request: { params: ActivityIdParam }, ok: ActivityMemberList, label: 'Members' },
+    { method: 'put', path: '/activities/{activityId}/members', summary: 'Replace the members (managers or the coaches)', request: { params: ActivityIdParam, ...activityBody(SetActivityMembersRequest) }, ok: ActivityMemberList, label: 'Members', write: true },
+  ];
+  for (const p of activityPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['activity'],
+      summary: p.summary,
+      description: activityNote,
+      security: [{ session: [] }],
+      parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      ...(p.request ? { request: p.request } : {}),
+      responses: { 200: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
   const tppkNote = 'Behind student.tppk (404 CAPABILITY_DISABLED otherwise). Reports and cases are readable only by TPPK members (RLS), never by the admin or kepsek through their role.';
   const tppkPublic = 'Public, no login. Rate limited per client in memory (429 RATE_LIMITED); the IP is never stored or logged.';
   registry.registerPath({
