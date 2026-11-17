@@ -286,7 +286,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   comes from the kiosk's school) -> photoId in POST /kiosk/visitors (400 photoId when not uploaded);
   GET /visitors/{id}/photo gives a 5-minute link and is audited (gate.visitor_photo_viewed). Job
   gate.visitor_photos (02:55) removes the file and sets photo_removed_at 30 days after left_at, or after
-  arrived_at when nobody signed the guest out. The R2 bucket CORS must allow PUT from KIOSK_ORIGINS.
+  arrived_at when nobody signed the guest out. The R2 bucket CORS must allow PUT from KIOSK_ORIGINS; in dev/tests the filesystem stand-in
+  (/api/v1/storage/fs) gets the same kioskCors middleware (GET, POST, PUT).
 
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,

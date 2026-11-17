@@ -109,6 +109,19 @@ describe('kiosk CORS', () => {
     const web = await kiosk().get('/api/v1/health').set('Origin', 'http://kios.test');
     expect(web.headers['access-control-allow-origin']).toBeUndefined();
   });
+
+  it('lets the kiosk PUT a guest photo to the storage stand-in, and nobody else', async () => {
+    const path = '/api/v1/storage/fs/schools/x/visitors/y';
+    const pre = await kiosk().options(path).set('Origin', 'http://kios.test').set('Access-Control-Request-Method', 'PUT').expect(204);
+    expect(pre.headers['access-control-allow-origin']).toBe('http://kios.test');
+    expect(pre.headers['access-control-allow-methods']).toContain('PUT');
+    const other = await kiosk().options(path).set('Origin', 'https://jahat.test').set('Access-Control-Request-Method', 'PUT');
+    expect(other.headers['access-control-allow-origin']).toBeUndefined();
+    // The answer to the real PUT (here refused: no valid signature) carries the header too, or the browser hides it.
+    const put = await kiosk().put(path).set('Origin', 'http://kios.test').send('x');
+    expect(put.status).toBeGreaterThanOrEqual(400);
+    expect(put.headers['access-control-allow-origin']).toBe('http://kios.test');
+  });
 });
 
 describe('cards on the holder phone (GRB-01)', () => {

@@ -60,6 +60,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
     }),
   );
   app.use('/api/v1/kiosk', kioskCors(kioskOrigins));
+  app.use('/api/v1/storage/fs', kioskCors(kioskOrigins));
   // Better Auth reads the raw body itself, so it is mounted before express.json().
   app.all('/api/auth/{*splat}', toNodeHandler(auth));
   // Dev/test stand-in for R2 presigned uploads; also reads the raw body, so before express.json().
