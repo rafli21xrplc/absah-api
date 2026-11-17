@@ -22,6 +22,16 @@ export async function ensurePhoneLogin(auth: Auth, input: { name: string; phoneN
   return (await createPhoneUser(auth, { name: input.name, phoneNumber: input.phoneNumber })).id;
 }
 
+/**
+ * The login of a guardian (ORT-02): the account that owns the number, or a new one. Unlike a
+ * student's login it is shared: one parent with children in several rombel or schools logs in once.
+ * Owning the number is proven at each OTP login.
+ */
+export async function guardianLogin(auth: Auth, input: { name: string; phoneNumber: string }): Promise<string> {
+  const owner = await findUserByPhone(auth, input.phoneNumber);
+  return owner?.id ?? (await createPhoneUser(auth, input)).id;
+}
+
 /** Portal memberships (siswa, orang_tua) need no invitation: the OTP login is the proof. */
 export async function setPortalMembership(tx: Tx, input: { schoolId: string; userId: string; role: 'siswa' | 'orang_tua'; active: boolean }): Promise<void> {
   const m = schema.memberships;
