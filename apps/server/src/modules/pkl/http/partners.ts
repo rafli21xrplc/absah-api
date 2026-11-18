@@ -1,19 +1,13 @@
 import { CreateDudiPartnerRequest, DudiPartner, DudiPartnerIdParam, DudiPartnerList, PklStaffList, PklStudentList, PklStudentQuery, UpdateDudiPartnerRequest } from '@absah/contracts';
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
-import { getActor, getCtx } from '../../../shared/context';
+import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
-import { schoolDate } from '../../../shared/school-date';
 import { resolveContext, type Auth } from '../../platform';
+import { todayOf } from './clock';
 import { createDudiPartner, findPklStudents, listDudiPartners, listSchoolMentors, patchDudiPartner } from '../application/partners';
-
-/** Today on the school's clock. */
-export const todayOf = (req: Request) => {
-  const ctx = getCtx(req);
-  return schoolDate(ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta');
-};
 
 /** DUDI partners and pickers for placements (PKL-01), behind pkl.enabled. */
 export function pklPartnersRouter(auth: Auth): Router {

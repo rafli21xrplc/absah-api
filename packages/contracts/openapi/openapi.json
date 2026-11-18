@@ -6160,6 +6160,221 @@
         },
         "additionalProperties": false
       },
+      "PklToday": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "placement": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "partner": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "radiusM": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "name",
+                  "address",
+                  "radiusM"
+                ]
+              },
+              "startsOn": {
+                "type": "string",
+                "format": "date"
+              },
+              "endsOn": {
+                "type": "string",
+                "format": "date"
+              },
+              "schoolMentor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "industryMentor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hours": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "startsAt": {
+                    "type": "string"
+                  },
+                  "endsAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "startsAt",
+                  "endsAt"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "partner",
+              "startsOn",
+              "endsOn",
+              "schoolMentor",
+              "industryMentor",
+              "hours"
+            ]
+          },
+          "checkIn": {
+            "$ref": "#/components/schemas/PklCheckin"
+          },
+          "checkOut": {
+            "$ref": "#/components/schemas/PklCheckin"
+          }
+        },
+        "required": [
+          "date",
+          "placement",
+          "checkIn",
+          "checkOut"
+        ]
+      },
+      "PklCheckin": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PklCheckinKind"
+          },
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "distanceM": {
+            "type": "integer"
+          },
+          "reviewReasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PklReviewReason"
+            }
+          },
+          "late": {
+            "type": "boolean"
+          },
+          "confirmStatus": {
+            "$ref": "#/components/schemas/PklConfirmStatus"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "schoolDate",
+          "recordedAt",
+          "distanceM",
+          "reviewReasons",
+          "late",
+          "confirmStatus",
+          "status"
+        ]
+      },
+      "PklCheckinKind": {
+        "type": "string",
+        "enum": [
+          "in",
+          "out"
+        ]
+      },
+      "PklReviewReason": {
+        "type": "string",
+        "enum": [
+          "outside_radius",
+          "outside_hours",
+          "clock_skew",
+          "no_industry_mentor"
+        ]
+      },
+      "PklConfirmStatus": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "pending",
+          "confirmed",
+          "needs_review",
+          "disputed",
+          "decided",
+          null
+        ]
+      },
+      "PklCheckinBody": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/PklCheckinKind"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "accuracyM": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "deviceTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "kind",
+          "latitude",
+          "longitude",
+          "deviceTime"
+        ],
+        "additionalProperties": false
+      },
       "LiaisonThreadList": {
         "type": "object",
         "properties": {
@@ -18886,6 +19101,191 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PklPlacement"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pkl/me": {
+      "get": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "The student's placement today and today's check-in/out (siswa)",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Today",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PklToday"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pkl/checkins": {
+      "post": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Check in or out at the DUDI (siswa); Idempotency-Key required",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads. Distance (haversine) to the DUDI, working hours and device clock (> 10 min = review) decide: pending (industry supervisor confirms) or needs_review (guru pembimbing decides). The point is stored rounded to 4 decimals. 409 no_placement, already_recorded.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PklCheckinBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PklCheckin"
                 }
               }
             }

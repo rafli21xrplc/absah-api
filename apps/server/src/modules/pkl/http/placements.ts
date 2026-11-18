@@ -7,7 +7,7 @@ import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
 import { cancelPklPlacement, createPklPlacements, listPklPlacements, patchPklPlacement } from '../application/placements';
-import { todayOf } from './partners';
+import { todayOf } from './clock';
 
 /** PKL placements (PKL-01), behind pkl.enabled. */
 export function pklPlacementsRouter(auth: Auth): Router {
