@@ -231,6 +231,7 @@
           "guru",
           "piket",
           "petugas_uks",
+          "guru_tahfidz",
           "tppk",
           "pembina",
           "humas_pkl",
@@ -692,6 +693,7 @@
           "guru",
           "piket",
           "petugas_uks",
+          "guru_tahfidz",
           "tppk",
           "pembina",
           "humas_pkl",
@@ -5492,6 +5494,204 @@
           "weekStart",
           "weekEnd",
           "students"
+        ]
+      },
+      "MemorizationLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "surah": {
+            "type": "integer"
+          },
+          "surahName": {
+            "type": "string"
+          },
+          "juz": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ayatFrom": {
+            "type": "integer"
+          },
+          "ayatTo": {
+            "type": "integer"
+          },
+          "score": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "listener": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "studentId",
+          "date",
+          "surah",
+          "surahName",
+          "juz",
+          "ayatFrom",
+          "ayatTo",
+          "score",
+          "note",
+          "listener",
+          "createdAt"
+        ]
+      },
+      "CreateMemorizationLogRequest": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "surah": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 114
+          },
+          "juz": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 30
+          },
+          "ayatFrom": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ayatTo": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "score": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "studentId",
+          "surah",
+          "ayatFrom",
+          "ayatTo"
+        ],
+        "additionalProperties": false
+      },
+      "MemorizationLogList": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "canWrite": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemorizationLog"
+            }
+          }
+        },
+        "required": [
+          "studentId",
+          "name",
+          "canWrite",
+          "items"
+        ]
+      },
+      "MemorizationStudentList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "studentId",
+                "name",
+                "className"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "LiaisonThreadList": {
@@ -17092,6 +17292,276 @@
           },
           "401": {
             "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memorization-logs": {
+      "post": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Record a setoran hafalan (surah, ayat range, optional juz, nilai 0-100, catatan); the caller is the penyimak",
+        "description": "Setoran hafalan (KEG-03): requires religious.memorization (404 CAPABILITY_DISABLED when off). Writers: guru_tahfidz and admin (403 for others). Date defaults to today (school timezone), never in the future; the ayat range is checked against the surah. 409 not_active for a student without an active enrollment.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemorizationLogRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorizationLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Hafalan history of a student, newest first (at most 200)",
+        "description": "Setoran hafalan (KEG-03): requires religious.memorization (404 CAPABILITY_DISABLED when off). Writers: guru_tahfidz and admin (403 for others). Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek and the writers; others 404.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "studentId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorizationLogList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memorization-logs/students": {
+      "get": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Active students by name (2+ letters, at most 20), for the writers",
+        "description": "Setoran hafalan (KEG-03): requires religious.memorization (404 CAPABILITY_DISABLED when off). Writers: guru_tahfidz and admin (403 for others).",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Students",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorizationStudentList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {

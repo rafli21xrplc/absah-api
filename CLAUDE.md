@@ -483,6 +483,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   locked_at on entries older than 2 days in each school's own date. Every calendar day counts
   (weekends and holidays too).
 
+- Setoran hafalan (KEG-03; http/memorization.ts, application/memorization.ts, table memorization_logs,
+  migrations 0067-0068, behind requireCap('religious.memorization')): per student (not enrollment, hafalan
+  carries over years): school_date, surah 1-114, juz?, ayat_from..ayat_to (checked against SURAH_AYAT in
+  contracts), score 0-100?, note, listener_id = the recorder. Role guru_tahfidz (enum value in 0067).
+  POST /memorization-logs (guru_tahfidz, admin; others 403; idempotent, audited memorization.recorded;
+  today by default, future 400; 409 not_active without an active enrollment). GET /memorization-logs?studentId
+  (student, parents, wali kelas, leaders, writers; others 404; canWrite for writers). GET
+  /memorization-logs/students?q= (writers). Listener name from school_member_directory.
+
 ## Buku penghubung (ORT-07, modules/portal, packages/db/src/schema/portal.ts)
 - communication_threads (one per student, all years), communication_messages (body encrypted,
   sender_role orang_tua|wali_kelas|guru, retracted_at), communication_reads (read cursor per user).
