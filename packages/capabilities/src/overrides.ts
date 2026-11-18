@@ -1,4 +1,5 @@
 import { isCapabilityKey, parseCapabilityValue, type CapabilityValues } from './catalog';
+import { isReleaseFlag } from './release';
 
 /**
  * Stored school override (school_capabilities). A deferred change keeps previous_value in force
@@ -49,6 +50,7 @@ export function effectiveOverrides(
 export function killSwitches(rows: FlagRow[], onInvalid: InvalidCapabilityHandler = () => {}): Partial<CapabilityValues> {
   const out: Record<string, unknown> = {};
   for (const row of [...rows].sort((a, b) => Number(a.schoolId !== null) - Number(b.schoolId !== null))) {
+    if (isReleaseFlag(row.key)) continue; // release flags share the table, read by releaseFlags()
     if (!isCapabilityKey(row.key) || !parseCapabilityValue(row.key, row.value).ok) {
       onInvalid(row.key, 'kill_switch');
       continue;

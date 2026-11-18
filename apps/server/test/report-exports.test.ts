@@ -169,11 +169,23 @@ describe('export jobs (RKP-02, RKP-03)', () => {
     await get(wali, `/exports/${other?.id ?? ''}/download`).expect(404);
   });
 
-  it('answers 409 while the report target has no exporter yet (RDM)', async () => {
+  it('exports RDM only once the release flag rdm-export-beta is on for the school (RKP-07)', async () => {
     await withTenant({ schoolId: school, userId: null }, (tx) => tx.insert(schema.schoolCapabilities).values({ schoolId: school, key: 'report.target', value: 'rdm' }));
     try {
       const res = await post(wakasek, { format: 'xlsx', semesterId: ids.semester }).expect(409);
-      expect(res.body).toMatchObject({ details: { reason: 'target_unavailable' } });
+      expect(res.body).toMatchObject({ details: { reason: 'release_flag_off' } });
+      // A global row off, the school's own row on: the school row wins (owner role, as the Absah team does).
+      const [flag] = await getDb().db.insert(schema.platformFlags).values({ key: 'rdm-export-beta', value: true, schoolId: school, reason: 'test' }).returning({ id: schema.platformFlags.id });
+      try {
+        const job = bodyOf<ExportJob>(await post(wakasek, { format: 'xlsx', semesterId: ids.semester, classId: ids.classA }).expect(202));
+        expect(job.target).toBe('rdm');
+        await build(job.id);
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load((await download(wakasek, job.id)) as unknown as ArrayBuffer);
+        expect(workbook.getWorksheet('X-1')?.getRow(1).getCell(4).value).toBe('Nama Siswa');
+      } finally {
+        if (flag) await getDb().db.delete(schema.platformFlags).where(eq(schema.platformFlags.id, flag.id));
+      }
     } finally {
       await withTenant({ schoolId: school, userId: null }, (tx) => tx.delete(schema.schoolCapabilities).where(eq(schema.schoolCapabilities.key, 'report.target')));
     }

@@ -2,6 +2,7 @@ import { EXPORT_RETENTION_DAYS, type CreateExportRequest, type ExportDownload, t
 import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
+import { readReleaseFlags } from '../../../shared/capability';
 import { withPlatform, withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../../shared/errors';
 import { defineConsumer, emit, type Consumer } from '../../../shared/outbox';
@@ -54,6 +55,10 @@ export function requestExport(actor: Actor, auditCtx: AuditContext, target: Expo
   if (!all && !input.classId) throw new ForbiddenError('Ekspor semua rombel untuk pimpinan sekolah dan operator.');
   if (!exporterFor(target)) throw new ConflictError(`Ekspor untuk ${target.toUpperCase()} belum tersedia.`, { reason: 'target_unavailable' });
   return withTenant(tenant(actor), async (tx) => {
+    // RKP-07: RDM columns are not validated with a madrasah yet; the Absah team opens it per school.
+    if (target === 'rdm' && !(await readReleaseFlags(tx))['rdm-export-beta']) {
+      throw new ConflictError('Ekspor RDM masih uji coba dan belum dibuka untuk madrasah ini. Hubungi tim Absah.', { reason: 'release_flag_off' });
+    }
     const semester = await findSemester(tx, input.semesterId);
     if (!semester) throw new NotFoundError('Semester tidak ditemukan.');
     if (input.classId) {

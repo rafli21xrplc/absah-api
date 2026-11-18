@@ -564,7 +564,7 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   and day: filled (submitted/locked), filledLate (submitted after reminded_at), missed, open.
 - Exports (export_jobs): POST /exports { format xlsx|pdf, semesterId, classId? } (idempotent, 202,
   audited, emits export.requested; whole school = managers only; target from report.target, no exporter
-  = 409 target_unavailable) -> consumer report_build_export builds the file in a savepoint, writes it to
+  = 409 target_unavailable; rdm without its release flag = 409 release_flag_off) -> consumer report_build_export builds the file in a savepoint, writes it to
   schools/{id}/exports/{job id}, status done (or failed on the last of 3 tries) -> GET /exports/{id}
   /download (presigned attachment, requester only). Job report.export_retention (02:50) removes files
   after 7 days (status expired).
@@ -574,6 +574,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   pdf = archive with H/T/S/I/A and signature blocks (kepala sekolah from the directory, wali kelas).
 - e-Rapor columns (exporters/erapor/columns.ts) are NOT confirmed: TODO(pilot), see
   packages/db/fixtures/erapor/README.md. Do not drop the TODO before a real import succeeded.
+- RDM (RKP-07, report.target rdm): exporters/rdm (RDM_COLUMNS TODO(pilot), PDF signed "Kepala Madrasah");
+  both targets build with exporters/common (recapWorkbook(recap, columns), recapPdf(recap, labels)).
+  Release flag rdm-export-beta must be on for the school (platform_flags, owner role; readReleaseFlags in
+  shared/capability.ts), else POST /exports answers 409 release_flag_off. See packages/db/fixtures/rdm/README.md.
+- Release flags (packages/capabilities release.ts RELEASE_FLAGS): built-but-unvalidated features, off by
+  default, set by the Absah team in platform_flags (value true; school row beats global). Not capabilities:
+  killSwitches skips them. Remove a flag once the feature is released.
 
 ## MBG (RKP-08, modules/report, behind requireCap('mbg.enabled'))
 - mbg_settings (one row per school: cutoff_time default 08.30, pic_name, pic_phone encryptedText; the PIC
