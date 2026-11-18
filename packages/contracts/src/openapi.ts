@@ -67,6 +67,7 @@ import {
   DecideCorrectionRequest,
 } from './attendance/corrections';
 import { JournalQuery, JournalResponse } from './attendance/journal';
+import { ClassStudentHours, ClassStudentHoursParams, ClassStudentHoursQuery } from './attendance/student-hours';
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
@@ -564,6 +565,17 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SubmitSessionRequest } } } },
     responses: { 200: json(SessionDetail, 'Filled session'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/classes/{classId}/student-hours`,
+    tags: ['attendance'],
+    summary: "Every lesson of a rombel's students on one day, learning groups included (AKD-10)",
+    description: 'For the wali kelas of the rombel and for admin, operator, kepsek, wakasek, piket; others 404. date defaults to today (school timezone). Activity sessions are not included.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ClassStudentHoursParams, query: ClassStudentHoursQuery },
+    responses: { 200: json(ClassStudentHours, 'Sessions and per-student statuses'), ...errors(400, 401, 404) },
   });
   registry.registerPath({
     method: 'get',

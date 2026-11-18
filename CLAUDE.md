@@ -220,6 +220,11 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sessions, so izin approved earlier fill sessions created later. Locked sessions are included
   (a sick note arriving the next day is normal); backdating is capped at 7 days by the leave module.
 
+- Jam siswa (AKD-10, application/student-hours.ts): GET /classes/{classId}/student-hours?date (default today)
+  for the rombel's wali kelas and canSeeAllSessions; others 404. Sessions = the rombel's own plus those of
+  learning groups with any of its active students (listSessions forClass), activities excluded; per
+  student only the sessions they belong to, with the record status and daily_attendance. Group session
+  records count in the student's own rombel rekap (daily_attendance is per enrollment).
 - Jurnal mengajar (PRS-09, application/journal.ts): POST /sessions/{id}/submit takes an optional `topic`
   (max 200, trimmed; omitted keeps it, empty clears it; per_period sessions only, else 400). It is also on
   SessionSummary.topic. GET /teaching-journal?month=YYYY-MM[&teacherId] lists per_period sessions of the
