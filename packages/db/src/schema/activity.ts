@@ -1,7 +1,7 @@
 import { ACTIVITY_KINDS, ACTIVITY_LOCATIONS, KAIH_HABITS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { boolean, check, date, index, pgEnum, pgTable, primaryKey, smallint, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
-import { academicYears, enrollments } from './academic';
+import { academicYears, enrollments, students } from './academic';
 import { createdAt, id, schoolId } from './_shared';
 import { user } from './auth';
 import { schools } from './platform';
@@ -100,5 +100,36 @@ export const habitEntries = pgTable(
     unique('habit_entries_enrollment_id_school_date_habit_key').on(t.enrollmentId, t.schoolDate, t.habit),
     index('habit_entries_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
     check('habit_entries_filled_by_role_check', sql`${t.filledByRole} in ('orang_tua', 'siswa')`),
+  ],
+);
+
+/**
+ * Setoran hafalan (KEG-03, religious.memorization): what a student recited to the guru tahfidz (the
+ * listener). Per student, not per enrollment: hafalan carries over academic years.
+ */
+export const memorizationLogs = pgTable(
+  'memorization_logs',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    schoolDate: date('school_date').notNull(),
+    surah: smallint('surah').notNull(),
+    juz: smallint('juz'),
+    ayatFrom: smallint('ayat_from').notNull(),
+    ayatTo: smallint('ayat_to').notNull(),
+    score: smallint('score'),
+    note: text('note'),
+    listenerId: uuid('listener_id').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('memorization_logs_school_id_student_id_school_date_idx').on(t.schoolId, t.studentId, t.schoolDate),
+    check('memorization_logs_surah_check', sql`${t.surah} between 1 and 114`),
+    check('memorization_logs_juz_check', sql`${t.juz} is null or ${t.juz} between 1 and 30`),
+    check('memorization_logs_ayat_check', sql`${t.ayatFrom} >= 1 and ${t.ayatTo} >= ${t.ayatFrom}`),
+    check('memorization_logs_score_check', sql`${t.score} is null or ${t.score} between 0 and 100`),
   ],
 );

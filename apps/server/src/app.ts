@@ -8,7 +8,7 @@ import { correctionsRouter, journalRouter, sessionsRouter } from './modules/atte
 import { gateRouter, kioskCors, kioskRouter, pickupRouter } from './modules/gate';
 import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
-import { activitiesRouter, habitsRouter } from './modules/activity';
+import { activitiesRouter, habitsRouter, memorizationRouter } from './modules/activity';
 import { tppkRouter, uksRouter } from './modules/student-affairs';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
@@ -91,6 +91,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(tppkRouter(auth));
   v1.use(activitiesRouter(auth));
   v1.use(habitsRouter(auth));
+  v1.use(memorizationRouter(auth));
   v1.use(gateRouter(auth, storage));
   v1.use(pickupRouter(auth, storage));
   v1.use(kioskRouter(storage));

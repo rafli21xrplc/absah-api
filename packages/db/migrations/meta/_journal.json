@@ -470,6 +470,20 @@
       "when": 1794959738420,
       "tag": "0066_export_jobs_stream",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794960390793,
+      "tag": "0067_memorization_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794960391553,
+      "tag": "0068_memorization_logs_rls",
+      "breakpoints": true
     }
   ]
 }

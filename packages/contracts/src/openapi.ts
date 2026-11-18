@@ -75,6 +75,7 @@ import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
 import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStudentParam, LiaisonStudentQuery, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
+import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
 import {
   AddTppkCaseEventRequest,
   CreateTppkCaseRequest,
@@ -1155,6 +1156,40 @@ function buildRegistry(): OpenAPIRegistry {
       responses: { 200: json(p.ok, p.label), ...errors(...('write' in p ? [400, 401, 404, 409] : [400, 401, 404])) },
     });
   }
+  const hafalanNote = 'Setoran hafalan (KEG-03): requires religious.memorization (404 CAPABILITY_DISABLED when off). Writers: guru_tahfidz and admin (403 for others).';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/memorization-logs`,
+    tags: ['activity'],
+    summary: 'Record a setoran hafalan (surah, ayat range, optional juz, nilai 0-100, catatan); the caller is the penyimak',
+    description: `${hafalanNote} Date defaults to today (school timezone), never in the future; the ayat range is checked against the surah. 409 not_active for a student without an active enrollment.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateMemorizationLogRequest } } } },
+    responses: { 201: json(MemorizationLog, 'Recorded'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/memorization-logs`,
+    tags: ['activity'],
+    summary: 'Hafalan history of a student, newest first (at most 200)',
+    description: `${hafalanNote} Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek and the writers; others 404.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MemorizationLogQuery },
+    responses: { 200: json(MemorizationLogList, 'History'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/memorization-logs/students`,
+    tags: ['activity'],
+    summary: 'Active students by name (2+ letters, at most 20), for the writers',
+    description: hafalanNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MemorizationStudentQuery },
+    responses: { 200: json(MemorizationStudentList, 'Students'), ...errors(400, 401, 403, 404) },
+  });
   const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
   const liaisonPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
     { method: 'get', path: '/liaison/threads', summary: 'Threads of the user (orang_tua: every child; staff: students they teach; admin: all)', ok: LiaisonThreadList, label: 'Threads' },
