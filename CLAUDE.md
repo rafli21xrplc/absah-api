@@ -679,3 +679,18 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   x-absah-signature sha256 HMAC) -> inbox 'payment:<provider>' -> job bil.apply-payments (every
   minute) marks the payment paid once (state + unique provider_txn_id) and the invoice paid; less money
   than due keeps it open (last_error underpaid:<amount>). A pending charge past expires_at reads expired.
+
+## PKL (SMK, modules/pkl, packages/db/src/schema/pkl.ts, behind requireCap('pkl.enabled'))
+- dudi_partners (name unique per school, address, precise latitude/longitude, radius_m default 150,
+  25-2000), dudi_work_hours (one row per ISO weekday; no row = closed, no session), pkl_placements
+  (enrollment x DUDI x starts_on..ends_on, school_mentor_id = guru pembimbing, industry_mentor_id =
+  pembimbing industri or null, status active|cancelled), pkl_checkins (one in + one out per placement
+  per school date; point rounded to 4 decimals, distance_m, review_reasons, late, confirm_status on
+  check-ins only; no DELETE for absah_app), pkl_journals (one per placement per date, attachment in R2).
+  Migrations 0069-0070. attendance_sessions.pkl_placement_id has an FK (restrict) and one pkl session
+  per placement per date (attendance_sessions_pkl_date_key).
+- Pure rules in domain/checkin-rules.ts: classifyCheckin (haversine distance from the reported point,
+  radius edge inside; check-in window from 60 min before opening to closing, check-out from opening to
+  3 h after closing; device clock > 10 min off; no industry supervisor) -> pending (industry supervisor
+  confirms) or needs_review (guru pembimbing decides). A check-in after opening time is late: confirmed
+  as T. GPS accuracy is stored, never widens the radius. The industry supervisor never sees coordinates.
