@@ -18,4 +18,5 @@ export { schoolDayOf } from './application/school-day';
 export { attendanceConsumers } from './application/consumers';
 export { applyGateArrivals, schoolStartTime } from './application/gate-marks';
 export { openActivitySession } from './application/activity-sessions';
+export { openPklSession, setPklStatus } from './application/pkl-sessions';
 export { getSession } from './application/sessions';

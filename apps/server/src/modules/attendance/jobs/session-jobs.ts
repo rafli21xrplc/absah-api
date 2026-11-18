@@ -6,7 +6,7 @@ import { applyGateArrivals } from '../application/gate-marks';
 import { applyLeavesToDate } from '../application/leave-marks';
 import { applyUksToDate } from '../application/uks-marks';
 import { schoolDate, schoolMinutes } from '../../../shared/school-date';
-import { GENERATE_AT, isLockDue, planActivitySessions, planSessions, reminderDueAt } from '../domain/session-plan';
+import { GENERATE_AT, isLockDue, planActivitySessions, planPklSessions, planSessions, reminderDueAt } from '../domain/session-plan';
 import { isoWeekday, isSchoolDay } from '../domain/status-rules';
 import {
   activeYearId,
@@ -17,6 +17,7 @@ import {
   findDay,
   insertSessions,
   listSchools,
+  pklPlacementsOn,
   lockAttendanceDay,
   lockSessions,
   markDay,
@@ -71,10 +72,13 @@ export function generateForSchool(school: JobSchool, date: string, now: Date, op
 
     const check = isSchoolDay({ date, calendarKind: await calendarKind(tx, date), daysWithPeriods: await daysWithPeriods(tx) });
     const activityPlan = planActivitySessions(await activitiesOfYear(tx, yearId), date, isoWeekday(date));
+    const pklPlan = planPklSessions(await pklPlacementsOn(tx, date), date, isoWeekday(date));
     if (!options.force && !check.schoolDay && check.reason) {
-      // Ekskul often meet on a day without lessons (Sabtu): their sessions still come, holidays excepted.
-      if (check.reason === 'not_school_day' && activityPlan.length > 0) {
-        await insertSessions(tx, school.id, date, activityPlan);
+      // Ekskul often meet, and DUDI often work, on a day without lessons (Sabtu): their sessions
+      // still come, holidays excepted.
+      const offDay = [...activityPlan, ...pklPlan];
+      if (check.reason === 'not_school_day' && offDay.length > 0) {
+        await insertSessions(tx, school.id, date, offDay);
         await applyLeavesToDate(tx, school.id, date);
       }
       await markDay(tx, school.id, date, { skippedReason: check.reason });
@@ -83,7 +87,7 @@ export function generateForSchool(school: JobSchool, date: string, now: Date, op
     const caps = resolveFromRows(school, await readCapabilityRows(tx), date);
     const mode = caps['attendance.mode'];
     const plan = planSessions(mode, { classes: await classesOfYear(tx, yearId), slots: mode === 'per_period' ? await slotsOfDay(tx, yearId, isoWeekday(date)) : [] });
-    const created = await insertSessions(tx, school.id, date, [...plan, ...activityPlan]);
+    const created = await insertSessions(tx, school.id, date, [...plan, ...activityPlan, ...pklPlan]);
     await applyLeavesToDate(tx, school.id, date);
     await applyUksToDate(tx, school.id, date);
     await applyGateArrivals(tx, school.id, school.timezone, { schoolDate: date });

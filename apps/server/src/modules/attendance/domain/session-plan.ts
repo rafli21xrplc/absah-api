@@ -9,11 +9,12 @@ export const REMINDER_DELAY_MINUTES = 10;
 
 export interface PlannedSession {
   mode: SessionMode;
-  ownerType: 'class' | 'group' | 'activity';
+  ownerType: 'class' | 'group' | 'activity' | 'placement';
   ownerId: string;
   slotId: string | null;
   teacherId: string | null;
   activityId?: string | null;
+  pklPlacementId?: string | null;
 }
 
 export interface PlannableActivity {
@@ -38,6 +39,25 @@ export function planActivitySessions(activities: PlannableActivity[], date: stri
 }
 
 export const activitySession = (activityId: string): PlannedSession => ({ mode: 'activity', ownerType: 'activity', ownerId: activityId, slotId: null, teacherId: null, activityId });
+
+export interface PlannablePlacement {
+  id: string;
+  startsOn: string;
+  endsOn: string;
+  /** ISO weekdays the DUDI works (dudi_work_hours). */
+  workDays: number[];
+}
+
+/**
+ * PKL sessions of a date (PKL-02): one per placement whose period covers the date, on the DUDI's
+ * work days (also a Saturday without lessons; never a school holiday, the caller decides that).
+ * No teacher: PKL statuses come from check-in decisions, not from filling the session.
+ */
+export function planPklSessions(placements: PlannablePlacement[], date: string, weekday: number): PlannedSession[] {
+  return placements
+    .filter((p) => p.startsOn <= date && date <= p.endsOn && p.workDays.includes(weekday))
+    .map((p) => ({ mode: 'pkl', ownerType: 'placement', ownerId: p.id, slotId: null, teacherId: null, pklPlacementId: p.id }));
+}
 
 /**
  * The sessions of one school day. daily: one per rombel, owned by the wali kelas (PRS, SD/MI).
