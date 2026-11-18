@@ -749,3 +749,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   {sessionId} once (attendance markSessionsReminded sets reminded_at; pkl sessions have no teacher, so the
   PRS reminder never touches them). notify_pkl_checkin_missing sends template pkl_checkin_missing (pending)
   to the student's login number from view student_login_contacts (migration 0072); url /portal/pkl.
+- Jurnal PKL (PKL-03; http/journals.ts, application/journals.ts): POST /pkl/journals/attachments (siswa,
+  presigned PUT schools/{id}/pkl/{uuid}, 201) then POST /pkl/journals {date?, activity, competency?,
+  attachment?} (siswa; today or up to 7 days back inside the running placement via studentPlacementOn, else
+  409 no_placement; the file must exist, else 400 attachment). One journal per placement per date: a rewrite
+  goes back to submitted (attachment undefined keeps, null removes; the old file is removed after commit);
+  approved -> 409 approved. GET /pkl/journals?placementId&status&from&to (default last 31 days): siswa own,
+  canSeeAllPkl all, others the placements they supervise (school or industry). POST /pkl/journals/{id}/review
+  {decision approved|revision, note (required for revision)}: the placement's guru pembimbing, its industry
+  supervisor or canManagePkl (else 404); submitted only (409 not_submitted). GET .../attachment: 5-minute link
+  for anyone who sees the journal. Audited pkl.journal_written|updated|reviewed (no text).

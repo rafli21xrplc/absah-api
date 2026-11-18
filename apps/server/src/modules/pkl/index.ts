@@ -4,6 +4,7 @@ export { pklPlacementsRouter } from './http/placements';
 export { pklCheckinsRouter } from './http/checkins';
 export { pklSupervisionRouter } from './http/supervision';
 export { pklReviewsRouter } from './http/reviews';
+export { pklJournalsRouter } from './http/journals';
 export { MISSING_CHECKIN_CRON, MISSING_CHECKIN_QUEUE, missingCheckinHandler } from './jobs/missing-checkin';
 export { remindMissingCheckins } from './application/reviews';
 export { AUTO_CONFIRM_CRON, AUTO_CONFIRM_QUEUE, autoConfirmHandler } from './jobs/auto-confirm';
