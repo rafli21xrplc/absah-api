@@ -6,10 +6,11 @@ apps/server/src/modules/report/infrastructure/exporters/rdm/columns.ts: No, NIS,
 Sakit, Izin, Alpa, satu lembar per rombel, header di baris 1.
 
 Ekspor RDM tertahan di balik flag rilis `rdm-export-beta` (mati bawaan; POST /exports menjawab 409
-reason release_flag_off). Tim Absah menyalakannya per madrasah dengan peran owner:
+reason release_flag_off). Tim Absah menyalakannya per madrasah (peran owner dari DATABASE_URL):
 
-    insert into platform_flags (id, key, value, school_id, reason)
-    values (gen_random_uuid(), 'rdm-export-beta', 'true', '<school id>', 'uji RDM bersama madrasah mitra');
+    pnpm --filter @absah/server release:flag --flag rdm-export-beta --school <school id> --reason "uji RDM bersama madrasah mitra"
+
+`--off` mematikannya lagi; `--all` (tanpa --school) berlaku untuk semua sekolah.
 
 Langkah sebelum rilis:
 1. Taruh contoh berkas impor ketidakhadiran RDM dari madrasah mitra di sini (anonimkan nama, NISN, NIS).
