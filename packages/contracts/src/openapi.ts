@@ -1353,6 +1353,7 @@ function buildRegistry(): OpenAPIRegistry {
     path: `${API_BASE_PATH}/exports`,
     tags: ['report'],
     summary: 'Queue a semester rekap file for the school report system (xlsx) or the signed archive (pdf)',
+    description: 'Target from report.target (e-Rapor or RDM). stream limits a whole-year file to one jurusan. 409 release_flag_off for RDM until the Absah team enables rdm-export-beta for the madrasah.',
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: CreateExportRequest } } } },

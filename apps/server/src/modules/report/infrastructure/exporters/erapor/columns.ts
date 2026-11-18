@@ -1,4 +1,4 @@
-import type { SemesterRecapStudent } from '../../../domain/semester-recap';
+import type { SheetColumn } from '../common/recap-workbook';
 
 /**
  * Columns of the e-Rapor ketidakhadiran sheet, one sheet per rombel, header in row 1.
@@ -8,10 +8,10 @@ import type { SemesterRecapStudent } from '../../../domain/semester-recap';
  * its own row ids (peserta_didik_id / anggota_rombel_id from its template), and the sheet name.
  * Only the column order and values below are known to be what e-Rapor shows (S, I, Tanpa Keterangan).
  */
-export const ERAPOR_COLUMNS: readonly { header: string; width: number; value: (s: SemesterRecapStudent, no: number) => string | number }[] = [
+export const ERAPOR_COLUMNS: readonly SheetColumn[] = [
   { header: 'No', width: 5, value: (_s, no) => no },
-  { header: 'NIS', width: 14, value: (s) => s.localId ?? '' },
-  { header: 'NISN', width: 14, value: (s) => s.nisn ?? '' },
+  { header: 'NIS', width: 14, text: true, value: (s) => s.localId ?? '' },
+  { header: 'NISN', width: 14, text: true, value: (s) => s.nisn ?? '' },
   { header: 'Nama Peserta Didik', width: 36, value: (s) => s.name },
   { header: 'Sakit', width: 8, value: (s) => s.counts.S },
   { header: 'Izin', width: 8, value: (s) => s.counts.I },
