@@ -1,4 +1,4 @@
-import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from '@absah/contracts';
+import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, RecapStreamQuery, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from '@absah/contracts';
 import { Router } from 'express';
 import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
@@ -15,7 +15,7 @@ export function reportsRouter(auth: Auth): Router {
   });
 
   router.get('/reports/attendance/classes', school, async (req, res) => {
-    sendContract(res, ClassRecapList, await classRecaps(getActor(req), ReportPeriodQuery.parse(req.query)));
+    sendContract(res, ClassRecapList, await classRecaps(getActor(req), ReportPeriodQuery.parse(req.query), RecapStreamQuery.parse(req.query).stream));
   });
 
   router.get('/reports/attendance/classes/:classId', school, async (req, res) => {

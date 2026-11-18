@@ -25,7 +25,7 @@ export async function listCorrections(tx: Tx, filter: { status?: CorrectionStatu
       id: c.id,
       sessionId: s.id,
       schoolDate: s.schoolDate,
-      ownerName: sql<string>`coalesce(${schema.classes.name}, ${schema.learningGroups.name}, '')`,
+      ownerName: sql<string>`coalesce(${schema.classes.name}, ${schema.learningGroups.name}, ${schema.activities.name}, '')`,
       subject: schema.subjects.name,
       period: schema.scheduleSlots.period,
       enrollmentId: c.enrollmentId,
@@ -49,6 +49,7 @@ export async function listCorrections(tx: Tx, filter: { status?: CorrectionStatu
     .innerJoin(schema.students, eq(schema.students.id, schema.enrollments.studentId))
     .leftJoin(schema.classes, and(eq(s.ownerType, 'class'), eq(schema.classes.id, s.ownerId)))
     .leftJoin(schema.learningGroups, and(eq(s.ownerType, 'group'), eq(schema.learningGroups.id, s.ownerId)))
+    .leftJoin(schema.activities, and(eq(s.ownerType, 'activity'), eq(schema.activities.id, s.ownerId)))
     .leftJoin(schema.scheduleSlots, eq(schema.scheduleSlots.id, s.slotId))
     .leftJoin(schema.subjects, eq(schema.subjects.id, schema.scheduleSlots.subjectId))
     .where(and(...where))

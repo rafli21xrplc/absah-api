@@ -91,3 +91,9 @@ export class IdempotencyInProgressError extends AppError {
     super('IDEMPOTENCY_IN_PROGRESS', 409, 'Permintaan yang sama masih diproses. Coba lagi sebentar.');
   }
 }
+
+export class RateLimitedError extends AppError {
+  constructor(message = 'Terlalu banyak permintaan. Coba lagi nanti.') {
+    super('RATE_LIMITED', 429, message);
+  }
+}

@@ -1,8 +1,9 @@
-import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, CardDeviceKeys } from '@absah/contracts';
+import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, CardDeviceKeys, LinkHeldPickups, LinkPickupDecisionRequest, PickupEventIdParam, PickupPhotoLink } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { UnauthenticatedError } from '../../../shared/errors';
 import { sendContract } from '../../../shared/http';
-import { linkCard, linkContext, linkLeave, type LinkRequestMeta } from '../application/links';
+import type { ObjectStorage } from '../../../shared/storage';
+import { linkCard, linkContext, linkLeave, linkPickupDecision, linkPickupPhotoLink, type LinkRequestMeta } from '../application/links';
 
 /** Scheme of the Authorization header that carries an action link token (kept out of URLs and logs). */
 export const LINK_AUTH_SCHEME = 'Link';
@@ -15,7 +16,7 @@ function tokenOf(req: Request): string {
 const metaOf = (req: Request): LinkRequestMeta => ({ requestId: req.requestId, ip: req.clientIp ?? null });
 
 /** Calls from the action link page (ORT-01); no session, the link token is the credential. */
-export function linksRouter(): Router {
+export function linksRouter(storage: ObjectStorage): Router {
   const router = Router();
   router.get('/links/context', async (req, res) => {
     res.set('Cache-Control', 'no-store');
@@ -27,6 +28,15 @@ export function linksRouter(): Router {
   router.post('/links/card', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     sendContract(res, CardDeviceKeys, await linkCard(tokenOf(req), metaOf(req), ActionLinkCardRequest.parse(req.body ?? {})));
+  });
+  // GRB-10: an unlisted penjemput waits at the gate for the parent's answer.
+  router.post('/links/pickups/:pickupEventId', async (req, res) => {
+    const { pickupEventId } = PickupEventIdParam.parse(req.params);
+    sendContract(res, LinkHeldPickups, { pickups: await linkPickupDecision(tokenOf(req), metaOf(req), pickupEventId, LinkPickupDecisionRequest.parse(req.body)) });
+  });
+  router.get('/links/pickups/:pickupEventId/photo', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    sendContract(res, PickupPhotoLink, await linkPickupPhotoLink(tokenOf(req), metaOf(req), storage, PickupEventIdParam.parse(req.params).pickupEventId));
   });
   return router;
 }

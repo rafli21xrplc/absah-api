@@ -11,7 +11,11 @@ export {
   remindUnfilled,
 } from './jobs/session-jobs';
 export { sessionsRouter } from './http/sessions';
+export { journalRouter } from './http/journal';
 export { correctionsRouter } from './http/corrections';
 export { findSchool } from './infrastructure/session-repo';
+export { schoolDayOf } from './application/school-day';
 export { attendanceConsumers } from './application/consumers';
 export { applyGateArrivals, schoolStartTime } from './application/gate-marks';
+export { openActivitySession } from './application/activity-sessions';
+export { getSession } from './application/sessions';

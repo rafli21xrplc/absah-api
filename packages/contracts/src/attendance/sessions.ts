@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AttendanceSource, AttendanceStatus, SessionMode, SessionOwnerType, SessionStatus } from './enums';
+import { SessionTopic } from './journal';
 
 /** Attendance sessions: Hari ini, filling a session (PRS-01 to PRS-04). */
 
@@ -17,6 +18,8 @@ export const SessionSummary = z
     subject: Ref.nullable(),
     teacher: Ref.nullable(),
     counts: z.object({ students: z.int(), filled: z.int(), absent: z.int() }),
+    /** Jurnal mengajar topic; null until the teacher writes one. */
+    topic: z.string().nullable(),
     /** The current user may fill this session (its teacher, the wali kelas, or a school manager). */
     canFill: z.boolean(),
   })
@@ -58,6 +61,8 @@ export const SubmitSessionRequest = z
     exceptions: z
       .array(z.object({ enrollmentId: z.uuid(), status: z.enum(['S', 'I', 'A', 'T']) }))
       .max(300),
+    /** Jurnal mengajar (PRS-09): omit to keep the current topic, empty string to clear it. */
+    topic: SessionTopic.optional(),
   })
   .strict()
   .meta({ id: 'SubmitSessionRequest' });

@@ -39,3 +39,16 @@ describe('mbgClassesLine', () => {
     expect(mbgClassesLine([])).toBe('-');
   });
 });
+
+describe('releaseTime with a service window', () => {
+  const hours = { start: 6 * 60, end: 18 * 60 };
+  it('sends inside the window and holds the rest to the next 06.00', () => {
+    const noon = new Date('2026-11-17T05:00:00Z'); // 12.00 WIB
+    expect(releaseTime(noon, 12 * 60, hours)).toBe(noon);
+    expect(releaseTime(new Date('2026-11-17T12:30:00Z'), 19 * 60 + 30, hours).toISOString()).toBe('2026-11-17T23:00:00.000Z');
+    expect(releaseTime(new Date('2026-11-16T21:00:00Z'), 4 * 60, hours).toISOString()).toBe('2026-11-16T23:00:00.000Z');
+  });
+  it('never goes into the quiet hours, whatever the school sets', () => {
+    expect(releaseTime(new Date('2026-11-16T22:00:00Z'), 5 * 60, { start: 0, end: 24 * 60 }).toISOString()).toBe('2026-11-16T23:00:00.000Z');
+  });
+});

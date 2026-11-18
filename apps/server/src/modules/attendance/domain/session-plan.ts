@@ -9,11 +9,35 @@ export const REMINDER_DELAY_MINUTES = 10;
 
 export interface PlannedSession {
   mode: SessionMode;
-  ownerType: 'class' | 'group';
+  ownerType: 'class' | 'group' | 'activity';
   ownerId: string;
   slotId: string | null;
   teacherId: string | null;
+  activityId?: string | null;
 }
+
+export interface PlannableActivity {
+  id: string;
+  days: number[];
+  startsOn: string | null;
+  endsOn: string | null;
+  active: boolean;
+}
+
+/** On its weekdays; an activity without weekdays but with both dates (kemah) meets every day of the range. */
+const meets = (a: PlannableActivity, weekday: number) => (a.days.length === 0 ? a.startsOn !== null && a.endsOn !== null : a.days.includes(weekday));
+
+/**
+ * Activity sessions of a date (KEG-01): active activities meeting that day, inside their date
+ * range. No teacher: every coach of the activity may fill it.
+ */
+export function planActivitySessions(activities: PlannableActivity[], date: string, weekday: number): PlannedSession[] {
+  return activities
+    .filter((a) => a.active && meets(a, weekday) && (!a.startsOn || a.startsOn <= date) && (!a.endsOn || date <= a.endsOn))
+    .map((a) => activitySession(a.id));
+}
+
+export const activitySession = (activityId: string): PlannedSession => ({ mode: 'activity', ownerType: 'activity', ownerId: activityId, slotId: null, teacherId: null, activityId });
 
 /**
  * The sessions of one school day. daily: one per rombel, owned by the wali kelas (PRS, SD/MI).

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ArrivalOutcome, ScanRejectReason, ScanResult } from './enums';
+import { KioskPickupStudent } from './pickup';
 
 /** What a kiosk downloads each morning to work offline (GRB-03). */
 export const KioskDay = z
@@ -12,6 +13,8 @@ export const KioskDay = z
     keys: z.array(z.object({ schoolDate: z.iso.date(), key: z.string() })),
     /** Cards with a bound phone. Only the first name and rombel, for the feedback screen. */
     cards: z.array(z.object({ cardId: z.uuid(), deviceId: z.uuid(), firstName: z.string(), className: z.string() })),
+    /** Approved penjemput per card (GRB-10); null when gate.pickup is off. */
+    pickup: z.array(KioskPickupStudent).nullable(),
   })
   .meta({ id: 'KioskDay' });
 export type KioskDay = z.infer<typeof KioskDay>;

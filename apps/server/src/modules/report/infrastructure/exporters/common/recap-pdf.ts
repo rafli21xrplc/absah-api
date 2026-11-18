@@ -45,11 +45,16 @@ function heading(doc: Doc, recap: SemesterRecap, cls: SemesterRecapClass) {
   return doc.y;
 }
 
-function signatures(doc: Doc, recap: SemesterRecap, cls: SemesterRecapClass, top: number) {
+/** Words that differ between schools and madrasah. */
+export interface PdfLabels {
+  principal: string;
+}
+
+function signatures(doc: Doc, recap: SemesterRecap, cls: SemesterRecapClass, top: number, labels: PdfLabels) {
   const width = 200;
   const right = doc.page.width - MARGIN - width;
   doc.font('Helvetica').fontSize(10);
-  doc.text('Mengetahui,', MARGIN, top, { width }).text('Kepala Sekolah', { width });
+  doc.text('Mengetahui,', MARGIN, top, { width }).text(labels.principal, { width });
   doc.text(tanggal(recap.signedOn), right, top, { width }).text('Wali Kelas', right, undefined, { width });
   const nameY = top + 80;
   doc.font('Helvetica-Bold');
@@ -58,10 +63,10 @@ function signatures(doc: Doc, recap: SemesterRecap, cls: SemesterRecapClass, top
 }
 
 /**
- * Archive copy (RKP-02): one section per rombel with H/T/S/I/A per student and signature blocks for
- * kepala sekolah and wali kelas, signed on paper after printing.
+ * Archive copy (RKP-02, RKP-07): one section per rombel with H/T/S/I/A per student and signature
+ * blocks for the kepala sekolah/madrasah and wali kelas, signed on paper after printing.
  */
-export function eraporPdf(recap: SemesterRecap): Promise<Buffer> {
+export function recapPdf(recap: SemesterRecap, labels: PdfLabels): Promise<Buffer> {
   const doc = new PDFDocument({ size: 'A4', margin: MARGIN, info: { Title: 'Rekap kehadiran', Creator: 'Absah' } });
   const chunks: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -93,7 +98,7 @@ export function eraporPdf(recap: SemesterRecap): Promise<Buffer> {
       doc.addPage();
       y = MARGIN;
     }
-    signatures(doc, recap, cls, y + 24);
+    signatures(doc, recap, cls, y + 24, labels);
   });
   doc.end();
   return done;

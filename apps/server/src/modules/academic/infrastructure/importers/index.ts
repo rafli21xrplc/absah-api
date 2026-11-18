@@ -1,10 +1,11 @@
 import type { ImportSource, StudentImporter } from '../../domain/student-import';
 import { DapodikImporter } from './dapodik/dapodik-importer';
+import { EmisImporter } from './emis/emis-importer';
 
 export { DapodikImporter } from './dapodik/dapodik-importer';
+export { EmisImporter } from './emis/emis-importer';
 
-/** Importer per source; EMIS gets its own parser behind the same interface. */
+/** Importer per source (data.source): Dapodik for schools, EMIS for madrasah. */
 export function importerFor(source: ImportSource): StudentImporter {
-  if (source === 'dapodik') return new DapodikImporter();
-  throw new Error(`no importer for ${source} yet`);
+  return source === 'emis' ? new EmisImporter() : new DapodikImporter();
 }

@@ -1,4 +1,4 @@
-import { ARRIVAL_OUTCOMES, CARD_HOLDERS, SCAN_METHODS, SCAN_REJECT_REASONS, SCAN_RESULTS } from '@absah/contracts';
+import { ARRIVAL_OUTCOMES, CARD_HOLDERS, PICKUP_EVENT_STATUSES, PICKUP_GUARDIAN_STATUSES, PICKUP_RELATIONS, SCAN_METHODS, SCAN_REJECT_REASONS, SCAN_RESULTS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { date, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
@@ -12,6 +12,9 @@ export const scanMethod = pgEnum('scan_method', SCAN_METHODS);
 export const scanResult = pgEnum('scan_result', SCAN_RESULTS);
 export const scanRejectReason = pgEnum('scan_reject_reason', SCAN_REJECT_REASONS);
 export const arrivalOutcome = pgEnum('arrival_outcome', ARRIVAL_OUTCOMES);
+export const pickupRelation = pgEnum('pickup_relation', PICKUP_RELATIONS);
+export const pickupGuardianStatus = pgEnum('pickup_guardian_status', PICKUP_GUARDIAN_STATUSES);
+export const pickupEventStatus = pgEnum('pickup_event_status', PICKUP_EVENT_STATUSES);
 
 const at = (name: string) => timestamp(name, { withTimezone: true });
 const schoolRef = () => schoolId().references(() => schools.id, { onDelete: 'cascade' });
@@ -123,5 +126,102 @@ export const gateScans = pgTable(
     // At most one arrival per student per day.
     uniqueIndex('gate_scans_arrival_key').on(t.enrollmentId, t.schoolDate).where(sql`${t.result} = 'accepted'`),
     index('gate_scans_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
+  ],
+);
+
+/**
+ * Buku tamu (GRB-11): one row per visit. clientEventId makes the kiosk's resend a no-op. The photo
+ * (optional, photo_key) is removed 30 days after the guest left (photo_removed_at).
+ */
+export const visitors = pgTable(
+  'visitors',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    schoolDate: date('school_date').notNull(),
+    clientEventId: uuid('client_event_id').notNull(),
+    kioskId: uuid('kiosk_id').references(() => kioskDevices.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    organization: text('organization'),
+    purpose: text('purpose').notNull(),
+    hostUserId: userRef('host_user_id'),
+    photoKey: text('photo_key'),
+    photoRemovedAt: at('photo_removed_at'),
+    arrivedAt: at('arrived_at').notNull().defaultNow(),
+    leftAt: at('left_at'),
+    leftBy: userRef('left_by'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('visitors_school_id_client_event_id_key').on(t.schoolId, t.clientEventId),
+    index('visitors_school_id_school_date_idx').on(t.schoolId, t.schoolDate, t.arrivedAt),
+  ],
+);
+
+/**
+ * Penjemput resmi (GRB-09). A parent's entry starts pending; the wali kelas or admin decides. The
+ * phone is encrypted; the photo (R2, photo_key) is removed 30 days after ended_at (rejected or
+ * deactivated), marked by photo_removed_at.
+ */
+export const pickupGuardians = pgTable(
+  'pickup_guardians',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    relation: pickupRelation('relation').notNull(),
+    phone: encryptedText('phone', 'pickup_guardians.phone').notNull(),
+    photoKey: text('photo_key').notNull(),
+    photoRemovedAt: at('photo_removed_at'),
+    validUntil: date('valid_until'),
+    status: pickupGuardianStatus('status').notNull().default('pending'),
+    registeredBy: userRef('registered_by'),
+    decidedBy: userRef('decided_by'),
+    decidedAt: at('decided_at'),
+    endedAt: at('ended_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('pickup_guardians_school_id_student_id_idx').on(t.schoolId, t.studentId), index('pickup_guardians_school_id_status_idx').on(t.schoolId, t.status)],
+);
+
+/**
+ * Check-out (GRB-10): one row per kiosk event. A listed penjemput is released at once; an unlisted
+ * one (unlisted_photo_key set, pickup_guardian_id null) is held until a parent or the wali kelas
+ * decides (released or denied), or expires at the end of the day. pickup_name is the name at the
+ * time. One release per student per day (partial unique index).
+ */
+export const pickupEvents = pgTable(
+  'pickup_events',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    schoolDate: date('school_date').notNull(),
+    clientEventId: uuid('client_event_id').notNull(),
+    kioskId: uuid('kiosk_id').references(() => kioskDevices.id, { onDelete: 'set null' }),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    pickupGuardianId: uuid('pickup_guardian_id').references(() => pickupGuardians.id, { onDelete: 'set null' }),
+    pickupName: text('pickup_name').notNull(),
+    unlistedPhotoKey: text('unlisted_photo_key'),
+    photoRemovedAt: at('photo_removed_at'),
+    status: pickupEventStatus('status').notNull(),
+    checkedOutAt: at('checked_out_at'),
+    decidedBy: userRef('decided_by'),
+    /** guardian (through the action link) or staff (wali kelas, admin). */
+    decidedVia: text('decided_via'),
+    decidedAt: at('decided_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('pickup_events_school_id_client_event_id_key').on(t.schoolId, t.clientEventId),
+    uniqueIndex('pickup_events_released_key').on(t.schoolId, t.enrollmentId, t.schoolDate).where(sql`${t.status} = 'released'`),
+    index('pickup_events_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
   ],
 );

@@ -1,6 +1,7 @@
 import {
   effectiveOverrides,
   killSwitches,
+  releaseFlags,
   resolveCapabilities,
   type BoolCapability,
   type CapabilityKey,
@@ -9,6 +10,7 @@ import {
   type InvalidCapabilityHandler,
   type Level,
   type OverrideRow,
+  type ReleaseFlag,
 } from '@absah/capabilities';
 import { schema, type Tx } from '@absah/db';
 import type { RequestHandler } from 'express';
@@ -39,6 +41,11 @@ export async function readCapabilityRows(tx: Tx): Promise<{ overrides: OverrideR
       .select({ key: schema.platformFlags.key, value: schema.platformFlags.value, schoolId: schema.platformFlags.schoolId })
       .from(schema.platformFlags),
   };
+}
+
+/** Release flags (packages/capabilities release.ts) of the school of the current transaction. */
+export async function readReleaseFlags(tx: Tx): Promise<Record<ReleaseFlag, boolean>> {
+  return releaseFlags(await tx.select({ key: schema.platformFlags.key, value: schema.platformFlags.value, schoolId: schema.platformFlags.schoolId }).from(schema.platformFlags));
 }
 
 /** All five layers for one school on `today`. */

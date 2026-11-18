@@ -1,5 +1,5 @@
 import { schema, sensitive, type Tx } from '@absah/db';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, ne } from 'drizzle-orm';
 
 const st = schema.students;
 const e = schema.enrollments;
@@ -22,7 +22,7 @@ export async function studentForContacts(tx: Tx, studentId: string, lock: boolea
 export function guardiansOfStudent(tx: Tx, studentId: string) {
   const g = schema.guardians;
   return tx
-    .select({ id: g.id, name: g.name, phone: g.phone, relation: schema.studentGuardians.relation })
+    .select({ id: g.id, name: g.name, phone: g.phone, userId: g.userId, relation: schema.studentGuardians.relation })
     .from(schema.studentGuardians)
     .innerJoin(g, eq(g.id, schema.studentGuardians.guardianId))
     .where(eq(schema.studentGuardians.studentId, studentId))
@@ -37,3 +37,18 @@ export async function setGuardianPhone(tx: Tx, guardianId: string, phone: string
 }
 
 export const setStudentUser = (tx: Tx, studentId: string, userId: string) => tx.update(st).set({ userId }).where(eq(st.id, studentId));
+
+export const setGuardianUser = (tx: Tx, guardianId: string, userId: string | null) => tx.update(schema.guardians).set({ userId }).where(eq(schema.guardians.id, guardianId));
+
+/** Whether another guardian of this school still logs in with the account. */
+export async function linkedElsewhere(tx: Tx, userId: string, guardianId: string): Promise<boolean> {
+  const g = schema.guardians;
+  const [row] = await tx.select({ id: g.id }).from(g).where(and(eq(g.userId, userId), ne(g.id, guardianId))).limit(1);
+  return row !== undefined;
+}
+
+/** Whether the account is a student's own login in this school. */
+export async function isStudentLogin(tx: Tx, userId: string): Promise<boolean> {
+  const [row] = await tx.select({ id: st.id }).from(st).where(eq(st.userId, userId)).limit(1);
+  return row !== undefined;
+}

@@ -66,10 +66,40 @@ import {
   CreateCorrectionsRequest,
   DecideCorrectionRequest,
 } from './attendance/corrections';
+import { JournalQuery, JournalResponse } from './attendance/journal';
+import { ClassStudentHours, ClassStudentHoursParams, ClassStudentHoursQuery } from './attendance/student-hours';
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStudentParam, LiaisonStudentQuery, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
+import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
+import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
+import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
+import {
+  AddTppkCaseEventRequest,
+  CreateTppkCaseRequest,
+  CreateTppkReportRequest,
+  SetTppkMembersRequest,
+  TppkCaseDetail,
+  TppkCaseIdParam,
+  TppkCaseList,
+  TppkCaseNoteRequest,
+  TppkCasesQuery,
+  TppkChannel,
+  TppkCodeParam,
+  TppkMemberList,
+  TppkReportDetail,
+  TppkReportIdParam,
+  TppkReportList,
+  TppkReportReceipt,
+  TppkReportsQuery,
+  TppkSchoolParam,
+  TppkTrackResponse,
+} from './student-affairs/tppk';
+import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVisitList, UksVisitsQuery } from './student-affairs/uks';
+import { CreateKioskPickupPhotoRequest, KioskUnlistedPickup, KioskUnlistedPickupRequest, LinkHeldPickups, LinkPickupDecisionRequest, PickupEvent, PickupEventActionParam, PickupEventIdParam, PickupEventList, PickupEventsQuery, KioskCheckoutBatch, KioskCheckoutResults, CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
+import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
 import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance } from './portal/links';
@@ -98,7 +128,7 @@ import {
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
-import { MbgDaily, MbgDailyQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
+import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
 import { CreatePaymentRequest, Payment, PaymentList } from './billing/payments';
 import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
@@ -301,6 +331,20 @@ function buildRegistry(): OpenAPIRegistry {
     tags: ['academic'],
     summary: 'Start a Dapodik import: returns a presigned PUT for the .xlsx (admin, operator)',
     description: 'Needs data.source = dapodik. Upload the file to upload.url, then POST /imports/{importId}/parse.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateImportRequest } } } },
+    responses: {
+      201: { description: 'Created', content: { 'application/json': { schema: CreateImportResponse } } },
+      ...errors(400, 401, 403, 404, 409, 422),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/imports/emis`,
+    tags: ['academic'],
+    summary: 'Start an EMIS import (madrasah): returns a presigned PUT for the .xlsx (admin, operator)',
+    description: 'Needs data.source = emis (AKD-09). Same flow as Dapodik: upload, POST /imports/{importId}/parse, preview, commit. Column layout provisional (TODO(pilot)).',
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: CreateImportRequest } } } },
@@ -537,6 +581,42 @@ function buildRegistry(): OpenAPIRegistry {
     request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SubmitSessionRequest } } } },
     responses: { 200: json(SessionDetail, 'Filled session'), ...errors(400, 401, 403, 404, 409) },
   });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/classes/{classId}/student-hours`,
+    tags: ['attendance'],
+    summary: "Every lesson of a rombel's students on one day, learning groups included (AKD-10)",
+    description: 'For the wali kelas of the rombel and for admin, operator, kepsek, wakasek, piket; others 404. date defaults to today (school timezone). Activity sessions are not included.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ClassStudentHoursParams, query: ClassStudentHoursQuery },
+    responses: { 200: json(ClassStudentHours, 'Sessions and per-student statuses'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teaching-journal`,
+    tags: ['attendance'],
+    summary: 'Jurnal mengajar of one month: per-period sessions with their topic (PRS-09)',
+    description: 'A guru sees only their own sessions. admin, kepsek and wakasek may pass teacherId, or omit it for every teacher.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: JournalQuery },
+    responses: { 200: json(JournalResponse, 'Journal entries'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teaching-journal/export.xlsx`,
+    tags: ['attendance'],
+    summary: 'Excel of one teacher\'s jurnal mengajar for a month',
+    description: 'teacherId is required for managers; a guru gets their own.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: JournalQuery },
+    responses: {
+      200: { description: 'Excel workbook', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } },
+      ...errors(400, 401, 403, 404),
+    },
+  });
 
   registry.registerPath({
     method: 'post',
@@ -744,6 +824,7 @@ function buildRegistry(): OpenAPIRegistry {
     path: `${API_BASE_PATH}/kiosk/day`,
     tags: ['kiosk'],
     summary: 'Morning download for offline work: day keys (today, tomorrow), late time, bound cards',
+    description: 'With gate.pickup also the approved penjemput per card, with 5-minute photo links the kiosk downloads at once (GRB-10); pickup is null otherwise.',
     security: [{ kiosk: [] }],
     responses: { 200: json(KioskDay, 'Day'), ...errors(401, 404) },
   });
@@ -758,6 +839,50 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...idempotencyHeader, required: true }],
     request: { body: { content: { 'application/json': { schema: KioskScanBatch } } } },
     responses: { 200: json(KioskScanResults, 'Results'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/checkouts`,
+    tags: ['kiosk'],
+    summary: 'Queued check-outs with a listed penjemput (GRB-10), exactly once per clientEventId',
+    description:
+      'Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Results per check-out: released (emits gate.checked_out; parents get student_picked_up), duplicate (the student was already released that day), or rejected with a card reason or not_authorized (the penjemput was never approved for this student). A penjemput deactivated after the morning sync still counts.',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: KioskCheckoutBatch } } } },
+    responses: { 200: json(KioskCheckoutResults, 'Results'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/pickup-photos`,
+    tags: ['kiosk'],
+    summary: "A presigned PUT for an unlisted penjemput's photo (JPEG, up to 2 MB)",
+    description: 'Requires gate.pickup (404 CAPABILITY_DISABLED otherwise).',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreateKioskPickupPhotoRequest } } } },
+    responses: { 200: json(CreatePickupPhotoResponse, 'Upload'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/unlisted-pickups`,
+    tags: ['kiosk'],
+    summary: 'Hold a student for an unlisted penjemput (name + photo required); online only',
+    description: 'Requires gate.pickup. Exactly once per clientEventId. Emits gate.unlisted_pickup (parents get unlisted_pickup with an action link). 400 for an unreadable card or a photo not uploaded; 409 already_released when the student left today.',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: KioskUnlistedPickupRequest } } } },
+    responses: { 200: json(KioskUnlistedPickup, 'Held'), ...errors(400, 401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/kiosk/unlisted-pickups/{pickupEventId}`,
+    tags: ['kiosk'],
+    summary: 'The held request as the kiosk polls it: held, released (allowed), denied or expired',
+    description: 'Requires gate.pickup.',
+    security: [{ kiosk: [] }],
+    request: { params: PickupEventIdParam },
+    responses: { 200: json(KioskUnlistedPickup, 'Request'), ...errors(401, 404) },
   });
   registry.registerPath({
     method: 'post',
@@ -779,6 +904,391 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: gateParams,
     responses: { 200: json(GateToday, 'Today'), ...errors(401, 403, 404) },
+  });
+  const visitorNote = 'Requires gate.visitors (404 CAPABILITY_DISABLED otherwise).';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/kiosk/visitor-hosts`,
+    tags: ['kiosk'],
+    summary: 'Staff a guest can pick as the person they came for (name only)',
+    description: visitorNote,
+    security: [{ kiosk: [] }],
+    responses: { 200: json(VisitorHostList, 'Hosts'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/visitor-photos`,
+    tags: ['kiosk'],
+    summary: "A presigned PUT for the guest's photo (JPEG, up to 2 MB); send photoId with POST /kiosk/visitors",
+    description: visitorNote,
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreateVisitorPhotoRequest } } } },
+    responses: { 200: json(CreateVisitorPhotoResponse, 'Upload'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/visitors`,
+    tags: ['kiosk'],
+    summary: 'A guest signs in at the kiosk (buku tamu); the person they came for is told',
+    description: `${visitorNote} Exactly once per clientEventId: a resend returns the stored visit. Emits gate.visitor_arrived when a host is named.`,
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreateVisitorRequest } } } },
+    responses: { 200: json(Visitor, 'Visit'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/visitors`,
+    tags: ['gate'],
+    summary: "The day's guests, newest first (piket, admin, operator, wakasek, kepsek)",
+    description: visitorNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { query: VisitorsQuery },
+    responses: { 200: json(VisitorList, 'Visitors'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/visitors/{visitorId}/photo`,
+    tags: ['gate'],
+    summary: "A 5-minute link to the guest's photo (piket, admin, operator, wakasek, kepsek)",
+    description: `${visitorNote} 404 when there is no photo or it was removed 30 days after the guest left.`,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: VisitorIdParam },
+    responses: { 200: json(VisitorPhotoLink, 'Link'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/visitors/{visitorId}/leave`,
+    tags: ['gate'],
+    summary: 'Piket signs a guest out; signing out again changes nothing',
+    description: visitorNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: VisitorIdParam },
+    responses: { 200: json(Visitor, 'Visit'), ...errors(401, 403, 404) },
+  });
+  const pickupNote = 'Requires gate.pickup (404 CAPABILITY_DISABLED otherwise). Callers outside the student (not their parent, wali kelas, or admin) get 404.';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/pickup-guardian-photos`,
+    tags: ['gate'],
+    summary: "A presigned PUT for a penjemput's photo (JPEG, up to 2 MB); send photoId with the registration",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: [...gateParams, { ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: CreatePickupPhotoRequest } } } },
+    responses: { 200: json(CreatePickupPhotoResponse, 'Upload'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/students/{studentId}/pickup-guardians`,
+    tags: ['gate'],
+    summary: "The student's penjemput in every status (parent, wali kelas, admin, piket)",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: StudentIdParam },
+    responses: { 200: json(PickupGuardianList, 'Penjemput'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/students/{studentId}/pickup-guardians`,
+    tags: ['gate'],
+    summary: 'Register a penjemput resmi (GRB-09): pending from a parent, approved from the wali kelas or admin',
+    description: `${pickupNote} At most 6 pending or approved per student (409 too_many). The number is encrypted and masked in responses.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, { ...idempotencyHeader, required: true }],
+    request: { params: StudentIdParam, body: { content: { 'application/json': { schema: CreatePickupGuardianRequest } } } },
+    responses: { 201: json(PickupGuardian, 'Registered'), ...errors(400, 401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickup-guardians`,
+    tags: ['gate'],
+    summary: 'Penjemput by status, oldest first: the admin sees every student, others their own rombel as wali kelas',
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { query: PickupGuardiansQuery },
+    responses: { 200: json(PickupGuardianList, 'Queue'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/pickup-guardians/{pickupGuardianId}/{action}`,
+    tags: ['gate'],
+    summary: 'approve or reject a pending penjemput (wali kelas, admin); deactivate a pending or approved one (also the parent)',
+    description: `${pickupNote} Repeating an action changes nothing; any other status change is 409. Audited. The photo is removed 30 days after reject or deactivate.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: PickupGuardianActionParam },
+    responses: { 200: json(PickupGuardian, 'Penjemput'), ...errors(401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickup-guardians/{pickupGuardianId}/photo`,
+    tags: ['gate'],
+    summary: "A 5-minute link to the penjemput's photo (the student's wali kelas, piket, admin; audited)",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: PickupGuardianIdParam },
+    responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickups`,
+    tags: ['gate'],
+    summary: "The day's check-outs, held first (gate viewers: all; a wali kelas: own rombel)",
+    description: pickupNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { query: PickupEventsQuery },
+    responses: { 200: json(PickupEventList, 'Check-outs'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/pickups/{pickupEventId}/{action}`,
+    tags: ['gate'],
+    summary: 'allow or deny a held unlisted penjemput (the student\'s wali kelas, admin)',
+    description: `${pickupNote} allow releases the student and emits gate.checked_out. The same decision again changes nothing; 409 otherwise (decided, expired, already released). Audited.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { params: PickupEventActionParam },
+    responses: { 200: json(PickupEvent, 'Check-out'), ...errors(401, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pickups/{pickupEventId}/photo`,
+    tags: ['gate'],
+    summary: "A 5-minute link to an unlisted penjemput's photo (wali kelas, piket, admin; audited)",
+    description: `${pickupNote} Removed 30 days after the request.`,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    request: { params: PickupEventIdParam },
+    responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404) },
+  });
+  const uksNote = 'petugas_uks only, behind student.uks (404 CAPABILITY_DISABLED otherwise). Notes are encrypted at rest.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/uks/students`,
+    tags: ['student-affairs'],
+    summary: 'Find an active student by name to record a UKS visit',
+    description: uksNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: UksStudentQuery },
+    responses: { 200: json(UksStudentList, 'Students'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/uks/visits`,
+    tags: ['student-affairs'],
+    summary: 'Record a UKS visit: complaint, action and outcome',
+    description: `${uksNote} Outcome dipulangkan emits uks.sent_home: the rest of the day is marked S and the parents are told.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateUksVisitRequest } } } },
+    responses: { 200: json(UksVisit, 'Recorded'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/uks/visits`,
+    tags: ['student-affairs'],
+    summary: "The day's UKS visits, newest first",
+    description: uksNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: UksVisitsQuery },
+    responses: { 200: json(UksVisitList, 'Visits'), ...errors(400, 401, 403, 404) },
+  });
+  const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
+  const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });
+  const activityPaths: { method: 'get' | 'post' | 'patch' | 'put'; path: string; summary: string; request?: object; ok: z.ZodType; label: string; write?: boolean }[] = [
+    { method: 'get', path: '/activities', summary: 'Activities the user may see', ok: ActivityList, label: 'Activities' },
+    { method: 'post', path: '/activities', summary: 'Create an activity with its coaches (admin, wakasek)', request: activityBody(CreateActivityRequest), ok: Activity, label: 'Created', write: true },
+    { method: 'get', path: '/activities/students', summary: 'Find active students to add as members', request: { query: ActivityStudentQuery }, ok: ActivityMemberList, label: 'Students' },
+    { method: 'get', path: '/activities/{activityId}', summary: 'One activity', request: { params: ActivityIdParam }, ok: Activity, label: 'Activity' },
+    { method: 'patch', path: '/activities/{activityId}', summary: 'Edit an activity, its coaches or deactivate it (admin, wakasek)', request: { params: ActivityIdParam, ...activityBody(UpdateActivityRequest) }, ok: Activity, label: 'Updated', write: true },
+    { method: 'get', path: '/activities/{activityId}/members', summary: 'Members of an activity', request: { params: ActivityIdParam }, ok: ActivityMemberList, label: 'Members' },
+    { method: 'put', path: '/activities/{activityId}/members', summary: 'Replace the members (managers or the coaches)', request: { params: ActivityIdParam, ...activityBody(SetActivityMembersRequest) }, ok: ActivityMemberList, label: 'Members', write: true },
+    { method: 'post', path: '/activities/{activityId}/sessions', summary: 'Open (or get) the activity session of a date, default today; fill it with POST /sessions/{id}/submit', request: { params: ActivityIdParam, ...activityBody(OpenActivitySessionRequest) }, ok: SessionDetail, label: 'Session' },
+    { method: 'get', path: '/activities/{activityId}/recap', summary: 'Rekap kegiatan per member (separate from the rombel rekap)', request: { params: ActivityIdParam, query: ActivityRecapQuery }, ok: ActivityRecap, label: 'Recap' },
+  ];
+  for (const p of activityPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['activity'],
+      summary: p.summary,
+      description: activityNote,
+      security: [{ session: [] }],
+      parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      ...(p.request ? { request: p.request } : {}),
+      responses: { 200: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
+  const habitNote = 'Jurnal 7 KAIH (KEG-02): requires habits.kaih parent or student (404 CAPABILITY_DISABLED when off). Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek; others 404.';
+  for (const p of [
+    { method: 'get' as const, path: '/habits/{studentId}', summary: 'The journal of a student, one entry per day (default the last 7, at most 31), newest first', request: { params: StudentIdParam, query: HabitRangeQuery }, ok: HabitJournal, label: 'Journal' },
+    {
+      method: 'put' as const,
+      path: '/habits/{studentId}/{date}',
+      summary: 'Tick habits of a day: the parent in mode parent, the student in mode student (409 not_filler otherwise)',
+      request: { params: HabitParams, body: { content: { 'application/json': { schema: PutHabitsRequest } } } },
+      ok: HabitDay,
+      label: 'Day',
+      write: true,
+    },
+    { method: 'get' as const, path: '/classes/{classId}/habits', summary: 'Weekly summary per student of a rombel (its wali kelas and the school leaders)', request: { params: ClassHabitsParams, query: ClassHabitsQuery }, ok: ClassHabitWeek, label: 'Week' },
+  ]) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['activity'],
+      summary: p.summary,
+      description: 'write' in p ? `${habitNote} Today and the 2 days before only; older dates are locked (409 locked; job keg.lock-habits 00.30). Habits not sent stay as they are.` : habitNote,
+      security: [{ session: [] }],
+      parameters: 'write' in p ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      request: p.request,
+      responses: { 200: json(p.ok, p.label), ...errors(...('write' in p ? [400, 401, 404, 409] : [400, 401, 404])) },
+    });
+  }
+  const hafalanNote = 'Setoran hafalan (KEG-03): requires religious.memorization (404 CAPABILITY_DISABLED when off). Writers: guru_tahfidz and admin (403 for others).';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/memorization-logs`,
+    tags: ['activity'],
+    summary: 'Record a setoran hafalan (surah, ayat range, optional juz, nilai 0-100, catatan); the caller is the penyimak',
+    description: `${hafalanNote} Date defaults to today (school timezone), never in the future; the ayat range is checked against the surah. 409 not_active for a student without an active enrollment.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateMemorizationLogRequest } } } },
+    responses: { 201: json(MemorizationLog, 'Recorded'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/memorization-logs`,
+    tags: ['activity'],
+    summary: 'Hafalan history of a student, newest first (at most 200)',
+    description: `${hafalanNote} Readers: the student, their parents, their wali kelas, admin/operator/wakasek/kepsek and the writers; others 404.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MemorizationLogQuery },
+    responses: { 200: json(MemorizationLogList, 'History'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/memorization-logs/students`,
+    tags: ['activity'],
+    summary: 'Active students by name (2+ letters, at most 20), for the writers',
+    description: hafalanNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MemorizationStudentQuery },
+    responses: { 200: json(MemorizationStudentList, 'Students'), ...errors(400, 401, 403, 404) },
+  });
+  const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
+  const liaisonPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
+    { method: 'get', path: '/liaison/threads', summary: 'Threads of the user (orang_tua: every child; staff: students they teach; admin: all)', ok: LiaisonThreadList, label: 'Threads' },
+    { method: 'get', path: '/liaison/students', summary: 'Students the user teaches this year, to start a thread (2+ letters)', request: { query: LiaisonStudentQuery }, ok: LiaisonStudentList, label: 'Students' },
+    { method: 'get', path: '/liaison/students/{studentId}', summary: 'The thread of a student', request: { params: LiaisonStudentParam }, ok: LiaisonThread, label: 'Thread' },
+    { method: 'post', path: '/liaison/students/{studentId}/messages', summary: 'Write a message (participants)', request: { params: LiaisonStudentParam, body: { content: { 'application/json': { schema: PostLiaisonMessageRequest } } } }, ok: LiaisonThread, label: 'Thread', write: true },
+    { method: 'post', path: '/liaison/students/{studentId}/read', summary: 'Mark the thread read up to now', request: { params: LiaisonStudentParam }, label: 'Read' },
+    { method: 'get', path: '/liaison/settings', summary: 'Service hours (WhatsApp notifications outside them wait)', ok: LiaisonSettings, label: 'Settings' },
+    { method: 'put', path: '/liaison/settings', summary: 'Set the service hours (admin)', request: { body: { content: { 'application/json': { schema: UpdateLiaisonSettingsRequest } } } }, ok: LiaisonSettings, label: 'Settings', write: true },
+    { method: 'post', path: '/liaison/messages/{messageId}/retract', summary: 'Retract an own message within 15 minutes', request: { params: LiaisonMessageParam }, ok: LiaisonThread, label: 'Thread', write: true },
+  ];
+  for (const p of liaisonPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['portal'],
+      summary: p.summary,
+      description: liaisonNote,
+      security: [{ session: [] }],
+      parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      ...(p.request ? { request: p.request } : {}),
+      responses: { ...(p.ok ? { 200: json(p.ok, p.label) } : { 204: { description: p.label } }), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
+  const tppkNote = 'Behind student.tppk (404 CAPABILITY_DISABLED otherwise). Reports and cases are readable only by TPPK members (RLS), never by the admin or kepsek through their role.';
+  const tppkPublic = 'Public, no login. Rate limited per client in memory (429 RATE_LIMITED); the IP is never stored or logged.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tppk/channel/{schoolId}`,
+    tags: ['student-affairs'],
+    summary: 'The school a report form is for (public, from the QR poster)',
+    description: `${tppkPublic} 404 when the school is unknown or student.tppk is off (same answer).`,
+    request: { params: TppkSchoolParam },
+    responses: { 200: json(TppkChannel, 'Channel open'), ...errors(400, 404, 429) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/tppk/reports`,
+    tags: ['student-affairs'],
+    summary: 'File a report to the TPPK (public; anonymous allowed)',
+    description: `${tppkPublic} The tracking code is returned once; only its keyed hash is kept. A named report from a signed-in user keeps the account; an anonymous one keeps nothing about the reporter. Only TPPK members are told (tppk.report_received).`,
+    request: { body: { content: { 'application/json': { schema: CreateTppkReportRequest } } } },
+    responses: { 201: json(TppkReportReceipt, 'Received'), ...errors(400, 404, 429) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tppk/reports/track/{code}`,
+    tags: ['student-affairs'],
+    summary: 'Status of a report by its tracking code (public)',
+    description: `${tppkPublic} Unknown and malformed codes get the same 404. The code is masked in request logs.`,
+    request: { params: TppkCodeParam },
+    responses: { 200: json(TppkTrackResponse, 'Status'), ...errors(404, 429) },
+  });
+  const tppkMembers = `${tppkNote} TPPK members only (403 for anyone else, admin and kepsek included). Every call writes an audit entry (ids and statuses, never the text).`;
+  const tppkHeaders = [{ ...schoolHeader, required: true }];
+  const tppkWrite = [{ ...schoolHeader, required: true }, idempotencyHeader];
+  const tppkPaths: { method: 'get' | 'post'; path: string; summary: string; request?: object; ok: z.ZodType; label: string; write?: boolean }[] = [
+    { method: 'get', path: '/tppk/reports', summary: 'Reports received, newest first', request: { query: TppkReportsQuery }, ok: TppkReportList, label: 'Reports' },
+    { method: 'get', path: '/tppk/reports/{reportId}', summary: 'One report with the chronology and, when named, the reporter', request: { params: TppkReportIdParam }, ok: TppkReportDetail, label: 'Report' },
+    { method: 'get', path: '/tppk/cases', summary: 'Cases, newest first', request: { query: TppkCasesQuery }, ok: TppkCaseList, label: 'Cases' },
+    { method: 'post', path: '/tppk/cases', summary: 'Open a case (from a report: it becomes ditangani; one case per report)', request: { body: { content: { 'application/json': { schema: CreateTppkCaseRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+    { method: 'get', path: '/tppk/cases/{caseId}', summary: 'A case with its report and every event', request: { params: TppkCaseIdParam }, ok: TppkCaseDetail, label: 'Case' },
+    { method: 'post', path: '/tppk/cases/{caseId}/events', summary: 'Add a note or a step to an open case', request: { params: TppkCaseIdParam, body: { content: { 'application/json': { schema: AddTppkCaseEventRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+    { method: 'post', path: '/tppk/cases/{caseId}/close', summary: 'Close a case (the report becomes selesai)', request: { params: TppkCaseIdParam, body: { content: { 'application/json': { schema: TppkCaseNoteRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+    { method: 'post', path: '/tppk/cases/{caseId}/reopen', summary: 'Reopen a closed case (the report is ditangani again)', request: { params: TppkCaseIdParam, body: { content: { 'application/json': { schema: TppkCaseNoteRequest } } } }, ok: TppkCaseDetail, label: 'Case', write: true },
+  ];
+  for (const p of tppkPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['student-affairs'],
+      summary: p.summary,
+      description: tppkMembers,
+      security: [{ session: [] }],
+      parameters: p.write ? tppkWrite : tppkHeaders,
+      ...(p.request ? { request: p.request } : {}),
+      responses: { 200: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tppk/members`,
+    tags: ['student-affairs'],
+    summary: 'The TPPK team of the school (any staff member)',
+    description: `${tppkNote} belowMinimum is true with fewer than 3 members.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(TppkMemberList, 'Team'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/tppk/members`,
+    tags: ['student-affairs'],
+    summary: 'Replace the TPPK team (admin)',
+    description: `${tppkNote} Members must be active staff. Audited as tppk.members_changed and the whole team is told.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: SetTppkMembersRequest } } } },
+    responses: { 200: json(TppkMemberList, 'Team'), ...errors(400, 401, 403, 404) },
   });
   registry.registerPath({
     method: 'get',
@@ -878,6 +1388,7 @@ function buildRegistry(): OpenAPIRegistry {
     path: `${API_BASE_PATH}/exports`,
     tags: ['report'],
     summary: 'Queue a semester rekap file for the school report system (xlsx) or the signed archive (pdf)',
+    description: 'Target from report.target (e-Rapor or RDM). stream limits a whole-year file to one jurusan. 409 release_flag_off for RDM until the Absah team enables rdm-export-beta for the madrasah.',
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: CreateExportRequest } } } },
@@ -921,6 +1432,16 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: MbgDailyQuery },
     responses: { 200: json(MbgDaily, 'Counts'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/mbg/forecast`,
+    tags: ['report'],
+    summary: 'Prakiraan MBG H-3 (RKP-09): stored at 13.00 three days before; default date is three days from today',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: MbgForecastQuery },
+    responses: { 200: json(MbgForecast, 'Forecast'), ...errors(400, 401, 403, 404) },
   });
   registry.registerPath({
     method: 'post',
@@ -1023,6 +1544,25 @@ function buildRegistry(): OpenAPIRegistry {
     request: { body: { content: { 'application/json': { schema: ActionLinkCardRequest } } } },
     responses: { 200: json(CardDeviceKeys, 'Card keys'), ...errors(401, 404, 409, 410) },
   });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/links/pickups/{pickupEventId}`,
+    tags: ['portal'],
+    summary: 'Action link: allow or deny an unlisted penjemput the kiosk holds for the student today (GRB-10)',
+    description: 'Not the link\'s one write. The same decision again changes nothing; 409 when already decided otherwise, expired, or the student left with someone else. Audited.',
+    security: [{ actionLink: [] }],
+    request: { params: PickupEventIdParam, body: { content: { 'application/json': { schema: LinkPickupDecisionRequest } } } },
+    responses: { 200: json(LinkHeldPickups, "Today's requests"), ...errors(400, 401, 404, 409, 410) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/links/pickups/{pickupEventId}/photo`,
+    tags: ['portal'],
+    summary: "Action link: a 5-minute link to the unlisted penjemput's photo (audited)",
+    security: [{ actionLink: [] }],
+    request: { params: PickupEventIdParam },
+    responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404, 410) },
+  });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',
     in: 'header',
@@ -1047,6 +1587,7 @@ const ERROR_DESCRIPTIONS: Record<number, string> = {
   404: 'Not found (NOT_FOUND); unknown, used or expired invitation',
   409: 'Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)',
   422: 'Idempotency-Key reused with a different request (IDEMPOTENCY_KEY_REUSED)',
+  429: 'Too many requests from this client (RATE_LIMITED)',
 };
 
 export function generateOpenApiDocument(version = '0.0.0') {

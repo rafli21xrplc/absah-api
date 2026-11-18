@@ -18,7 +18,8 @@ export const StudentContacts = z
     name: z.string(),
     className: z.string().nullable(),
     account: z.object({ phone: z.string().nullable(), active: z.boolean() }),
-    guardians: z.array(z.object({ id: z.uuid(), name: z.string(), relation: GuardianRelation, phone: z.string().nullable() })),
+    /** portal: the guardian logs in to the PWA with this number (orang_tua). */
+    guardians: z.array(z.object({ id: z.uuid(), name: z.string(), relation: GuardianRelation, phone: z.string().nullable(), portal: z.boolean() })),
   })
   .meta({ id: 'StudentContacts' });
 export type StudentContacts = z.infer<typeof StudentContacts>;
@@ -26,12 +27,17 @@ export type StudentContacts = z.infer<typeof StudentContacts>;
 /**
  * PUT /api/v1/students/{studentId}/contacts: only the fields sent change. A student number creates
  * (or moves) the student's login and makes them a siswa member; null ends their access. A guardian
- * number null stops their messages.
+ * number null stops their messages and their portal access. portal: true makes the guardian an
+ * orang_tua member who logs in with their number (an account that already owns the number is
+ * reused, so one parent has one login for all their children); false ends that access.
  */
 export const UpdateStudentContactsRequest = z
   .object({
     studentPhone: PhoneNumberId.nullable().optional(),
-    guardians: z.array(z.object({ guardianId: z.uuid(), phone: PhoneNumberId.nullable() }).strict()).max(5).optional(),
+    guardians: z
+      .array(z.object({ guardianId: z.uuid(), phone: PhoneNumberId.nullable().optional(), portal: z.boolean().optional() }).strict())
+      .max(5)
+      .optional(),
   })
   .strict()
   .meta({ id: 'UpdateStudentContactsRequest' });

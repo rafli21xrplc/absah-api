@@ -1,3 +1,4 @@
+import type { ClassStream } from '@absah/contracts';
 import { schema, type Tx } from '@absah/db';
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
@@ -41,6 +42,7 @@ const jobView = {
   academicYear: y.name,
   classId: c.id,
   className: c.name,
+  stream: j.stream,
 };
 
 function jobs(tx: Tx) {
@@ -79,11 +81,11 @@ export async function principalName(tx: Tx): Promise<string | null> {
   return (result.rows as { name: string }[])[0]?.name ?? null;
 }
 
-export function classesOfYear(tx: Tx, academicYearId: string, classId: string | null) {
+export function classesOfYear(tx: Tx, academicYearId: string, classId: string | null, stream: ClassStream | null = null) {
   return tx
     .select({ id: c.id, name: c.name, grade: c.grade, homeroomName: sql<string | null>`(select m.name from school_member_directory m where m.user_id = ${c.homeroomTeacherId} limit 1)` })
     .from(c)
-    .where(and(eq(c.academicYearId, academicYearId), classId ? eq(c.id, classId) : undefined))
+    .where(and(eq(c.academicYearId, academicYearId), classId ? eq(c.id, classId) : undefined, stream ? eq(c.stream, stream) : undefined))
     .orderBy(asc(c.grade), asc(c.name));
 }
 
