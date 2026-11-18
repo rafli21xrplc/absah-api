@@ -23,17 +23,21 @@ export async function ensurePhoneLogin(auth: Auth, input: { name: string; phoneN
 }
 
 /**
- * The login of a guardian (ORT-02): the account that owns the number, or a new one. Unlike a
- * student's login it is shared: one parent with children in several rombel or schools logs in once.
- * Owning the number is proven at each OTP login.
+ * The login of a guardian (ORT-02) or an industry supervisor (PKL-01): the account that owns the
+ * number, or a new one. Unlike a student's login it is shared: one parent with children in several
+ * rombel or schools, or one supervisor for several schools, logs in once. Owning the number is
+ * proven at each OTP login.
  */
-export async function guardianLogin(auth: Auth, input: { name: string; phoneNumber: string }): Promise<string> {
+export async function sharedPhoneLogin(auth: Auth, input: { name: string; phoneNumber: string }): Promise<string> {
   const owner = await findUserByPhone(auth, input.phoneNumber);
   return owner?.id ?? (await createPhoneUser(auth, input)).id;
 }
 
-/** Portal memberships (siswa, orang_tua) need no invitation: the OTP login is the proof. */
-export async function setPortalMembership(tx: Tx, input: { schoolId: string; userId: string; role: 'siswa' | 'orang_tua'; active: boolean }): Promise<void> {
+/** Roles that need no invitation: the OTP login is the proof (portal, industry supervisors). */
+export type PhoneRole = 'siswa' | 'orang_tua' | 'pembimbing_industri';
+
+/** Activates (or suspends) a phone-role membership without an invitation. */
+export async function setPortalMembership(tx: Tx, input: { schoolId: string; userId: string; role: PhoneRole; active: boolean }): Promise<void> {
   const m = schema.memberships;
   const current = await findMembership(tx, input.schoolId, input.userId, input.role);
   const status = input.active ? 'active' : 'suspended';
@@ -45,7 +49,7 @@ export async function setPortalMembership(tx: Tx, input: { schoolId: string; use
 }
 
 /** Whether the user has an active membership with the role in the current school. */
-export async function hasActiveMembership(tx: Tx, userId: string, role: 'siswa' | 'orang_tua'): Promise<boolean> {
+export async function hasActiveMembership(tx: Tx, userId: string, role: PhoneRole): Promise<boolean> {
   const m = schema.memberships;
   const [row] = await tx
     .select({ id: m.id })

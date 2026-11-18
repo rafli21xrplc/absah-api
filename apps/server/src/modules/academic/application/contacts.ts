@@ -5,7 +5,7 @@ import { hashValue } from '../../../shared/crypto';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
-import { ensurePhoneLogin, guardianLogin, hasActiveMembership, loginPhoneOf, setPortalMembership, type Auth } from '../../platform';
+import { ensurePhoneLogin, sharedPhoneLogin, hasActiveMembership, loginPhoneOf, setPortalMembership, type Auth } from '../../platform';
 import { canManageStudentData } from '../domain/policies';
 import { guardiansOfStudent, isStudentLogin, linkedElsewhere, setGuardianPhone, setGuardianUser, setStudentUser, studentForContacts } from '../infrastructure/contacts-repo';
 
@@ -78,7 +78,7 @@ export async function updateStudentContacts(auth: Auth, actor: Actor, auditCtx: 
   // Better Auth writes on its own connection, so the logins exist before the tenant transaction.
   const userId = input.studentPhone ? await ensurePhoneLogin(auth, { name: before.student.name, phoneNumber: input.studentPhone, currentUserId: before.student.userId }) : before.student.userId;
   const guardianUsers = new Map<string, string>();
-  for (const p of before.plans) if (p.portal && p.phone) guardianUsers.set(p.guardian.id, await guardianLogin(auth, { name: p.guardian.name, phoneNumber: p.phone }));
+  for (const p of before.plans) if (p.portal && p.phone) guardianUsers.set(p.guardian.id, await sharedPhoneLogin(auth, { name: p.guardian.name, phoneNumber: p.phone }));
 
   return withTenant(scope(actor), async (tx) => {
     const student = await studentForContacts(tx, studentId, true);

@@ -2,7 +2,7 @@ import type { LeaveKind } from '@absah/contracts';
 import { defineConsumer, type Consumer } from '../../../shared/outbox';
 import { firstName } from '../../../shared/names';
 import type { MessageSender } from '../../../shared/messaging';
-import { schoolMinutes } from '../../../shared/school-date';
+import { schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine, releaseTime } from '../domain/messages';
 import {
   guardiansOf,
@@ -14,6 +14,7 @@ import {
   mbgCurrentCounts,
   mbgForecastRows,
   mbgPicPhone,
+  pklMentorNotice,
   portalGuardians,
   releasedPickup,
   schoolOf,
@@ -316,5 +317,31 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, deliverConsumer(deps.sender)];
+  /** PKL-01: a new industry supervisor learns where to log in (once a day at most); no student names. */
+  const pklMentor = defineConsumer({
+    name: 'notify_pkl_mentor_assigned',
+    event: 'pkl.mentor_assigned',
+    async handle(tx, event) {
+      const school = await schoolOf(tx, event.schoolId);
+      if (!school) return;
+      const today = schoolDate(school.timezone, deps.now?.() ?? new Date());
+      const notice = await pklMentorNotice(tx, event.payload.userId, today);
+      if (!notice) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'pkl_mentor_assigned',
+        enrollmentId: null,
+        // They log in with the OTP, so no action link is minted.
+        recipients: [{ phone: notice.phone }],
+        dedupKey: () => `pkl_mentor:${event.payload.userId}:${today}`,
+        params: { school: school.name, count: String(notice.count), url: `${deps.appUrl}/dudi` },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, deliverConsumer(deps.sender)];
 }

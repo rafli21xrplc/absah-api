@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
 import { CreateDudiPartnerRequest, DudiPartner, DudiPartnerIdParam, DudiPartnerList, PklStaffList, PklStudentList, PklStudentQuery, UpdateDudiPartnerRequest } from './partners';
 
 /** PKL endpoints for the OpenAPI document (registered by openapi.ts), all behind pkl.enabled. */
@@ -33,4 +34,35 @@ export const PKL_PATHS: PklPath[] = [
   },
   { method: 'get', path: '/pkl/students', summary: 'Active students by name or NISN (2+ characters, at most 20), for placements', request: { query: PklStudentQuery }, ok: PklStudentList, label: 'Students' },
   { method: 'get', path: '/pkl/school-mentors', summary: 'Active school staff who can be guru pembimbing', ok: PklStaffList, label: 'Staff' },
+  {
+    method: 'get',
+    path: '/pkl/placements',
+    summary: 'Placements: managers all, a guru pembimbing their own (scope current by default)',
+    request: { query: PklPlacementQuery },
+    ok: PklPlacementList,
+    label: 'Placements',
+  },
+  {
+    method: 'post',
+    path: '/pkl/placements',
+    summary: 'Place students at one DUDI with one period and supervisors',
+    description:
+      'The industry supervisor gets an active pembimbing_industri membership (no invitation: the WhatsApp OTP is the proof) and a WhatsApp with the /dudi link (pkl.mentor_assigned). 409 overlap (details.enrollmentIds), partner_inactive, phone_student.',
+    request: { body: CreatePklPlacementsRequest },
+    ok: PklPlacementList,
+    label: 'Created',
+    write: true,
+    status: 201,
+  },
+  {
+    method: 'patch',
+    path: '/pkl/placements/{placementId}',
+    summary: 'Change the end date or the supervisors; industryMentor null removes them',
+    description: 'An industry supervisor without any running placement left is suspended at once (job pkl.expire-mentors does the same daily).',
+    request: { params: PklPlacementIdParam, body: UpdatePklPlacementRequest },
+    ok: PklPlacement,
+    label: 'Updated',
+    write: true,
+  },
+  { method: 'post', path: '/pkl/placements/{placementId}/cancel', summary: 'Cancel a placement (again = no-op)', request: { params: PklPlacementIdParam }, ok: PklPlacement, label: 'Cancelled', write: true },
 ];
