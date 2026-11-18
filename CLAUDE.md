@@ -729,3 +729,11 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   check-in, emits pkl.checkin_recorded {checkinId} (no consumer yet) and audits without coordinates.
   GET /pkl/me: placement (DUDI name/address/radius, supervisors' names, today's hours) + today's check-in/out,
   never coordinates. A check-in's status: confirmed -> H/T (late), decided -> decided_status.
+- Industry supervisor (http/supervision.ts, application/supervision.ts; canSuperviseAtDudi = pembimbing_industri,
+  rows filtered by industry_mentor_id): GET /pkl/supervision?date (default today, future 400) lists their
+  running placements with check-in status, never coordinates or distance. POST /pkl/checkins/confirm {date?,
+  checkinIds?} confirms every pending check-in of that day (one click) or the listed ones; an id of another
+  supervisor's student -> 404 and nothing written. POST /pkl/checkins/{id}/dispute {reason} (pending only, else
+  409 not_pending) -> disputed (guru pembimbing decides). Confirmation = openPklSession + setPklStatus H/T
+  (late) with sourceRef = check-in. Job pkl.auto-confirm (hourly, :07 UTC) confirms check-ins pending > 24 h
+  (confirmed_by null); withPlatform only lists schools with such rows.

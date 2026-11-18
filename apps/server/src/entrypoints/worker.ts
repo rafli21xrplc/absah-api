@@ -21,7 +21,7 @@ import {
   reportConsumers,
 } from '../modules/report';
 import { LOCK_HABITS_CRON, LOCK_HABITS_QUEUE, lockHabitsHandler } from '../modules/activity';
-import { EXPIRE_MENTORS_CRON, EXPIRE_MENTORS_QUEUE, expireMentorsHandler } from '../modules/pkl';
+import { AUTO_CONFIRM_CRON, AUTO_CONFIRM_QUEUE, autoConfirmHandler, EXPIRE_MENTORS_CRON, EXPIRE_MENTORS_QUEUE, expireMentorsHandler } from '../modules/pkl';
 import {
   APPLY_PAYMENTS_CRON,
   APPLY_PAYMENTS_QUEUE,
@@ -102,6 +102,9 @@ await boss.schedule(LOCK_HABITS_QUEUE, LOCK_HABITS_CRON, null, { tz: 'Asia/Jakar
 await boss.createQueue(EXPIRE_MENTORS_QUEUE);
 await boss.work(EXPIRE_MENTORS_QUEUE, expireMentorsHandler(logger));
 await boss.schedule(EXPIRE_MENTORS_QUEUE, EXPIRE_MENTORS_CRON, null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(AUTO_CONFIRM_QUEUE);
+await boss.work(AUTO_CONFIRM_QUEUE, autoConfirmHandler(logger));
+await boss.schedule(AUTO_CONFIRM_QUEUE, AUTO_CONFIRM_CRON, null, { tz: 'UTC' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);
