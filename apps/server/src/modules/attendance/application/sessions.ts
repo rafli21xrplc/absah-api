@@ -30,7 +30,7 @@ function toSummary(actor: Actor, r: SessionRow): SessionSummary {
 /** Hari ini: the sessions of the user (scope mine) or of the whole school (scope all). */
 export async function getToday(actor: Actor, schoolDate: string, scopeAll: boolean): Promise<TodayResponse> {
   if (scopeAll && !canSeeAllSessions.allows(actor)) throw new ForbiddenError();
-  const rows = await withTenant(scope(actor), (tx) => listSessions(tx, { date: schoolDate, ...(scopeAll ? {} : { forUser: actor.userId }) }));
+  const rows = await withTenant(scope(actor), (tx) => listSessions(tx, { date: schoolDate, withoutPkl: true, ...(scopeAll ? {} : { forUser: actor.userId }) }));
   return { schoolDate, sessions: rows.map((r) => toSummary(actor, r)) };
 }
 

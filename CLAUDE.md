@@ -713,3 +713,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   supervisor emits pkl.mentor_assigned {userId} -> notify_pkl_mentor_assigned sends template
   pkl_mentor_assigned (school, count, url /dudi; pending approval; one per supervisor per day) to the
   number from view pkl_mentor_contacts (migration 0071, like homeroom_contacts). Responses mask the number.
+- PKL sessions (attendance module, PKL-02): prs.generate-sessions plans one session per running placement
+  (pklPlacementsOn: not cancelled, active enrollment, date in period) on the DUDI's work days (planPklSessions:
+  mode pkl, owner placement, pkl_placement_id, no teacher), also on a not_school_day (Saturday), never on a
+  holiday. roster/rosterSize/ownerName (DUDI name) know owner placement; izin and UKS coverage include pkl
+  sessions; recomputeDaily counts pkl sessions (a PKL day is the student's school day) and changeMarks emits
+  attendance.absent_marked for a PKL alpa. Nobody fills a pkl session through /sessions/{id}/submit
+  (mayFillSession false) and Hari ini leaves them out (withoutPkl). The pkl module uses attendance's
+  openPklSession (creates the session when missing; locked when the day is already locked) and setPklStatus
+  (changeMarks with source pkl_confirm, sourceRef = check-in or null).

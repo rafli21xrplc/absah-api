@@ -13,8 +13,12 @@ export interface SessionOwnership {
   coachIds: readonly string[];
 }
 
-/** The session's teacher, the wali kelas for a daily session, a coach for an activity session, or a manager. */
+/**
+ * The session's teacher, the wali kelas for a daily session, a coach for an activity session, or a
+ * manager. Nobody fills a PKL session: its status comes from check-in decisions (PKL-02).
+ */
 export function mayFillSession(actor: Actor, session: SessionOwnership): boolean {
+  if (session.mode === 'pkl') return false;
   if (session.teacherId === actor.userId) return true;
   if (session.mode === 'daily' && session.homeroomTeacherId === actor.userId) return true;
   if (session.mode === 'activity' && session.coachIds.includes(actor.userId)) return true;
