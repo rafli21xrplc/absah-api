@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyCheckin, clockSkewSeconds, haversineMeters, roundCoordinate, withinWorkHours, type CheckinInput } from './checkin-rules';
+import { classifyCheckin, clockSkewSeconds, haversineMeters, missingCheckinDue, roundCoordinate, withinWorkHours, type CheckinInput } from './checkin-rules';
 
 // Monas, Jakarta, and points north of it: 0.001 degree of latitude is about 111 m.
 const MONAS = { latitude: -6.175392, longitude: 106.827153 };
@@ -111,5 +111,14 @@ describe('classifyCheckin', () => {
   it('collects several reasons', () => {
     const c = classifyCheckin(input({ point: north(1_000), hours: null, deviceTime: new Date(0) }));
     expect(c.reasons).toEqual(['outside_radius', 'outside_hours', 'clock_skew']);
+  });
+});
+
+describe('missingCheckinDue', () => {
+  it('reminds at 10.00, or an hour after a later opening', () => {
+    expect(missingCheckinDue(9 * 60 + 59, '07:30:00')).toBe(false);
+    expect(missingCheckinDue(10 * 60, '07:30:00')).toBe(true);
+    expect(missingCheckinDue(10 * 60, '13:00:00')).toBe(false);
+    expect(missingCheckinDue(14 * 60, '13:00:00')).toBe(true);
   });
 });

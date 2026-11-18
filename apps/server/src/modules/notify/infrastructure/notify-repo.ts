@@ -212,3 +212,18 @@ export async function pklMentorNotice(tx: Tx, userId: string, today: string): Pr
   const r = res.rows[0];
   return r?.phone_number && r.n > 0 ? { phone: r.phone_number, count: r.n } : undefined;
 }
+
+/** PKL-02: the student of a pkl session, their login number (view student_login_contacts) and the DUDI. */
+export async function pklMissingNotice(tx: Tx, sessionId: string): Promise<{ phone: string; studentName: string; partnerName: string } | undefined> {
+  const res = await tx.execute<{ phone_number: string | null; student_name: string; partner_name: string }>(sql`
+    select c.phone_number, st.name as student_name, dp.name as partner_name
+      from attendance_sessions s
+      join pkl_placements p on p.id = s.pkl_placement_id
+      join dudi_partners dp on dp.id = p.partner_id
+      join enrollments e on e.id = p.enrollment_id
+      join students st on st.id = e.student_id
+      left join student_login_contacts c on c.student_id = st.id
+     where s.id = ${sessionId}::uuid and s.mode = 'pkl'`);
+  const r = res.rows[0];
+  return r?.phone_number ? { phone: r.phone_number, studentName: r.student_name, partnerName: r.partner_name } : undefined;
+}

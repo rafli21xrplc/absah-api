@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { PklCheckin, PklCheckinBody, PklToday } from './checkins';
+import { DecidePklDayRequest, PklDayDecision, PklReviewList, PklSessionIdParam } from './reviews';
 import { ConfirmPklCheckinsRequest, DisputePklCheckinRequest, PklCheckinIdParam, PklSupervisionDay, PklSupervisionQuery } from './supervision';
 import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
 import { CreateDudiPartnerRequest, DudiPartner, DudiPartnerIdParam, DudiPartnerList, PklStaffList, PklStudentList, PklStudentQuery, UpdateDudiPartnerRequest } from './partners';
@@ -106,6 +107,23 @@ export const PKL_PATHS: PklPath[] = [
     request: { params: PklCheckinIdParam, body: DisputePklCheckinRequest },
     ok: PklSupervisionDay,
     label: 'Day',
+    write: true,
+  },
+  {
+    method: 'get',
+    path: '/pkl/reviews',
+    summary: "The guru pembimbing's open queue: check-ins in review or disputed, past work days without check-in (managers: all)",
+    ok: PklReviewList,
+    label: 'Queue',
+  },
+  {
+    method: 'post',
+    path: '/pkl/days/{sessionId}/decide',
+    summary: "Decide a PKL day's status (the placement's guru pembimbing or a manager); deciding again replaces it",
+    description: 'Writes source pkl_confirm (izin and corrections still outrank it). 409 pending_industry or confirmed when the industry supervisor has the check-in; a future day 400; others 404.',
+    request: { params: PklSessionIdParam, body: DecidePklDayRequest },
+    ok: PklDayDecision,
+    label: 'Decided',
     write: true,
   },
 ];

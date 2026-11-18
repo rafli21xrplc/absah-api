@@ -505,6 +505,13 @@
       "when": 1794976443258,
       "tag": "0071_pkl_mentor_notify",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1794977916956,
+      "tag": "0072_pkl_checkin_reminder",
+      "breakpoints": true
     }
   ]
 }

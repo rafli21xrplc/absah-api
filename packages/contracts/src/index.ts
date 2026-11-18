@@ -45,3 +45,4 @@ export * from './pkl/partners';
 export * from './pkl/placements';
 export * from './pkl/checkins';
 export * from './pkl/supervision';
+export * from './pkl/reviews';
