@@ -4,6 +4,7 @@ import { date, index, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniq
 import { enrollments } from './academic';
 import { activities } from './activity';
 import { createdAt, id, schoolId } from './_shared';
+import { pklPlacements } from './pkl';
 import { user } from './auth';
 import { schools } from './platform';
 import { scheduleSlots } from './schedule';
@@ -37,7 +38,7 @@ export const attendanceSessions = pgTable(
     status: sessionStatus('status').notNull().default('open'),
     topic: text('topic'),
     activityId: uuid('activity_id').references(() => activities.id, { onDelete: 'restrict' }),
-    pklPlacementId: uuid('pkl_placement_id'),
+    pklPlacementId: uuid('pkl_placement_id').references(() => pklPlacements.id, { onDelete: 'restrict' }),
     submittedAt: at('submitted_at'),
     submittedBy: userRef('submitted_by'),
     remindedAt: at('reminded_at'),
@@ -54,6 +55,8 @@ export const attendanceSessions = pgTable(
       .where(sql`${t.mode} = 'daily'`),
     // One session per activity per day, whether generated or opened by a coach (KEG-01).
     uniqueIndex('attendance_sessions_activity_date_key').on(t.schoolId, t.schoolDate, t.activityId).where(sql`${t.mode} = 'activity'`),
+    // One session per PKL placement per DUDI work day (PKL-02).
+    uniqueIndex('attendance_sessions_pkl_date_key').on(t.schoolId, t.schoolDate, t.pklPlacementId).where(sql`${t.mode} = 'pkl'`),
   ],
 );
 
