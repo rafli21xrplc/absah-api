@@ -8,6 +8,7 @@ export { lastPhoneOtp } from './application/dev-otp';
 export { seedPilot, type PilotSeedResult } from './application/pilot';
 export { inviteMember } from './application/invitations';
 export { createSchoolWithAdmin } from './application/create-school';
+export { setReleaseFlag } from './application/release-flags';
 export { HEARTBEAT_QUEUE, heartbeatHandler } from './jobs/heartbeat';
 export {
   IDEMPOTENCY_CLEANUP_QUEUE,

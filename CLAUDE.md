@@ -592,6 +592,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Release flags (packages/capabilities release.ts RELEASE_FLAGS): built-but-unvalidated features, off by
   default, set by the Absah team in platform_flags (value true; school row beats global). Not capabilities:
   killSwitches skips them. Remove a flag once the feature is released.
+  Ops CLI: `pnpm --filter @absah/server release:flag --flag <name> (--school <id> | --all) [--off]`
+  (platform setReleaseFlag, withPlatform upsert on (key, school_id)); e2e uses it too.
 
 ## MBG (RKP-08, modules/report, behind requireCap('mbg.enabled'))
 - mbg_settings (one row per school: cutoff_time default 08.30, pic_name, pic_phone encryptedText; the PIC

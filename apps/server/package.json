@@ -20,7 +20,8 @@
     "auth:last-otp": "tsx src/entrypoints/auth-last-otp.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "release:flag": "tsx src/entrypoints/release-flag.ts"
   },
   "dependencies": {
     "@absah/capabilities": "workspace:*",
