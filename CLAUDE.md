@@ -737,3 +737,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   409 not_pending) -> disputed (guru pembimbing decides). Confirmation = openPklSession + setPklStatus H/T
   (late) with sourceRef = check-in. Job pkl.auto-confirm (hourly, :07 UTC) confirms check-ins pending > 24 h
   (confirmed_by null); withPlatform only lists schools with such rows.
+- Guru pembimbing review (http/reviews.ts, application/reviews.ts): GET /pkl/reviews = open queue (the
+  placement's school_mentor_id; canManagePkl sees all; others get an empty list): check-ins needs_review or
+  disputed, and pkl sessions before today with no check-in and no record. POST /pkl/days/{sessionId}/decide
+  {status H|T|S|I|A}: the placement's guru pembimbing or a manager (else 404); a future day 400; a check-in
+  pending (409 pending_industry) or confirmed (409 confirmed) belongs to the industry supervisor; otherwise
+  the check-in (if any) becomes decided and setPklStatus writes the status (deciding again replaces it).
+  Audited pkl.day_decided.
+- Job pkl.missing-checkin (every 5 min UTC, each school's clock): from 10.00, or an hour after a later
+  opening (missingCheckinDue), today's pkl sessions without check-in or record emit pkl.checkin_missing
+  {sessionId} once (attendance markSessionsReminded sets reminded_at; pkl sessions have no teacher, so the
+  PRS reminder never touches them). notify_pkl_checkin_missing sends template pkl_checkin_missing (pending)
+  to the student's login number from view student_login_contacts (migration 0072); url /portal/pkl.

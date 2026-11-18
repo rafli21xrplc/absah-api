@@ -105,3 +105,10 @@ export function classifyCheckin(input: CheckinInput): CheckinClassification {
 
 /** The attendance status a confirmed check-in records. */
 export const confirmedStatus = (late: boolean) => (late ? 'T' : 'H');
+
+/** pkl.missing-checkin reminds at 10.00, or an hour after opening when the DUDI opens later. */
+export const PKL_MISSING_CHECKIN_AT = 10 * 60;
+
+export function missingCheckinDue(localMinutes: number, startsAt: string): boolean {
+  return localMinutes >= Math.max(PKL_MISSING_CHECKIN_AT, clockMinutes(startsAt) + 60);
+}
