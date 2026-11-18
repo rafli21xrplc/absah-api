@@ -2,7 +2,7 @@ import { EXPORT_FORMATS, EXPORT_STATUSES, EXPORT_TARGETS } from '@absah/contract
 import { sql } from 'drizzle-orm';
 import { date, index, integer, pgEnum, pgTable, text, time, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
-import { classes, semesters } from './academic';
+import { classes, classStream, semesters } from './academic';
 import { user } from './auth';
 import { createdAt, id, schoolId } from './_shared';
 import { schools } from './platform';
@@ -29,6 +29,8 @@ export const exportJobs = pgTable(
       .references(() => semesters.id, { onDelete: 'cascade' }),
     /** null: every rombel of the semester's year. */
     classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }),
+    /** AKD-11: only rombel of this jurusan (whole-year exports only). */
+    stream: classStream('stream'),
     status: exportStatus('status').notNull().default('queued'),
     fileKey: text('file_key').notNull(),
     fileName: text('file_name'),

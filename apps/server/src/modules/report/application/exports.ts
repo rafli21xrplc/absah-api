@@ -36,6 +36,7 @@ function view(row: ExportJobRow): ExportJob {
     format: row.format,
     semester: { id: row.semesterId, academicYear: row.academicYear, number: row.semesterNumber },
     class: row.classId && row.className ? { id: row.classId, name: row.className } : null,
+    stream: row.stream,
     status: row.status,
     fileName: row.fileName,
     error: row.error,
@@ -67,10 +68,11 @@ export function requestExport(actor: Actor, auditCtx: AuditContext, target: Expo
       format: input.format,
       semesterId: semester.id,
       classId: input.classId ?? null,
+      stream: input.stream ?? null,
       fileKey: storageKey(actor.schoolId, 'exports', id),
       requestedBy: actor.userId,
     });
-    await audit(tx, auditCtx, 'export.requested', { type: 'export_job', id }, { after: { target, format: input.format, semesterId: semester.id, classId: input.classId ?? null } });
+    await audit(tx, auditCtx, 'export.requested', { type: 'export_job', id }, { after: { target, format: input.format, semesterId: semester.id, classId: input.classId ?? null, stream: input.stream ?? null } });
     await emit(tx, 'export.requested', { exportJobId: id });
     const row = await findJob(tx, id);
     if (!row) throw new Error('export job vanished');
@@ -110,9 +112,9 @@ async function semesterRecap(tx: Tx, schoolId: string, job: ExportJobRow): Promi
   const students = job.classId ? await studentsOfClass(tx, job.classId, semester.startsOn, semester.endsOn) : undefined;
   const rows = await enrollmentDays(tx, semester.academicYearId, semester.startsOn, semester.endsOn, students);
   const byClass = semesterStudentsByClass(rows.map((r) => ({ ...r, counts: { H: r.H, T: r.T, S: r.S, I: r.I, A: r.A } })));
-  const classes = await classesOfYear(tx, semester.academicYearId, job.classId);
+  const classes = await classesOfYear(tx, semester.academicYearId, job.classId, job.stream);
   return {
-    className: job.className,
+    className: job.className ?? (job.stream ? `jurusan ${job.stream.toUpperCase()}` : null),
     recap: {
       school: { name: school.name, npsn: school.npsn },
       semester: { academicYear: semester.academicYear, number: semester.number, startsOn: semester.startsOn, endsOn: semester.endsOn },

@@ -1,4 +1,4 @@
-import type { AttendanceCounts, ClassRecapDetail, ClassRecapList, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from '@absah/contracts';
+import type { AttendanceCounts, ClassStream, ClassRecapDetail, ClassRecapList, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from '@absah/contracts';
 import { withTenant } from '../../../shared/db';
 import { ForbiddenError, NotFoundError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
@@ -17,11 +17,12 @@ export function listSemesters(actor: Actor): Promise<ReportSemesterList> {
 }
 
 /** RKP-01: rekap per rombel. Managers see every rombel of the active year, a wali kelas their own. */
-export function classRecaps(actor: Actor, { from, to }: ReportPeriodQuery): Promise<ClassRecapList> {
+export function classRecaps(actor: Actor, { from, to }: ReportPeriodQuery, stream?: ClassStream): Promise<ClassRecapList> {
   return withTenant(tenant(actor), async (tx) => {
     const all = canReadAllRecaps.allows(actor);
-    const classes = await activeClasses(tx, all ? null : actor.userId);
-    if (!all && classes.length === 0) throw new ForbiddenError(NOT_ALLOWED);
+    // A wali kelas without a rombel is refused whatever the filter; the filter may then leave none.
+    if (!all && (await activeClasses(tx, actor.userId)).length === 0) throw new ForbiddenError(NOT_ALLOWED);
+    const classes = await activeClasses(tx, all ? null : actor.userId, stream);
     const counts = new Map((await classCounts(tx, classes.map((c) => c.id), from, to)).map((r) => [r.classId, r]));
     return {
       from,
@@ -32,6 +33,7 @@ export function classRecaps(actor: Actor, { from, to }: ReportPeriodQuery): Prom
           id: c.id,
           name: c.name,
           grade: c.grade,
+          stream: c.stream,
           homeroom: person(c.homeroomId, c.homeroomName),
           students: row?.students ?? 0,
           ...recapTotals(row ? countsOf(row) : emptyCounts()),

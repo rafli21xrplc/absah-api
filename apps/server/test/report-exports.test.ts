@@ -68,8 +68,8 @@ beforeAll(async () => {
     const [a, b] = await tx
       .insert(schema.classes)
       .values([
-        { schoolId: school, academicYearId, name: 'X-1', grade: 10, homeroomTeacherId: w.id },
-        { schoolId: school, academicYearId, name: 'X-2', grade: 10 },
+        { schoolId: school, academicYearId, name: 'X-1', grade: 10, stream: 'ipa', homeroomTeacherId: w.id },
+        { schoolId: school, academicYearId, name: 'X-2', grade: 10, stream: 'ips' },
       ])
       .returning();
     ids.classA = a?.id ?? '';
@@ -125,6 +125,23 @@ describe('export jobs (RKP-02, RKP-03)', () => {
     await build(job.id);
     const pdf = await download(wakasek, job.id);
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('exports and lists one jurusan only (AKD-11)', async () => {
+    const job = bodyOf<ExportJob>(await post(wakasek, { format: 'xlsx', semesterId: ids.semester, stream: 'ipa' }).expect(202));
+    expect(job).toMatchObject({ class: null, stream: 'ipa' });
+    await build(job.id);
+    expect(bodyOf<ExportJob>(await get(wakasek, `/exports/${job.id}`).expect(200)).fileName).toBe('rekap-kehadiran-2026-2027-sem2-jurusan-IPA.xlsx');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load((await download(wakasek, job.id)) as unknown as ArrayBuffer);
+    expect(workbook.worksheets.map((w) => w.name)).toEqual(['X-1']);
+
+    const list = bodyOf<{ items: { name: string; stream: string | null }[] }>(await get(wakasek, '/reports/attendance/classes?from=2027-01-04&to=2027-01-08&stream=ips').expect(200));
+    expect(list.items).toEqual([expect.objectContaining({ name: 'X-2', stream: 'ips' })]);
+    await get(wakasek, '/reports/attendance/classes?from=2027-01-04&to=2027-01-08&stream=teknik').expect(400);
+    // A wali kelas keeps their own rombel under its jurusan, and nothing under another.
+    expect(bodyOf<{ items: unknown[] }>(await get(wali, '/reports/attendance/classes?from=2027-01-04&to=2027-01-08&stream=ips').expect(200)).items).toEqual([]);
+    await post(wakasek, { format: 'xlsx', semesterId: ids.semester, classId: ids.classA, stream: 'ipa' }).expect(400);
   });
 
   it('replays the same request for the same key', async () => {

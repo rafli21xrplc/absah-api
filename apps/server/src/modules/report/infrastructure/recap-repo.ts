@@ -1,3 +1,4 @@
+import type { ClassStream } from '@absah/contracts';
 import { schema, type Tx } from '@absah/db';
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 
@@ -28,12 +29,12 @@ export function activeSemesters(tx: Tx) {
 }
 
 /** Rombel of the active year; onlyHomeroomOf limits them to one wali kelas. */
-export function activeClasses(tx: Tx, onlyHomeroomOf: string | null) {
+export function activeClasses(tx: Tx, onlyHomeroomOf: string | null, stream?: ClassStream) {
   return tx
-    .select({ id: c.id, name: c.name, grade: c.grade, homeroomId: c.homeroomTeacherId, homeroomName: memberName(c.homeroomTeacherId) })
+    .select({ id: c.id, name: c.name, grade: c.grade, stream: c.stream, homeroomId: c.homeroomTeacherId, homeroomName: memberName(c.homeroomTeacherId) })
     .from(c)
     .innerJoin(schema.academicYears, and(eq(schema.academicYears.id, c.academicYearId), eq(schema.academicYears.isActive, true)))
-    .where(onlyHomeroomOf ? eq(c.homeroomTeacherId, onlyHomeroomOf) : undefined)
+    .where(and(onlyHomeroomOf ? eq(c.homeroomTeacherId, onlyHomeroomOf) : undefined, stream ? eq(c.stream, stream) : undefined))
     .orderBy(asc(c.grade), asc(c.name));
 }
 
