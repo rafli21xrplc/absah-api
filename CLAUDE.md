@@ -145,6 +145,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   infrastructure/importers/<source>; importerFor(source) picks one. Parsers read only the columns
   Absah needs. Matching is pure (domain/student-matching.ts): NISN, then NIK hash, then name +
   birth date; blanks never erase stored values; students missing from the file are "calon keluar".
+- EMIS (AKD-09): POST /imports/emis (requireCapValue data.source emis, madrasah preset) with the same
+  parse/preview/commit; EmisImporter (infrastructure/importers/emis) reads one header row. Both importers
+  share importers/student-sheet.ts (firstSheet, readStudentRows). EMIS columns are TODO(pilot)
+  (packages/db/fixtures/emis/README.md, emisFixture('data-siswa.xlsx'), fixtures:emis).
 - Import flow: POST /imports/dapodik (presigned PUT, key from the actor's school) -> browser PUTs
   the file -> POST /imports/{id}/parse emits student_import.uploaded -> consumer
   academic_parse_student_import (worker) parses and stores the preview -> GET /imports/{id}.
