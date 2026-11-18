@@ -458,6 +458,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   activity_coaches (pembina = any active staff, not the membership role), activity_members (active
   enrollments of that year). Migrations 0050-0051; attendance_sessions.activity_id now has an FK
   (on delete restrict: deactivate activities, never delete them).
+- KEG-03: kind ibadah (sholat berjamaah) needs religious.worship (madrasah preset); POST/PATCH with
+  kind ibadah answer 404 CAPABILITY_DISABLED otherwise (checkKind in http/activities.ts).
 - GET /activities (admin, operator, wakasek, kepsek: all; others: the ones they coach), POST and PATCH
   (admin, wakasek; coaches replaced as a whole), GET /activities/{id}, GET|PUT .../members (managers or
   coaches; others 404), GET /activities/students?q= (managers or anyone coaching something).

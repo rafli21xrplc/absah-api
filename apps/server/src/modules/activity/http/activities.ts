@@ -1,6 +1,7 @@
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SessionDetail, SetActivityMembersRequest, UpdateActivityRequest } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
+import { CapabilityDisabledError } from '../../../shared/errors';
 import { getActor, getCtx } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
@@ -13,6 +14,11 @@ const timezoneOf = (req: Request) => {
   return ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta';
 };
 
+/** KEG-03: ibadah berjamaah only for schools with religious.worship (madrasah preset); other kinds always. */
+function checkKind(req: Request, kind: string | undefined) {
+  if (kind === 'ibadah' && getCtx(req).caps['religious.worship'] !== true) throw new CapabilityDisabledError('religious.worship');
+}
+
 /** Kegiatan (KEG-01). */
 export function activitiesRouter(auth: Auth): Router {
   const router = Router();
@@ -23,7 +29,9 @@ export function activitiesRouter(auth: Auth): Router {
   });
   router.post('/activities', school, idempotent(), async (req, res) => {
     const actor = getActor(req);
-    sendContract(res, Activity, await createActivity(actor, auditContext(req, actor), CreateActivityRequest.parse(req.body)));
+    const input = CreateActivityRequest.parse(req.body);
+    checkKind(req, input.kind);
+    sendContract(res, Activity, await createActivity(actor, auditContext(req, actor), input));
   });
   // Before /activities/:activityId, so "students" is not taken for an id.
   router.get('/activities/students', school, async (req, res) => {
@@ -34,7 +42,9 @@ export function activitiesRouter(auth: Auth): Router {
   });
   router.patch('/activities/:activityId', school, idempotent(), async (req, res) => {
     const actor = getActor(req);
-    sendContract(res, Activity, await patchActivity(actor, auditContext(req, actor), ActivityIdParam.parse(req.params).activityId, UpdateActivityRequest.parse(req.body)));
+    const input = UpdateActivityRequest.parse(req.body);
+    checkKind(req, input.kind);
+    sendContract(res, Activity, await patchActivity(actor, auditContext(req, actor), ActivityIdParam.parse(req.params).activityId, input));
   });
   router.get('/activities/:activityId/members', school, async (req, res) => {
     sendContract(res, ActivityMemberList, await getMembers(getActor(req), ActivityIdParam.parse(req.params).activityId));
