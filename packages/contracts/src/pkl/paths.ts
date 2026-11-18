@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { PklCheckin, PklCheckinBody, PklToday } from './checkins';
 import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
 import { CreateDudiPartnerRequest, DudiPartner, DudiPartnerIdParam, DudiPartnerList, PklStaffList, PklStudentList, PklStudentQuery, UpdateDudiPartnerRequest } from './partners';
 
@@ -65,4 +66,17 @@ export const PKL_PATHS: PklPath[] = [
     write: true,
   },
   { method: 'post', path: '/pkl/placements/{placementId}/cancel', summary: 'Cancel a placement (again = no-op)', request: { params: PklPlacementIdParam }, ok: PklPlacement, label: 'Cancelled', write: true },
+  { method: 'get', path: '/pkl/me', summary: "The student's placement today and today's check-in/out (siswa)", ok: PklToday, label: 'Today' },
+  {
+    method: 'post',
+    path: '/pkl/checkins',
+    summary: 'Check in or out at the DUDI (siswa); Idempotency-Key required',
+    description:
+      'Distance (haversine) to the DUDI, working hours and device clock (> 10 min = review) decide: pending (industry supervisor confirms) or needs_review (guru pembimbing decides). The point is stored rounded to 4 decimals. 409 no_placement, already_recorded.',
+    request: { body: PklCheckinBody },
+    ok: PklCheckin,
+    label: 'Recorded',
+    write: true,
+    status: 201,
+  },
 ];
