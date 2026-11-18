@@ -1,7 +1,8 @@
 import { schema } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { withTenant } from '../src/shared/db';
+import { eq } from 'drizzle-orm';
+import { getDb, withTenant } from '../src/shared/db';
 import { buildTestApp, enableTotp, signIn, type Agent } from './harness';
 
 const t = buildTestApp();
@@ -105,5 +106,24 @@ describe('activities (KEG-01)', () => {
     const res = await send(wakasek, 'patch', `/activities/${pramuka}`, { days: [3], coachIds: [ids.pembina, ids.guru], active: false }).expect(200);
     expect(res.body as Activity).toMatchObject({ days: [3], active: false, coaches: [{ id: ids.pembina }, { id: ids.guru }] });
     await send(wakasek, 'patch', `/activities/${pramuka}`, { name: 'Kemah Bakti' }).expect(409);
+  });
+
+  it('allows ibadah berjamaah only with religious.worship (KEG-03)', async () => {
+    const res = await send(wakasek, 'post', '/activities', { name: 'Dzuhur berjamaah', kind: 'ibadah', location: 'sekolah', days: [1, 2, 3, 4, 5], coachIds: [ids.pembina] }).expect(404);
+    expect((res.body as { code: string }).code).toBe('CAPABILITY_DISABLED');
+    await send(wakasek, 'patch', `/activities/${pramuka}`, { kind: 'ibadah' }).expect(404);
+
+    const ma = await t.school('sma', 'MA Ibadah');
+    await getDb().db.update(schema.schools).set({ isMadrasah: true }).where(eq(schema.schools.id, ma));
+    await t.member(ma, ids.wakasek ?? '', 'wakasek');
+    await t.member(ma, ids.pembina ?? '', 'guru');
+    await withTenant({ schoolId: ma, userId: null }, (tx) => tx.insert(schema.academicYears).values({ schoolId: ma, name: '2026/2027', startsOn: '2026-07-01', endsOn: '2027-06-30', isActive: true }));
+    const created = await wakasek
+      .post('/api/v1/activities')
+      .set('X-School-Id', ma)
+      .set('Idempotency-Key', key())
+      .send({ name: 'Dzuhur berjamaah', kind: 'ibadah', location: 'sekolah', days: [1, 2, 3, 4, 5], coachIds: [ids.pembina] })
+      .expect(200);
+    expect(created.body as Activity).toMatchObject({ name: 'Dzuhur berjamaah', days: [1, 2, 3, 4, 5] });
   });
 });
