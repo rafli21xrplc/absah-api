@@ -2,6 +2,7 @@
 // bundles that import contracts do not pull in the generator.
 import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import { CreatePointRuleRequest, PointRule, PointRuleIdParam, PointRuleList, PointRulesQuery, UpdatePointRuleRequest } from './student-affairs/points';
 import {
   SchoolCapabilitiesResponse,
   SchoolProfileResponse,
@@ -1106,6 +1107,40 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: UksVisitsQuery },
     responses: { 200: json(UksVisitList, 'Visits'), ...errors(400, 401, 403, 404) },
+  });
+  const pointNote = 'Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/point-rules`,
+    tags: ['student-affairs'],
+    summary: 'Point rules (KSW-01): active ones, all=true adds switched-off ones for admin and wakasek',
+    description: `${pointNote} Read: admin, kepsek, wakasek, wali kelas, guru.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: PointRulesQuery },
+    responses: { 200: json(PointRuleList, 'Rules'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/point-rules`,
+    tags: ['student-affairs'],
+    summary: 'Create a point rule (admin, wakasek)',
+    description: `${pointNote} 409 when the name is taken.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreatePointRuleRequest } } } },
+    responses: { 201: json(PointRule, 'Created'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/point-rules/{ruleId}`,
+    tags: ['student-affairs'],
+    summary: 'Edit or switch off a point rule (admin, wakasek)',
+    description: `${pointNote} The kind cannot change; new points keep its sign.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: PointRuleIdParam, body: { content: { 'application/json': { schema: UpdatePointRuleRequest } } } },
+    responses: { 200: json(PointRule, 'Updated'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });
