@@ -7,7 +7,7 @@ import {
   heartbeatHandler,
   idempotencyCleanupHandler,
 } from '../modules/platform';
-import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
+import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, pushConsumers, releaseHandler, webhookHandler } from '../modules/notify';
 import { PICKUP_PHOTOS_QUEUE, pickupPhotosHandler, VISITOR_PHOTOS_QUEUE, visitorPhotosHandler } from '../modules/gate';
 import {
   EXPORT_RETENTION_QUEUE,
@@ -44,6 +44,7 @@ import {
 import { createPaymentProvider } from '../shared/payments';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
+import { createPushSender } from '../shared/push';
 import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { deleteOldOutboxRows, OUTBOX_RETENTION_QUEUE, startOutbox, type Consumer } from '../shared/outbox';
@@ -138,12 +139,15 @@ if (paymentProvider) {
 
 // Outbox consumers from every module.
 const sender = createMessageSender(config, logger);
+// Web Push for staff exists only when the VAPID keys are set (NTF-06).
+const pushSender = createPushSender(config);
 const consumers: Consumer[] = [
   ...academicConsumers(storage),
   ...attendanceConsumers(),
   ...reportConsumers(storage),
   ...subscriptionConsumers(paymentProvider),
   ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
+  ...(pushSender ? pushConsumers({ push: pushSender }) : []),
 ];
 const outbox = await startOutbox(boss, consumers, logger);
 logger.info('worker started');
