@@ -143,6 +143,8 @@ export const CAPABILITIES = {
   'mbg.enabled':            { kind: 'bool', default: false },
   'student.tppk':           { kind: 'bool', default: true },
   'student.uks':            { kind: 'bool', default: true },
+  'student.points':         { kind: 'bool', default: true },
+  'student.counseling':     { kind: 'bool', default: true },
   'data.source':            { kind: 'enum', values: ['dapodik', 'emis'], default: 'dapodik' },
   'report.target':          { kind: 'enum', values: ['erapor', 'rdm'], default: 'erapor' },
 } as const;
@@ -344,6 +346,7 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | KSW | `POST /tppk/reports` (publik, rate limited), `GET /tppk/reports/track/{code}` | `student.tppk` | siapa pun |
 | KSW | `GET\|POST /tppk/cases`, `POST /tppk/cases/{id}/events` | `student.tppk` | anggota TPPK |
 | KSW | `POST /uks/visits` | `student.uks` | petugas UKS |
+| KSW | `GET\|POST /point-rules`, `PUT /point-rules/{id}` | `student.points` | baca: admin, kepsek, wakasek, wali kelas, guru; tulis: admin, wakasek |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |
@@ -441,6 +444,7 @@ Absah memproses data anak, sehingga acuan utamanya adalah UU 27/2022 tentang Pel
 | Guru mapel | Sesi dan kelompok yang ia ajar | + menulis jurnal mengajar |
 | Piket, petugas kios | Gerbang hari ini | + check-out penjemput, buku tamu |
 | Petugas UKS | Kunjungan UKS | Peran baru |
+| Guru BK | Catatan BK sekolahnya (bersama admin) | Peran baru; wali kelas dan guru lain tidak membaca |
 | Anggota TPPK | Laporan dan kasus TPPK sekolahnya | Peran baru, ditunjuk admin; minimal 3 orang |
 | Pembina kegiatan, guru tahfidz | Kegiatannya | Peran baru |
 | Humas/kaprog, guru pembimbing PKL | Penempatan PKL | Peran baru |

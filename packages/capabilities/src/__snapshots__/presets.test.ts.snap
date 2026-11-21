@@ -18,6 +18,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > sd + madrasah 1`] = `
   "religious.memorization": true,
   "religious.worship": true,
   "report.target": "rdm",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -41,6 +43,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > sd 1`] = `
   "religious.memorization": false,
   "religious.worship": false,
   "report.target": "erapor",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -64,6 +68,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > sma + madrasah 1`] = `
   "religious.memorization": true,
   "religious.worship": true,
   "report.target": "rdm",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -87,6 +93,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > sma 1`] = `
   "religious.memorization": false,
   "religious.worship": false,
   "report.target": "erapor",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -110,6 +118,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > smk + madrasah 1`] = `
   "religious.memorization": true,
   "religious.worship": true,
   "report.target": "rdm",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -133,6 +143,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > smk 1`] = `
   "religious.memorization": false,
   "religious.worship": false,
   "report.target": "erapor",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -156,6 +168,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > smp + madrasah 1`] = `
   "religious.memorization": true,
   "religious.worship": true,
   "report.target": "rdm",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
@@ -179,6 +193,8 @@ exports[`resolveCapabilities: 4 levels x madrasah > smp 1`] = `
   "religious.memorization": false,
   "religious.worship": false,
   "report.target": "erapor",
+  "student.counseling": true,
+  "student.points": true,
   "student.tppk": true,
   "student.uks": true,
 }
