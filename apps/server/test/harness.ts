@@ -13,6 +13,7 @@ import { loadConfig } from '../src/shared/config';
 import { initCrypto } from '../src/shared/crypto';
 import { closeDb, getDb, initDb } from '../src/shared/db';
 import { FakeMessageSender } from '../src/shared/messaging/message-sender';
+import { FakePushSender } from '../src/shared/push';
 import { FsObjectStorage } from '../src/shared/storage';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,6 +21,8 @@ import path from 'node:path';
 
 export const TEST_ORIGIN = 'http://localhost:3000';
 export const PASSWORD = 'kata-sandi-uji-123';
+/** Public half of a throwaway VAPID pair; the app only hands it to browsers. */
+export const TEST_VAPID_PUBLIC_KEY = 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM';
 /** Fixed test-only key (32 zero-ish bytes); never used outside tests. */
 export const TEST_ENCRYPTION_KEYS = `test1:${Buffer.alloc(32, 7).toString('base64')}`;
 
@@ -43,8 +46,9 @@ export function buildTestApp(options: { logger?: Logger } = {}) {
   const messageSender = new FakeMessageSender();
   const auth = createAuth({ db, config, messageSender });
   const paymentProvider = new FakePaymentProvider(TEST_PAYMENT_SECRET);
+  const pushSender = new FakePushSender();
   const storage = new FsObjectStorage(mkdtempSync(path.join(tmpdir(), 'absah-storage-')), TEST_ORIGIN, 'test-storage-secret');
-  const app = createApp({ logger: options.logger ?? pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' }, paymentProvider });
+  const app = createApp({ logger: options.logger ?? pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage, kioskOrigins: ['http://kios.test'], whatsappWebhook: { appSecret: 'wa-test-secret', verifyToken: 'wa-test-verify' }, paymentProvider, vapidPublicKey: TEST_VAPID_PUBLIC_KEY });
 
   const created = { schools: [] as string[], users: [] as string[] };
 
@@ -54,6 +58,7 @@ export function buildTestApp(options: { logger?: Logger } = {}) {
     config,
     messageSender,
     paymentProvider,
+    pushSender,
     storage,
     /** A cookie-keeping client from its own IP, so auth rate limits do not leak between tests. */
     agent(ip = `10.${rnd()}.${rnd()}.${rnd()}`) {

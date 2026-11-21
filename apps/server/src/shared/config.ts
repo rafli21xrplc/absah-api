@@ -51,6 +51,11 @@ const ConfigSchema = z.object({
   /** Echoed once when the webhook URL is registered (hub.verify_token). */
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   WHATSAPP_OTP_TEMPLATE: z.string().default('absah_login_otp_v1'),
+  /** Web Push for staff (NTF-06). All three or none: without them push is off (GET /push/config answers null). Generate with `npx web-push generate-vapid-keys`. */
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  /** mailto: or https: contact the push services can reach if we misbehave. */
+  VAPID_SUBJECT: z.string().regex(/^(mailto:|https:\/\/)/, 'must start with mailto: or https://').optional(),
   /** none = online payment off; fake = dev/test gateway (never in production). Real gateways come later. */
   PAYMENT_PROVIDER: z.enum(['none', 'fake']).default('none'),
   /** Verifies payment webhooks (the fake gateway signs with it). */
@@ -79,6 +84,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }
     if (c.PAYMENT_PROVIDER !== 'none' && !c.PAYMENT_WEBHOOK_SECRET) {
       ctx.addIssue({ code: 'custom', path: ['PAYMENT_WEBHOOK_SECRET'], message: 'required when PAYMENT_PROVIDER is set' });
+    }
+    const vapid = [c.VAPID_PUBLIC_KEY, c.VAPID_PRIVATE_KEY, c.VAPID_SUBJECT];
+    if (vapid.some(Boolean) && !vapid.every(Boolean)) {
+      ctx.addIssue({ code: 'custom', path: ['VAPID_PUBLIC_KEY'], message: 'VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT are set together or not at all' });
     }
     if (c.WHATSAPP_PROVIDER === 'meta_cloud') {
       for (const k of ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_APP_SECRET', 'WHATSAPP_VERIFY_TOKEN'] as const) {
