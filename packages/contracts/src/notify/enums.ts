@@ -22,3 +22,11 @@ export type TemplateApproval = z.infer<typeof TemplateApproval>;
 export const TEMPLATE_CODES = ['absent_marked', 'leave_approved', 'leave_rejected', 'login_otp', 'mbg_count', 'mbg_count_corrected', 'liaison_message', 'mbg_forecast', 'student_sent_home', 'student_picked_up', 'unlisted_pickup', 'tppk_report_received', 'tppk_team_changed', 'pkl_mentor_assigned', 'pkl_checkin_missing'] as const;
 export const TemplateCode = z.enum(TEMPLATE_CODES).meta({ id: 'TemplateCode' });
 export type TemplateCode = z.infer<typeof TemplateCode>;
+
+/**
+ * Messages a parent may switch off (ORT-06). The rest are safety or account messages that must
+ * arrive: OTP, a penjemput waiting for approval, TPPK, and staff or PIC messages that are not for parents.
+ */
+export const MUTABLE_TEMPLATE_CODES = ['absent_marked', 'leave_approved', 'leave_rejected', 'student_sent_home', 'student_picked_up', 'liaison_message'] as const;
+export const MutableTemplateCode = z.enum(MUTABLE_TEMPLATE_CODES).meta({ id: 'MutableTemplateCode' });
+export type MutableTemplateCode = z.infer<typeof MutableTemplateCode>;

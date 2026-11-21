@@ -512,6 +512,20 @@
       "when": 1794977916956,
       "tag": "0072_pkl_checkin_reminder",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1795273661515,
+      "tag": "0073_notification_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795273665992,
+      "tag": "0074_notification_preferences_rls",
+      "breakpoints": true
     }
   ]
 }

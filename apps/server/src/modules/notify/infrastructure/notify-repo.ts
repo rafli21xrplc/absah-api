@@ -1,5 +1,6 @@
 import { schema, type Tx } from '@absah/db';
 import { and, asc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import type { Preference } from '../domain/preferences';
 
 const n = schema.notifications;
 
@@ -226,4 +227,32 @@ export async function pklMissingNotice(tx: Tx, sessionId: string): Promise<{ pho
      where s.id = ${sessionId}::uuid and s.mode = 'pkl'`);
   const r = res.rows[0];
   return r?.phone_number ? { phone: r.phone_number, studentName: r.student_name, partnerName: r.partner_name } : undefined;
+}
+
+/** ORT-06: the stored choices of these guardians (those without a row keep the defaults). */
+export async function preferencesOf(tx: Tx, guardianIds: string[]): Promise<Map<string, Preference>> {
+  if (guardianIds.length === 0) return new Map();
+  const p = schema.notificationPreferences;
+  const rows = await tx.select({ guardianId: p.guardianId, mutedTypes: p.mutedTypes, noLateMessages: p.noLateMessages }).from(p).where(inArray(p.guardianId, guardianIds));
+  return new Map(rows.map((r) => [r.guardianId, { mutedTypes: r.mutedTypes, noLateMessages: r.noLateMessages }]));
+}
+
+/** ORT-06: the signed-in parent's guardian rows at the current school (usually one), oldest id first. */
+export async function guardianRowsOfUser(tx: Tx, userId: string) {
+  const g = schema.guardians;
+  const p = schema.notificationPreferences;
+  return tx
+    .select({ guardianId: g.id, phone: g.phone, mutedTypes: p.mutedTypes, noLateMessages: p.noLateMessages })
+    .from(g)
+    .leftJoin(p, eq(p.guardianId, g.id))
+    .where(eq(g.userId, userId))
+    .orderBy(asc(g.id));
+}
+
+export async function savePreference(tx: Tx, row: { schoolId: string; guardianId: string; mutedTypes: string[]; noLateMessages: boolean }) {
+  const p = schema.notificationPreferences;
+  await tx
+    .insert(p)
+    .values(row)
+    .onConflictDoUpdate({ target: p.guardianId, set: { mutedTypes: row.mutedTypes, noLateMessages: row.noLateMessages, updatedAt: new Date() } });
 }

@@ -44,7 +44,8 @@ export interface SendWindow {
   start: number;
   end: number;
 }
-const OUTSIDE_QUIET_HOURS: SendWindow = { start: QUIET_HOURS.end, end: QUIET_HOURS.start };
+/** The default sending hours: everything outside the quiet hours. */
+export const OUTSIDE_QUIET_HOURS: SendWindow = { start: QUIET_HOURS.end, end: QUIET_HOURS.start };
 
 /**
  * When a message created at `now` may go out: now inside the window (default: outside the quiet

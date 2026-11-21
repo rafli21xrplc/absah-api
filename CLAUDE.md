@@ -369,6 +369,15 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Consumers get (tx, event, delivery); Consumer.retryLimit overrides the queue's retry policy.
 - Links point to /portal until prompt 3.3 adds tokenized action links. Staff (wali kelas, teacher
   reminders) get push in NTF-06 (prompt 5.7): their phone numbers live in Better Auth tables.
+- Preferences (ORT-06, notification_preferences, migrations 0073-0074): one row per guardian (guardians are
+  per school; no row = defaults), muted_types text[] + no_late_messages. GET|PUT /portal/notification-preferences
+  (orang_tua only, own rows by guardians.user_id, PUT idempotent and audited without the number; the PUT writes
+  every guardian row the account owns at that school). Only MUTABLE_TEMPLATE_CODES (contracts notify/enums.ts:
+  alpa, izin decisions, sent home, picked up, buku penghubung) can be switched off; unlisted_pickup, OTP and
+  TPPK always arrive, enforced in the API contract AND in isMuted (domain/preferences.ts) against stale rows.
+  queueMessages is the one place that applies them: a muted type creates no row (dedup key stays free), and
+  "no late messages" ends that guardian's window at 19.00 school time (windowFor, NOTIFICATION_LATE_CUTOFF_MINUTES),
+  so a later message waits for 06.00 like the quiet hours. Recipients without a guardianId (PIC MBG) are unaffected.
 - Exception to rule 3: the login OTP is sent inline from Better Auth's sendOTP (user waiting, no
   school for a tenant outbox, route rate limited). Everything else goes through the worker.
 

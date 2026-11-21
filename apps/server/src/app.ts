@@ -13,7 +13,7 @@ import { tppkRouter, uksRouter } from './modules/student-affairs';
 import { pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
-import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
+import { notificationsRouter, preferencesRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
@@ -103,6 +103,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(pickupRouter(auth, storage));
   v1.use(kioskRouter(storage));
   v1.use(notificationsRouter(auth));
+  v1.use(preferencesRouter(auth));
   v1.use(portalRouter(auth));
   v1.use(liaisonRouter(auth));
   v1.use(reportsRouter(auth));
