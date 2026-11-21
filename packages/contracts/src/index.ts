@@ -31,6 +31,7 @@ export * from './student-affairs/tppk';
 export * from './student-affairs/uks';
 export * from './notify/enums';
 export * from './notify/notifications';
+export * from './notify/preferences';
 export * from './portal/links';
 export * from './portal/liaison';
 export * from './academic/contacts';
