@@ -104,7 +104,7 @@ import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorReq
 import { NotificationOverview } from './notify/notifications';
 import { NotificationPreferences, UpdateNotificationPreferencesRequest } from './notify/preferences';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
-import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance } from './portal/links';
+import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance, PortalAttendanceQuery } from './portal/links';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
 import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
@@ -1364,10 +1364,12 @@ function buildRegistry(): OpenAPIRegistry {
     method: 'get',
     path: `${API_BASE_PATH}/portal/attendance`,
     tags: ['portal'],
-    summary: "PWA: the siswa's own attendance or the orang tua's children's, today and the last 30 days",
+    summary: "PWA: the siswa's own attendance or the orang tua's children's, today and the last 30 days (up to 180 with `days`)",
+    description: '`studentId` narrows to one child; an id that is not the caller\'s child gives an empty list, never another family\'s data.',
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
-    responses: { 200: json(PortalAttendance, 'History'), ...errors(401, 403) },
+    request: { query: PortalAttendanceQuery },
+    responses: { 200: json(PortalAttendance, 'History'), ...errors(400, 401, 403) },
   });
   registry.registerPath({
     method: 'get',

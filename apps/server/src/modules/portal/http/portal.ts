@@ -1,4 +1,4 @@
-import { PortalAttendance } from '@absah/contracts';
+import { PortalAttendance, PortalAttendanceQuery } from '@absah/contracts';
 import { Router } from 'express';
 import { getActor, getCtx } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
@@ -12,7 +12,7 @@ export function portalRouter(auth: Auth): Router {
   router.get('/portal/attendance', school, async (req, res) => {
     const ctx = getCtx(req);
     const timezone = ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta';
-    sendContract(res, PortalAttendance, await portalAttendance(getActor(req), timezone));
+    sendContract(res, PortalAttendance, await portalAttendance(getActor(req), timezone, PortalAttendanceQuery.parse(req.query)));
   });
   return router;
 }
