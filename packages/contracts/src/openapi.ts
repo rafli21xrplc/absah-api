@@ -2,7 +2,23 @@
 // bundles that import contracts do not pull in the generator.
 import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
-import { CreatePointRuleRequest, PointRule, PointRuleIdParam, PointRuleList, PointRulesQuery, UpdatePointRuleRequest } from './student-affairs/points';
+import {
+  CreatePointEntryRequest,
+  CreatePointEvidenceRequest,
+  CreatePointEvidenceResponse,
+  CreatePointRuleRequest,
+  PointEntry,
+  PointEntryIdParam,
+  PointEvidenceLink,
+  PointRule,
+  PointRuleIdParam,
+  PointRuleList,
+  PointRulesQuery,
+  PointStudentParam,
+  ReversePointEntryRequest,
+  StudentPoints,
+  UpdatePointRuleRequest,
+} from './student-affairs/points';
 import {
   SchoolCapabilitiesResponse,
   SchoolProfileResponse,
@@ -1141,6 +1157,62 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: PointRuleIdParam, body: { content: { 'application/json': { schema: UpdatePointRuleRequest } } } },
     responses: { 200: json(PointRule, 'Updated'), ...errors(400, 401, 403, 404, 409) },
+  });
+  const entryNote = `${pointNote} Entries are insert-only: a mistake is undone by a reversing entry. The note is encrypted and never audited.`;
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/point-entries/evidence`,
+    tags: ['student-affairs'],
+    summary: 'Presigned PUT for the evidence of a point entry (admin, wakasek, wali kelas, guru)',
+    description: `${entryNote} Photo or PDF up to 5 MB, stored under schools/{id}/ksw/{uuid}.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreatePointEvidenceRequest } } } },
+    responses: { 201: json(CreatePointEvidenceResponse, 'Upload target'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/point-entries`,
+    tags: ['student-affairs'],
+    summary: 'Record a pelanggaran or prestasi (admin, wakasek, wali kelas, guru)',
+    description: `${entryNote} The rule must be active (409 rule_inactive); the date is today or up to 30 days back; the student must be active.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreatePointEntryRequest } } } },
+    responses: { 201: json(PointEntry, 'Recorded'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/point-entries/{entryId}/reverse`,
+    tags: ['student-affairs'],
+    summary: 'Reverse a point entry with an opposite entry (admin, wakasek)',
+    description: `${entryNote} 409 already_reversed or is_reversal.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: PointEntryIdParam, body: { content: { 'application/json': { schema: ReversePointEntryRequest } } } },
+    responses: { 201: json(PointEntry, 'Reversing entry'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/point-entries/{entryId}/evidence`,
+    tags: ['student-affairs'],
+    summary: 'A 5-minute link to the evidence (admin, kepsek, wakasek, the wali kelas of the class)',
+    description: entryNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: PointEntryIdParam },
+    responses: { 200: json(PointEvidenceLink, 'Link'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/students/{enrollmentId}/points`,
+    tags: ['student-affairs'],
+    summary: 'Net points and entries of a student (admin, kepsek, wakasek, the wali kelas of the class)',
+    description: `${entryNote} 404 for a wali kelas of another class.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: PointStudentParam },
+    responses: { 200: json(StudentPoints, 'Totals and entries'), ...errors(400, 401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

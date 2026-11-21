@@ -1,6 +1,6 @@
 import { POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, index, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, foreignKey, index, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
 import { enrollments } from './academic';
 import { createdAt, id, schoolId } from './_shared';
@@ -57,5 +57,46 @@ export const pointRules = pgTable(
   (t) => [
     uniqueIndex('point_rules_school_id_name_key').on(t.schoolId, sql`lower(${t.name})`),
     check('point_rules_points_check', sql`(${t.kind} = 'violation' and ${t.points} between -100 and -1) or (${t.kind} = 'achievement' and ${t.points} between 1 and 100)`),
+  ],
+);
+
+/**
+ * Point entries (KSW-02): insert-only. Rule title, category and points are copied so later edits to
+ * the rule never rewrite history; a mistake is undone by a reversing entry (negated points, same kind,
+ * reverses_entry_id set), at most one per entry. The note is encrypted.
+ */
+export const pointEntries = pgTable(
+  'point_entries',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    ruleId: uuid('rule_id')
+      .notNull()
+      .references(() => pointRules.id, { onDelete: 'restrict' }),
+    kind: pointKind('kind').notNull(),
+    category: text('category').notNull(),
+    ruleName: text('rule_name').notNull(),
+    points: smallint('points').notNull(),
+    occurredOn: date('occurred_on').notNull(),
+    note: encryptedText('note', 'point_entries.note'),
+    evidenceKey: text('evidence_key'),
+    evidenceType: text('evidence_type'),
+    reversesEntryId: uuid('reverses_entry_id'),
+    recordedBy: uuid('recorded_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({ name: 'point_entries_reverses_entry_id_fkey', columns: [t.reversesEntryId], foreignColumns: [t.id] }),
+    index('point_entries_school_id_enrollment_id_idx').on(t.schoolId, t.enrollmentId, t.occurredOn),
+    uniqueIndex('point_entries_reverses_entry_id_key').on(t.reversesEntryId).where(sql`${t.reversesEntryId} is not null`),
+    check('point_entries_points_check', sql`${t.points} between -100 and 100 and ${t.points} <> 0`),
+    check(
+      'point_entries_sign_check',
+      sql`${t.reversesEntryId} is not null or (${t.kind} = 'violation' and ${t.points} < 0) or (${t.kind} = 'achievement' and ${t.points} > 0)`,
+    ),
+    check('point_entries_evidence_check', sql`(${t.evidenceKey} is null) = (${t.evidenceType} is null)`),
   ],
 );

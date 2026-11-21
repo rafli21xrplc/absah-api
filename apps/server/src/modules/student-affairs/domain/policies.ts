@@ -13,3 +13,9 @@ export const canSeeTppkTeam = anyRole(...STAFF_ROLES);
 /** Point rules (KSW-01): the discipline team sets them, teachers read them to record entries (KSW-02). */
 export const canManagePointRules = anyRole('admin', 'wakasek');
 export const canReadPointRules = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru');
+
+/** Point entries (KSW-02): any teacher records; leaders read a student's profile; wali kelas only their own class. */
+export const canRecordPoints = anyRole('admin', 'wakasek', 'wali_kelas', 'guru');
+export const canReversePoints = anyRole('admin', 'wakasek');
+export const canSeeAllPoints = anyRole('admin', 'kepsek', 'wakasek');
+export const canReadStudentPoints = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas');

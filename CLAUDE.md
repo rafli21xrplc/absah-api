@@ -565,12 +565,28 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Point rules (KSW-01, behind student.points; migrations 0077-0078, schema point_rules): one table per school.
   kind violation|achievement, category, name, points (smallint, CHECK: violation -100..-1, achievement 1..100, so the
   sign always agrees with the kind; the contract refines the same rule), active. Switched off, never deleted
-  (absah_app has no DELETE): entries (5.8b) will keep a copy of what they cited. Name unique per school ignoring
+  (absah_app has no DELETE): entries (KSW-02) keep a copy of what they cited. Name unique per school ignoring
   case (409). GET /point-rules (admin, kepsek, wakasek, wali kelas, guru; ?all=true adds switched-off rules for
   admin and wakasek only), POST and PUT /point-rules/{id} (admin, wakasek; idempotent; the kind cannot change, new
   points keep its sign). Audit ksw.point_rule_created|updated logs the title as `rule`, not `name`: the audit
   sanitiser redacts every key called name. New role guru_bk (membership_role) and capabilities student.points and
   student.counseling (default true) arrive here; the BK notes themselves come in 5.8e.
+- Point entries (KSW-02, behind student.points; migrations 0079-0080, schema point_entries): a pelanggaran or
+  prestasi against an enrollment, so totals are per student per academic year. INSERT-ONLY (absah_app has no
+  UPDATE, DELETE or TRUNCATE): rule_id plus a copy of kind, category, rule_name and points, so editing or
+  switching off a rule never rewrites history. A mistake is undone by a reversing entry (negated points, same kind,
+  reverses_entry_id), at most one per entry (unique partial index; CHECK sign applies only to non-reversals).
+  Because UPDATE is revoked, SELECT ... FOR UPDATE is impossible too (it needs UPDATE): the unique index
+  decides a reversal race (409 already_reversed), do not add a row lock. note is encrypted (point_entries.note);
+  audit ksw.point_recorded|reversed keeps ids and points, never the note or reason. Evidence: POST
+  /point-entries/evidence presigns a PUT (jpeg/png/webp/pdf, 5 MB) under schools/{id}/ksw/{uuid}; POST
+  /point-entries needs the object to exist (400 path evidence). POST /point-entries (admin, wakasek, wali kelas,
+  guru; today up to 30 days back; student must be active, rule active else 409 rule_inactive), POST
+  /point-entries/{id}/reverse (admin, wakasek; 409 already_reversed|is_reversal), GET /students/{enrollmentId}/points
+  and GET /point-entries/{id}/evidence (admin, kepsek, wakasek, the class's wali kelas; other wali kelas get 404,
+  guru and others 403). Net totals come from plain sums because a reversal carries the kind it cancels. In a
+  single-table drizzle select, ${table.col} inside a correlated subquery renders as a bare column and binds to the
+  inner table: qualify it by hand (see isReversed in point-entry-repo.ts).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,
