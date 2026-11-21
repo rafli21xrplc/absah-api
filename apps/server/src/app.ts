@@ -13,7 +13,7 @@ import { tppkRouter, uksRouter } from './modules/student-affairs';
 import { pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
-import { notificationsRouter, preferencesRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
+import { notificationsRouter, preferencesRouter, pushRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
@@ -39,9 +39,11 @@ export interface AppDeps {
   whatsappWebhook?: WhatsappWebhookConfig;
   /** Payment gateway (PAYMENT_PROVIDER); null = online payment off. */
   paymentProvider?: PaymentProvider | null;
+  /** Public VAPID key for Web Push (NTF-06); null = push is off. */
+  vapidPublicKey?: string | null;
 }
 
-export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [], whatsappWebhook, paymentProvider = null }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [], whatsappWebhook, paymentProvider = null, vapidPublicKey = null }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
@@ -104,6 +106,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(kioskRouter(storage));
   v1.use(notificationsRouter(auth));
   v1.use(preferencesRouter(auth));
+  v1.use(pushRouter(auth, vapidPublicKey));
   v1.use(portalRouter(auth));
   v1.use(liaisonRouter(auth));
   v1.use(reportsRouter(auth));

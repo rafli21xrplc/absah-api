@@ -32,6 +32,7 @@ export * from './student-affairs/uks';
 export * from './notify/enums';
 export * from './notify/notifications';
 export * from './notify/preferences';
+export * from './push/subscriptions';
 export * from './portal/links';
 export * from './portal/liaison';
 export * from './academic/contacts';

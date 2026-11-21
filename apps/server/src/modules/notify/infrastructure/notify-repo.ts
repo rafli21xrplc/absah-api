@@ -1,5 +1,5 @@
-import { schema, type Tx } from '@absah/db';
-import { and, asc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { schema, sensitive, type Tx } from '@absah/db';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import type { Preference } from '../domain/preferences';
 
 const n = schema.notifications;
@@ -255,4 +255,27 @@ export async function savePreference(tx: Tx, row: { schoolId: string; guardianId
     .insert(p)
     .values(row)
     .onConflictDoUpdate({ target: p.guardianId, set: { mutedTypes: row.mutedTypes, noLateMessages: row.noLateMessages, updatedAt: new Date() } });
+}
+
+const ps = schema.pushSubscriptions;
+
+/** NTF-06: add a device, or refresh its keys (the same endpoint re-registers). */
+export async function savePushSubscription(tx: Tx, row: { schoolId: string; userId: string; endpointHash: string; endpoint: string; p256dh: string; auth: string }) {
+  await tx
+    .insert(ps)
+    .values({ ...row, endpoint: sensitive(row.endpoint), p256dh: sensitive(row.p256dh), auth: sensitive(row.auth) })
+    .onConflictDoUpdate({ target: [ps.schoolId, ps.userId, ps.endpointHash], set: { endpoint: sensitive(row.endpoint), p256dh: sensitive(row.p256dh), auth: sensitive(row.auth) } });
+}
+
+/** Subscriptions of one member at the current school, newest first. */
+export function pushSubscriptionsOf(tx: Tx, userId: string) {
+  return tx.select({ id: ps.id, endpoint: ps.endpoint, p256dh: ps.p256dh, auth: ps.auth }).from(ps).where(eq(ps.userId, userId)).orderBy(desc(ps.createdAt), desc(ps.id));
+}
+
+export async function deletePushSubscriptions(tx: Tx, ids: string[]) {
+  if (ids.length > 0) await tx.delete(ps).where(inArray(ps.id, ids));
+}
+
+export async function deletePushByEndpoint(tx: Tx, userId: string, endpointHash: string) {
+  await tx.delete(ps).where(and(eq(ps.userId, userId), eq(ps.endpointHash, endpointHash)));
 }

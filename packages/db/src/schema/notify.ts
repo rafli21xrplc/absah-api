@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { boolean, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
 import { enrollments, guardians } from './academic';
+import { user } from './auth';
 import { createdAt, id, schoolId } from './_shared';
 import { schools } from './platform';
 
@@ -92,4 +93,28 @@ export const notificationPreferences = pgTable(
     updatedAt: at('updated_at').notNull().defaultNow(),
   },
   (t) => [index('notification_preferences_school_id_idx').on(t.schoolId)],
+);
+
+/**
+ * A staff member's browser or phone that accepted Web Push (NTF-06), per school: the member
+ * enables it once for each school they work at. The endpoint is a capability (whoever holds it
+ * with the keys can push to that browser), so all three values are encrypted; endpoint_hash
+ * (hashValue) finds a subscription without decrypting. The app keeps at most
+ * PUSH_MAX_PER_USER per member and school and drops rows the push service reports as gone.
+ */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    endpointHash: text('endpoint_hash').notNull(),
+    endpoint: encryptedText('endpoint', 'push_subscriptions.endpoint').notNull(),
+    p256dh: encryptedText('p256dh', 'push_subscriptions.p256dh').notNull(),
+    auth: encryptedText('auth', 'push_subscriptions.auth').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('push_subscriptions_school_id_user_id_endpoint_hash_key').on(t.schoolId, t.userId, t.endpointHash)],
 );
