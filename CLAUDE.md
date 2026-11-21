@@ -460,6 +460,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   still uses that account. Audit after.guardianPortal [{guardianId, portal on|off}].
 - GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
   the last 30 days of daily_attendance with counts.
+- Parent with children at several schools (ORT-03/04, 5.7b): ONE login. /me/context lists every school with an
+  active membership (orang_tua at each, since guardianLogin reuses the account that owns the number), and the
+  portal never reads across schools: each call carries X-School-Id and RLS decides, so the web composes the
+  children of all schools (one /portal/attendance per school with the orang_tua role). Do not add a
+  cross-school query for this (withUser is for memberships only). Preferences are per school too.
+  /portal/attendance?days=1..180 (default 30) and ?studentId= (one child; a stranger's id gives an empty
+  list) serve ORT-05; items carry enrollmentId, the key of the child's izin in GET /leave-requests (parents
+  already read their children's). Poin and tagihan history arrive with 5.8 / 5.10 behind their capabilities
+  (neither module exists yet).
 
 ## Activity (KEG, modules/activity, packages/db/src/schema/activity.ts)
 - activities (per academic year: name unique, kind ekskul|upacara|ibadah|lainnya, location
