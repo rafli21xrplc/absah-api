@@ -25,6 +25,7 @@ export const CAPABILITIES = {
   'student.early_warning': { kind: 'bool', default: true },
   'teacher.attendance': { kind: 'bool', default: true },
   'student.billing': { kind: 'bool', default: true },
+  'exam.enabled': { kind: 'bool', default: true },
   'portal.liaison': { kind: 'bool', default: true },
   'data.source': { kind: 'enum', values: ['dapodik', 'emis'], default: 'dapodik' },
   'report.target': { kind: 'enum', values: ['erapor', 'rdm'], default: 'erapor' },

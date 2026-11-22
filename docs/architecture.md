@@ -364,6 +364,7 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | GRU | `GET /teacher-attendance/report?month=&teacherId=` | `teacher.attendance` | kepsek, wakasek, admin |
 | TGH | `/student-billing/fee-types`, `/issue`, `/bills`, `/bills/{id}/void` | `student.billing` | bendahara, admin write; kepsek, wakasek read |
 | TGH | `/student-billing/mine`, `/installments/{id}/payments`, `/recap` | `student.billing` | orang_tua, siswa pay their own; bendahara, admin, kepsek, wakasek read the recap |
+| UJN | `/exam/periods` (GET, POST, PATCH) | `exam.enabled` | wakasek, admin write; kepsek, wali_kelas read |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |
