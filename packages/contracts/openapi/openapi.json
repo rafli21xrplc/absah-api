@@ -5258,6 +5258,233 @@
           "items"
         ]
       },
+      "PointThresholdList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PointThreshold"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PointThreshold": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minPoints": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "notifyParents": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "minPoints",
+          "label",
+          "action",
+          "notifyParents",
+          "active"
+        ]
+      },
+      "CreatePointThresholdRequest": {
+        "type": "object",
+        "properties": {
+          "minPoints": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "label": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "action": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "notifyParents": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "minPoints",
+          "label",
+          "action",
+          "notifyParents"
+        ],
+        "additionalProperties": false
+      },
+      "UpdatePointThresholdRequest": {
+        "type": "object",
+        "properties": {
+          "minPoints": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "label": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "action": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "notifyParents": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FollowupTaskList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FollowupTask"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "FollowupTask": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "enrollmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "enrollmentId",
+              "name",
+              "className"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "minPoints": {
+            "type": "integer"
+          },
+          "totalPoints": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FollowupStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "student",
+          "label",
+          "action",
+          "minPoints",
+          "totalPoints",
+          "status",
+          "createdAt",
+          "completedAt",
+          "completedBy",
+          "note"
+        ]
+      },
+      "FollowupStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "done"
+        ]
+      },
+      "CompleteFollowupRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -8273,7 +8500,8 @@
           "tppk_report_received",
           "tppk_team_changed",
           "pkl_mentor_assigned",
-          "pkl_checkin_missing"
+          "pkl_checkin_missing",
+          "student_discipline_threshold"
         ]
       },
       "StudentContacts": {
@@ -18658,6 +18886,515 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/point-thresholds": {
+      "get": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Point thresholds (KSW-03): active ones, all=true adds switched-off ones for admin and wakasek",
+        "description": "Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted. Tiers sit on the net pelanggaran points of a student's year; crossing one makes a follow-up task (once per student per tier) and, when the tier asks for it, a generic WhatsApp to the parents. Tiers are switched off, never deleted. Read: admin, kepsek, wakasek, wali kelas, guru BK.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "all",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tiers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointThresholdList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Create a point threshold (admin, wakasek)",
+        "description": "Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted. Tiers sit on the net pelanggaran points of a student's year; crossing one makes a follow-up task (once per student per tier) and, when the tier asks for it, a generic WhatsApp to the parents. Tiers are switched off, never deleted. 409 when a tier with those points exists.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePointThresholdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointThreshold"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/point-thresholds/{thresholdId}": {
+      "put": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Edit or switch off a point threshold (admin, wakasek)",
+        "description": "Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted. Tiers sit on the net pelanggaran points of a student's year; crossing one makes a follow-up task (once per student per tier) and, when the tier asks for it, a generic WhatsApp to the parents. Tiers are switched off, never deleted. A change applies to entries recorded afterwards; existing tasks keep their copy.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "thresholdId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePointThresholdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointThreshold"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/followup-tasks": {
+      "get": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Follow-up tasks (KSW-03): admin, kepsek, wakasek and guru BK see all; a wali kelas the tasks of their class",
+        "description": "Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted. Tiers sit on the net pelanggaran points of a student's year; crossing one makes a follow-up task (once per student per tier) and, when the tier asks for it, a generic WhatsApp to the parents. Tiers are switched off, never deleted. The completion note is encrypted.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/FollowupStatus"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowupTaskList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/followup-tasks/{taskId}/complete": {
+      "post": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Close a follow-up task (admin, wakasek, guru BK, the wali kelas of the class)",
+        "description": "Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted. Tiers sit on the net pelanggaran points of a student's year; crossing one makes a follow-up task (once per student per tier) and, when the tier asks for it, a generic WhatsApp to the parents. Tiers are switched off, never deleted. 409 already_done.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteFollowupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowupTask"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
             "content": {
               "application/json": {
                 "schema": {

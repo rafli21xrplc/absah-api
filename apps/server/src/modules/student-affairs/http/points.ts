@@ -1,8 +1,14 @@
 import {
+  CompleteFollowupRequest,
   CreatePointEntryRequest,
   CreatePointEvidenceRequest,
   CreatePointEvidenceResponse,
   CreatePointRuleRequest,
+  CreatePointThresholdRequest,
+  FollowupTask,
+  FollowupTaskIdParam,
+  FollowupTaskList,
+  FollowupTasksQuery,
   PointEntry,
   PointEntryIdParam,
   PointEvidenceLink,
@@ -10,10 +16,15 @@ import {
   PointRuleIdParam,
   PointRuleList,
   PointRulesQuery,
+  PointThreshold,
+  PointThresholdIdParam,
+  PointThresholdList,
+  PointThresholdsQuery,
   PointStudentParam,
   ReversePointEntryRequest,
   StudentPoints,
   UpdatePointRuleRequest,
+  UpdatePointThresholdRequest,
 } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
@@ -24,6 +35,8 @@ import { idempotent } from '../../../shared/idempotency';
 import { schoolDate } from '../../../shared/school-date';
 import type { ObjectStorage } from '../../../shared/storage';
 import { resolveContext, type Auth } from '../../platform';
+import { completeFollowup, listFollowups } from '../application/followups';
+import { createPointThreshold, listPointThresholds, updatePointThreshold } from '../application/thresholds';
 import { createPointEvidence, pointEvidenceLink, recordPointEntry, reversePointEntry, studentPoints } from '../application/point-entries';
 import { createPointRule, listPointRules, updatePointRule } from '../application/point-rules';
 
@@ -32,7 +45,7 @@ const todayOf = (req: Request) => {
   return schoolDate(ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta');
 };
 
-/** Discipline points (KSW-01, KSW-02; thresholds and early warnings follow), behind student.points. */
+/** Discipline points (KSW-01 rules, KSW-02 entries, KSW-03 thresholds and follow-up tasks; early warnings follow), behind student.points. */
 export function pointsRouter(auth: Auth, storage: ObjectStorage): Router {
   const router = Router();
   const points = [resolveContext(auth, { school: 'required' }), requireCap('student.points')];
@@ -67,6 +80,27 @@ export function pointsRouter(auth: Auth, storage: ObjectStorage): Router {
   });
   router.get('/students/:enrollmentId/points', ...points, async (req, res) => {
     sendContract(res, StudentPoints, await studentPoints(getActor(req), PointStudentParam.parse(req.params).enrollmentId));
+  });
+
+  router.get('/point-thresholds', ...points, async (req, res) => {
+    sendContract(res, PointThresholdList, await listPointThresholds(getActor(req), PointThresholdsQuery.parse(req.query).all ?? false));
+  });
+  router.post('/point-thresholds', ...points, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, PointThreshold, await createPointThreshold(actor, auditContext(req, actor), CreatePointThresholdRequest.parse(req.body)), 201);
+  });
+  router.put('/point-thresholds/:thresholdId', ...points, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { thresholdId } = PointThresholdIdParam.parse(req.params);
+    sendContract(res, PointThreshold, await updatePointThreshold(actor, auditContext(req, actor), thresholdId, UpdatePointThresholdRequest.parse(req.body)));
+  });
+  router.get('/followup-tasks', ...points, async (req, res) => {
+    sendContract(res, FollowupTaskList, await listFollowups(getActor(req), FollowupTasksQuery.parse(req.query).status));
+  });
+  router.post('/followup-tasks/:taskId/complete', ...points, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { taskId } = FollowupTaskIdParam.parse(req.params);
+    sendContract(res, FollowupTask, await completeFollowup(actor, auditContext(req, actor), taskId, CompleteFollowupRequest.parse(req.body)));
   });
 
   return router;

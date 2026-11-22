@@ -587,6 +587,22 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   guru and others 403). Net totals come from plain sums because a reversal carries the kind it cancels. In a
   single-table drizzle select, ${table.col} inside a correlated subquery renders as a bare column and binds to the
   inner table: qualify it by hand (see isReversed in point-entry-repo.ts).
+- Point thresholds and follow-up tasks (KSW-03, behind student.points; migrations 0081-0083, schema point_thresholds
+  and followup_tasks): a tier is minPoints (1..1000) on the NET pelanggaran points of the student's year (positive
+  number), label, action, notifyParents, active; unique per school on minPoints, switched off never deleted.
+  recordPointEntry, for a pelanggaran only, takes pg_advisory_xact_lock per enrollment, reads the total, inserts, then
+  raiseThresholdTasks: pure domain/thresholds.ts crossedThresholds(before, after, tiers) (before < min <= after,
+  lowest first, nothing when the total falls) and one followup_tasks row per tier per enrollment (unique index +
+  ON CONFLICT DO NOTHING, so falling back and climbing again makes no second task); each new task emits
+  ksw.threshold_reached. The lock is what lets two simultaneous entries notice a tier they cross together. Tiers made
+  later are NOT applied backwards. The task copies label/action/minPoints (editing a tier changes nothing already
+  made). Consumer notify_ksw_threshold_reached (only when the tier has notifyParents) uses template
+  student_discipline_threshold (0083, approval pending): school and first name only, never points or rule. Dedup key
+  threshold:<task>:<guardian>. Endpoints: GET|POST /point-thresholds, PUT /point-thresholds/{id} (read: admin,
+  kepsek, wakasek, wali kelas, guru BK; write: admin, wakasek), GET /followup-tasks[?status] (admin, kepsek, wakasek,
+  guru BK see all; a wali kelas only their class; guru 403), POST /followup-tasks/{id}/complete (admin, wakasek, guru
+  BK, the class's wali kelas; kepsek reads only; open to done once, 409 already_done; the note is encrypted and not
+  audited). Staff push for new tasks is not wired yet (early warnings in 5.8d will push).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,
