@@ -75,5 +75,16 @@ export function pushConsumers(deps: { push: PushSender }): Consumer[] {
     },
   });
 
-  return [visitorArrived, sessionUnfilled, leaveRequested, earlyWarning, teacherLeaveRequested, teacherLeaveDecided];
+  /** A session was given to a substitute (GRU-03): the substitute is told, with a link to the session. The text names no class or teacher. */
+  const substituteAssigned = defineConsumer({
+    name: 'notify_push_substitute_assigned',
+    event: 'teacher.substitute_assigned',
+    async handle(tx, event) {
+      const school = await schoolOf(tx, event.schoolId);
+      if (!school) return;
+      await pushToUser(tx, deps.push, event.payload.substituteId, { title: school.name, body: 'Anda ditugaskan menjadi guru pengganti. Ketuk untuk melihat.', url: `/sesi/${event.payload.sessionId}`, tag: `substitute:${event.payload.sessionId}` });
+    },
+  });
+
+  return [visitorArrived, sessionUnfilled, leaveRequested, earlyWarning, teacherLeaveRequested, teacherLeaveDecided, substituteAssigned];
 }

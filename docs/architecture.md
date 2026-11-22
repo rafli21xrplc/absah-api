@@ -360,6 +360,7 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | KSW | `GET /counseling-notes` | `student.counseling` | guru BK, admin (dibatasi juga oleh RLS; wali kelas tidak bisa) |
 | GRU | `GET /teacher-attendance/today`, `POST /teacher-attendance/check-in`, `POST /teacher-attendance/check-out` | `teacher.attendance` | guru, wali kelas, wakasek, piket, guru BK, guru tahfidz |
 | GRU | `GET\|POST /teacher-leaves`, `POST /teacher-leaves/{id}/decide`, `POST /teacher-leaves/{id}/cancel` | `teacher.attendance` | ajukan dan baca milik sendiri: guru, wali kelas, wakasek, piket, guru BK, guru tahfidz; putuskan dan baca semua: wakasek, kepsek, admin |
+| GRU | `GET /substitutions`, `GET /substitutions/candidates`, `POST /substitutions` | `teacher.attendance` | baca: wakasek, piket, kepsek, admin; tugaskan: wakasek, piket, admin |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |

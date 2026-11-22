@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { TeacherAttendance, TeacherToday } from './teacher/attendance';
+import { AssignSubstituteRequest, CandidateList, CandidatesQuery, SubstitutionItem, SubstitutionList, SubstitutionsQuery } from './teacher/substitutions';
 import { CreateTeacherLeaveRequest, DecideTeacherLeaveRequest, TeacherLeave, TeacherLeaveIdParam, TeacherLeaveList, TeacherLeavesQuery } from './teacher/leave';
 import {
   CompleteFollowupRequest,
@@ -1434,6 +1435,40 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: TeacherLeaveIdParam },
     responses: { 200: json(TeacherLeave, 'Cancelled'), ...errors(400, 401, 403, 404, 409) },
+  });
+  const substituteNote = `${teacherNote} Read by wakasek, piket, kepsek and admin; assigned by wakasek, piket and admin. Sessions are the ones the school generated for the day (lessons and daily sessions, not activities or PKL).`;
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/substitutions`,
+    tags: ['teacher'],
+    summary: "Sessions of a day whose teacher is on approved izin, with or without a substitute (GRU-03)",
+    description: `${substituteNote} A session without a substitute stays on the list until one is assigned: it is computed from the approved izin each time.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: SubstitutionsQuery },
+    responses: { 200: json(SubstitutionList, 'Substitutions'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/substitutions/candidates`,
+    tags: ['teacher'],
+    summary: 'Teachers free at the time of a session, best first (GRU-03)',
+    description: `${substituteNote} Free means no lesson of their own or taken over at that period (or no daily session that date), not on approved izin, not the absent teacher. Order: already checked in, same subject, fewest substitutions this month, name. 409 not_needed when the session's teacher is not on izin.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: CandidatesQuery },
+    responses: { 200: json(CandidateList, 'Candidates'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/substitutions`,
+    tags: ['teacher'],
+    summary: 'Give a session to a substitute (GRU-03)',
+    description: `${substituteNote} The session moves to the substitute, who gets a push; changing the substitute later keeps the history. 409 reason: not_needed, session_closed, already_assigned, or why the person cannot (not_a_teacher, is_absent_teacher, on_leave, busy). All assignments of one date are serialized, so one person never gets two sessions at the same time.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: AssignSubstituteRequest } } } },
+    responses: { 201: json(SubstitutionItem, 'Assigned'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

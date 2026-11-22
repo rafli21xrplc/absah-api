@@ -59,6 +59,8 @@ export const EVENTS = {
   'teacher.leave_requested': z.object({ teacherLeaveId: z.uuid() }),
   /** The wakasek decided a teacher's izin (GRU-02): push to the teacher. */
   'teacher.leave_decided': z.object({ teacherLeaveId: z.uuid(), approved: z.boolean() }),
+  /** A session was given to a substitute (GRU-03): push to the substitute. */
+  'teacher.substitute_assigned': z.object({ sessionId: z.uuid(), substituteId: z.uuid() }),
   /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
   'tppk.report_received': z.object({ reportId: z.uuid() }),
   /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */

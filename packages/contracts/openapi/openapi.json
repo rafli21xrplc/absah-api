@@ -5963,6 +5963,242 @@
         ],
         "additionalProperties": false
       },
+      "SubstitutionList": {
+        "type": "object",
+        "properties": {
+          "schoolDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubstitutionItem"
+            }
+          }
+        },
+        "required": [
+          "schoolDate",
+          "items"
+        ]
+      },
+      "SubstitutionItem": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "schoolDate": {
+                "type": "string",
+                "format": "date"
+              },
+              "mode": {
+                "$ref": "#/components/schemas/SessionMode"
+              },
+              "owner": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "$ref": "#/components/schemas/SessionOwnerType"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id",
+                  "name"
+                ]
+              },
+              "period": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "number": {
+                    "type": "integer"
+                  },
+                  "startsAt": {
+                    "type": "string"
+                  },
+                  "endsAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "number",
+                  "startsAt",
+                  "endsAt"
+                ]
+              },
+              "subject": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "schoolDate",
+              "mode",
+              "owner",
+              "period",
+              "subject"
+            ]
+          },
+          "absentTeacher": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "leaveKind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TeacherLeaveKind"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            ]
+          },
+          "substitute": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "assignedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "assignedAt"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "needed",
+              "assigned"
+            ]
+          }
+        },
+        "required": [
+          "session",
+          "absentTeacher",
+          "leaveKind",
+          "substitute",
+          "status"
+        ]
+      },
+      "CandidateList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubstituteCandidate"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SubstituteCandidate": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "checkedIn": {
+            "type": "boolean"
+          },
+          "sameSubject": {
+            "type": "boolean"
+          },
+          "substitutionsThisMonth": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "checkedIn",
+          "sameSubject",
+          "substitutionsThisMonth"
+        ]
+      },
+      "AssignSubstituteRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "substituteId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "sessionId",
+          "substituteId"
+        ],
+        "additionalProperties": false
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -21077,6 +21313,295 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TeacherLeave"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/substitutions": {
+      "get": {
+        "tags": [
+          "teacher"
+        ],
+        "summary": "Sessions of a day whose teacher is on approved izin, with or without a substitute (GRU-03)",
+        "description": "Behind teacher.attendance (404 CAPABILITY_DISABLED otherwise). Staff who teach (guru, wali kelas, wakasek, piket, guru BK, guru tahfidz) check themselves in; other roles get 403. Read by wakasek, piket, kepsek and admin; assigned by wakasek, piket and admin. Sessions are the ones the school generated for the day (lessons and daily sessions, not activities or PKL). A session without a substitute stays on the list until one is assigned: it is computed from the approved izin each time.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Substitutions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubstitutionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "teacher"
+        ],
+        "summary": "Give a session to a substitute (GRU-03)",
+        "description": "Behind teacher.attendance (404 CAPABILITY_DISABLED otherwise). Staff who teach (guru, wali kelas, wakasek, piket, guru BK, guru tahfidz) check themselves in; other roles get 403. Read by wakasek, piket, kepsek and admin; assigned by wakasek, piket and admin. Sessions are the ones the school generated for the day (lessons and daily sessions, not activities or PKL). The session moves to the substitute, who gets a push; changing the substitute later keeps the history. 409 reason: not_needed, session_closed, already_assigned, or why the person cannot (not_a_teacher, is_absent_teacher, on_leave, busy). All assignments of one date are serialized, so one person never gets two sessions at the same time.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignSubstituteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Assigned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubstitutionItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/substitutions/candidates": {
+      "get": {
+        "tags": [
+          "teacher"
+        ],
+        "summary": "Teachers free at the time of a session, best first (GRU-03)",
+        "description": "Behind teacher.attendance (404 CAPABILITY_DISABLED otherwise). Staff who teach (guru, wali kelas, wakasek, piket, guru BK, guru tahfidz) check themselves in; other roles get 403. Read by wakasek, piket, kepsek and admin; assigned by wakasek, piket and admin. Sessions are the ones the school generated for the day (lessons and daily sessions, not activities or PKL). Free means no lesson of their own or taken over at that period (or no daily session that date), not on approved izin, not the absent teacher. Order: already checked in, same subject, fewest substitutions this month, name. 409 not_needed when the session's teacher is not on izin.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Candidates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateList"
                 }
               }
             }
