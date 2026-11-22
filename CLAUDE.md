@@ -710,6 +710,17 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   parent/student cannot be one). Reading `user` names: the app role cannot read the `user` table, use the
   school_member_directory view (as report/recap-repo memberNames). Drizzle drops the table qualifier in single-table
   selects: qualify correlated subqueries by hand (a count came out 0 until we did).
+- Absen ujian per ruang (UJN-03, migrations 0097-0098): exam_attendance is APPEND-ONLY (no update/delete for the app
+  role), unique per period+student, composite FK to the room's period, method qr|manual, recorded_by. POST
+  /exam/rooms/{id}/attendance {enrollmentId} (by hand) and POST /exam/rooms/{id}/scan {token} (card QR). The QR is the
+  DAILY card's: gate exports `verifyCardQr(tx, schoolId, token, nowMs, tz)` (signature, 30 s window, bound phone, same as
+  the kiosk), exam never copies the crypto. Rules in application/attendance.ts checkIn: period open, today within
+  start..end (school clock), student seated in THIS room (else 409 wrong_room{room}/not_seated), eligible RIGHT NOW
+  (evaluateStudents, shared with the eligibility list; else 409 not_eligible{reasons kinds}); second try = 200
+  duplicate:true. Recorders: wakasek, admin or the room's pengawas (kepsek reads only). GET /exam/rooms/{id}/attendance
+  = the room's list (present/absent/eligible). Guards: a room with check-ins cannot be deleted
+  (room_has_attendance); a checked-in student cannot be unseated or moved (checked_in). A thrown error rolls the whole
+  withTenant back, including the lazily created gate secret: tests insert gate_secrets themselves.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

@@ -100,3 +100,42 @@ describe('exam_rooms and exam_seats (UJN-03)', () => {
     expect(await refusal(inSchool(school, (tx) => tx.execute(sql`truncate exam_seats`)))).toMatch(/permission denied/);
   });
 });
+
+describe('exam_attendance (UJN-03)', () => {
+  let roomId: string;
+  let enrollmentId: string;
+  let otherPeriodId: string;
+  const row = (extra: object = {}) => ({ schoolId: school, periodId, roomId, enrollmentId, method: 'manual', ...extra });
+
+  beforeAll(async () => {
+    await inSchool(school, async (tx) => {
+      const [cls] = await tx.insert(schema.classes).values({ schoolId: school, academicYearId: yearId, name: '9A', grade: 9 }).returning();
+      const [st] = await tx.insert(schema.students).values({ schoolId: school, name: 'Siswa Hadir' }).returning();
+      const [en] = await tx.insert(schema.enrollments).values({ schoolId: school, studentId: st?.id ?? '', classId: cls?.id ?? '', academicYearId: yearId, startsOn: '2026-07-13' }).returning();
+      enrollmentId = en?.id ?? '';
+      const [room] = await tx.insert(schema.examRooms).values({ schoolId: school, periodId, name: 'Hadir' }).returning();
+      roomId = room?.id ?? '';
+      const [p2] = await tx.insert(schema.examPeriods).values({ schoolId: school, academicYearId: yearId, name: 'PAS Hadir', startsOn: '2027-06-10', endsOn: '2027-06-12' }).returning();
+      otherPeriodId = p2?.id ?? '';
+    });
+  });
+
+  it('is private to its school', async () => {
+    expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examAttendance).values(row())))).toBeNull();
+    expect(await inSchool(school, (tx) => tx.select().from(schema.examAttendance))).toHaveLength(1);
+    expect(await inSchool(other, (tx) => tx.select().from(schema.examAttendance))).toHaveLength(0);
+    expect(await refusal(inSchool(other, (tx) => tx.insert(schema.examAttendance).values(row())))).toMatch(/row-level security/);
+  });
+
+  it('records a student once per period, in a room of that period, by qr or by hand', async () => {
+    expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examAttendance).values(row({ method: 'qr' }))))).toMatch(/exam_attendance_period_enrollment_key/);
+    expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examAttendance).values(row({ periodId: otherPeriodId, method: 'telepati' }))))).toMatch(/exam_attendance_method_check|exam_attendance_room_period_fk/);
+    expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examAttendance).values(row({ periodId: otherPeriodId }))))).toMatch(/exam_attendance_room_period_fk/); // the room belongs to another period
+  });
+
+  it('is append-only: never changed or removed, and a room with arrivals cannot be deleted', async () => {
+    expect(await refusal(inSchool(school, (tx) => tx.update(schema.examAttendance).set({ method: 'qr' })))).toMatch(/permission denied/);
+    expect(await refusal(inSchool(school, (tx) => tx.execute(sql`delete from exam_attendance`)))).toMatch(/permission denied/);
+    expect(await refusal(inSchool(school, (tx) => tx.delete(schema.examRooms).where(eq(schema.examRooms.id, roomId))))).toMatch(/exam_attendance_room_period_fk|foreign key/);
+  });
+});

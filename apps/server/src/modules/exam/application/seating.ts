@@ -6,6 +6,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { anyRole, type Actor } from '../../../shared/policy';
 import { planSeating } from '../domain/seating';
 import { canManageExams } from '../domain/policies';
+import { checkedInAmong } from '../infrastructure/attendance-repo';
 import { findPeriod } from '../infrastructure/period-repo';
 import { activeEnrollments, deleteSeat, findRoom, insertSeats, lockRoom, moveSeat, occupiedSeatNos, seatsInPeriod, seatsOfRoom } from '../infrastructure/room-repo';
 import { viewRoom } from './rooms';
@@ -32,6 +33,8 @@ export function seatStudents(actor: Actor, auditCtx: AuditContext, roomId: strin
     await lockRoom(tx, roomId);
     const plan = planSeating({ roomId, occupied: await occupiedSeatNos(tx, roomId), existing: await seatsInPeriod(tx, room.periodId, ids), enrollmentIds: ids });
     if (room.capacity !== null && plan.seatedAfter > room.capacity) throw new ConflictError(`Ruang ini hanya muat ${room.capacity} siswa.`, { reason: 'room_full' });
+    // Someone who has arrived has sat their exam in this room: they are not moved afterwards.
+    if ((await checkedInAmong(tx, room.periodId, plan.move.map((m) => m.enrollmentId))).length > 0) throw new ConflictError('Ada siswa yang sudah absen ujian di ruang lain dan tidak bisa dipindah.', { reason: 'checked_in' });
     // Movers first: freeing their old seats is not needed (numbers here are free ones), only the room changes.
     for (const m of plan.move) await moveSeat(tx, room.periodId, m.enrollmentId, roomId, m.seatNo);
     await insertSeats(tx, plan.add.map((a) => ({ schoolId: actor.schoolId, periodId: room.periodId, roomId, enrollmentId: a.enrollmentId, seatNo: a.seatNo })));
@@ -46,6 +49,7 @@ export function unseatStudent(actor: Actor, auditCtx: AuditContext, roomId: stri
   return withTenant(scope(actor), async (tx) => {
     const room = await findRoom(tx, roomId);
     if (!room) throw new NotFoundError('Ruang tidak ditemukan.');
+    if ((await checkedInAmong(tx, room.periodId, [enrollmentId])).length > 0) throw new ConflictError('Siswa ini sudah absen ujian di ruang ini.', { reason: 'checked_in' });
     if (!(await deleteSeat(tx, roomId, enrollmentId))) throw new NotFoundError('Siswa tidak duduk di ruang ini.');
     await audit(tx, auditCtx, 'exam.student_unseated', { type: 'exam_room', id: roomId }, { before: { room: room.name } });
   });

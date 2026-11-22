@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { ExamCheckIn, ExamCheckInRequest, ExamScanRequest, RoomAttendance } from './exam/attendance';
 import { CreateExamRoomRequest, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest } from './exam/rooms';
 import { EligibilityList, EligibilityQuery } from './exam/eligibility';
 import { CreateExamPeriodRequest, ExamPeriod, ExamPeriodIdParam, ExamPeriodList, ExamPeriodsQuery, UpdateExamPeriodRequest } from './exam/periods';
@@ -1710,6 +1711,40 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: ExamRoomSeatParam },
     responses: { 204: { description: 'Removed' }, ...errors(401, 403, 404) },
+  });
+  const arrivalNote = `${roomNote} Check-in is for wakasek, admin and the room's own pengawas, on an exam day of an open period, for a student seated in this very room and allowed to sit by the period's rule right now. Once per period: a second try answers 200 with the first arrival (duplicate: true) and records nothing. 409 reasons: period_closed, not_exam_day, wrong_room (room says where), not_seated, not_eligible (reasons lists attendance and/or bills), card_rejected (cardReason: malformed, expired, no_key, bad_signature, unknown_card, wrong_device).`;
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}/attendance`,
+    tags: ['exam'],
+    summary: 'Check a student in by hand (UJN-03)',
+    description: arrivalNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamRoomIdParam, body: { content: { 'application/json': { schema: ExamCheckInRequest } } } },
+    responses: { 200: json(ExamCheckIn, 'Already checked in'), 201: json(ExamCheckIn, 'Checked in'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}/scan`,
+    tags: ['exam'],
+    summary: 'Check a student in by their card QR (UJN-03)',
+    description: `${arrivalNote} The token is the same dynamic QR as the daily card (verified exactly as at the gate: signature, 30-second window, the card's bound phone). Mode ujian needs no second card.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamRoomIdParam, body: { content: { 'application/json': { schema: ExamScanRequest } } } },
+    responses: { 200: json(ExamCheckIn, 'Already checked in'), 201: json(ExamCheckIn, 'Checked in'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}/attendance`,
+    tags: ['exam'],
+    summary: 'Attendance list of a room: who has arrived (UJN-03)',
+    description: `${roomNote} Counts seated/present/absent and per seat the arrival (time, qr or manual) and whether the student may sit now. Wakasek, kepsek, admin, or the room's pengawas.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ExamRoomIdParam },
+    responses: { 200: json(RoomAttendance, 'Attendance'), ...errors(401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

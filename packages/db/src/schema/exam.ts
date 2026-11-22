@@ -86,3 +86,29 @@ export const examSeats = pgTable(
     index('exam_seats_school_id_room_id_idx').on(t.schoolId, t.roomId),
   ],
 );
+
+/**
+ * A student who has arrived to sit an exam (UJN-03), once per period: the card QR (method qr, no recorder) or the pengawas
+ * by hand (method manual). Append-only: a wrong entry is for the wakasek to sort out with the school, never silently edited.
+ */
+export const examAttendance = pgTable(
+  'exam_attendance',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    periodId: uuid('period_id').notNull(),
+    roomId: uuid('room_id').notNull(),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'restrict' }),
+    checkedInAt: timestamp('checked_in_at', { withTimezone: true }).notNull().defaultNow(),
+    method: text('method').notNull(),
+    recordedBy: uuid('recorded_by').references(() => user.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    unique('exam_attendance_period_enrollment_key').on(t.periodId, t.enrollmentId),
+    foreignKey({ columns: [t.roomId, t.periodId], foreignColumns: [examRooms.id, examRooms.periodId], name: 'exam_attendance_room_period_fk' }),
+    index('exam_attendance_school_id_room_id_idx').on(t.schoolId, t.roomId),
+    check('exam_attendance_method_check', sql`${t.method} in ('qr', 'manual')`),
+  ],
+);

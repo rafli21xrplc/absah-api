@@ -680,6 +680,20 @@
       "when": 1795350503628,
       "tag": "0096_exam_rooms_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1795351466858,
+      "tag": "0097_exam_attendance",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1795351466859,
+      "tag": "0098_exam_attendance_rls",
+      "breakpoints": true
     }
   ]
 }

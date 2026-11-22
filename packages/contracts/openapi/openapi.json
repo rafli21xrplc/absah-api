@@ -7578,6 +7578,173 @@
           }
         ]
       },
+      "ExamCheckIn": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "seatNo": {
+            "type": "integer"
+          },
+          "checkedInAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "qr",
+              "manual"
+            ]
+          },
+          "duplicate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "student",
+          "seatNo",
+          "checkedInAt",
+          "method",
+          "duplicate"
+        ]
+      },
+      "ExamCheckInRequest": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "enrollmentId"
+        ],
+        "additionalProperties": false
+      },
+      "ExamScanRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "additionalProperties": false
+      },
+      "RoomAttendance": {
+        "type": "object",
+        "properties": {
+          "room": {
+            "$ref": "#/components/schemas/ExamRoom"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "seated": {
+                "type": "integer"
+              },
+              "present": {
+                "type": "integer"
+              },
+              "absent": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "seated",
+              "present",
+              "absent"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "seatNo": {
+                  "type": "integer"
+                },
+                "student": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ]
+                },
+                "className": {
+                  "type": "string"
+                },
+                "present": {
+                  "type": "boolean"
+                },
+                "checkedInAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "method": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "qr",
+                    "manual",
+                    null
+                  ]
+                },
+                "eligible": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "seatNo",
+                "student",
+                "className",
+                "present",
+                "checkedInAt",
+                "method",
+                "eligible"
+              ]
+            }
+          }
+        },
+        "required": [
+          "room",
+          "counts",
+          "items"
+        ]
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -25122,6 +25289,333 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exam/rooms/{roomId}/attendance": {
+      "post": {
+        "tags": [
+          "exam"
+        ],
+        "summary": "Check a student in by hand (UJN-03)",
+        "description": "Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored. Rooms (UJN-03): wakasek and admin arrange; kepsek reads; a room's own pengawas reads that room's seat list. Check-in is for wakasek, admin and the room's own pengawas, on an exam day of an open period, for a student seated in this very room and allowed to sit by the period's rule right now. Once per period: a second try answers 200 with the first arrival (duplicate: true) and records nothing. 409 reasons: period_closed, not_exam_day, wrong_room (room says where), not_seated, not_eligible (reasons lists attendance and/or bills), card_rejected (cardReason: malformed, expired, no_key, bad_signature, unknown_card, wrong_device).",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "roomId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExamCheckInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Already checked in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamCheckIn"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Checked in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamCheckIn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "exam"
+        ],
+        "summary": "Attendance list of a room: who has arrived (UJN-03)",
+        "description": "Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored. Rooms (UJN-03): wakasek and admin arrange; kepsek reads; a room's own pengawas reads that room's seat list. Counts seated/present/absent and per seat the arrival (time, qr or manual) and whether the student may sit now. Wakasek, kepsek, admin, or the room's pengawas.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "roomId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attendance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomAttendance"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exam/rooms/{roomId}/scan": {
+      "post": {
+        "tags": [
+          "exam"
+        ],
+        "summary": "Check a student in by their card QR (UJN-03)",
+        "description": "Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored. Rooms (UJN-03): wakasek and admin arrange; kepsek reads; a room's own pengawas reads that room's seat list. Check-in is for wakasek, admin and the room's own pengawas, on an exam day of an open period, for a student seated in this very room and allowed to sit by the period's rule right now. Once per period: a second try answers 200 with the first arrival (duplicate: true) and records nothing. 409 reasons: period_closed, not_exam_day, wrong_room (room says where), not_seated, not_eligible (reasons lists attendance and/or bills), card_rejected (cardReason: malformed, expired, no_key, bad_signature, unknown_card, wrong_device). The token is the same dynamic QR as the daily card (verified exactly as at the gate: signature, 30-second window, the card's bound phone). Mode ujian needs no second card.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "roomId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExamScanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Already checked in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamCheckIn"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Checked in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamCheckIn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
             "content": {
               "application/json": {
                 "schema": {

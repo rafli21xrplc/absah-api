@@ -46,6 +46,7 @@ export * from './student-billing/recap';
 export * from './exam/periods';
 export * from './exam/eligibility';
 export * from './exam/rooms';
+export * from './exam/attendance';
 export * from './notify/enums';
 export * from './notify/notifications';
 export * from './notify/preferences';
