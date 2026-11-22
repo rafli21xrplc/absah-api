@@ -20,6 +20,7 @@ import {
   mbgForecastHandler,
   reportConsumers,
 } from '../modules/report';
+import { WORKSPACE_EXPORT_RETENTION_QUEUE, workspaceExportConsumers, workspaceExportRetentionHandler } from '../modules/workspace-export';
 import { LOCK_HABITS_CRON, LOCK_HABITS_QUEUE, lockHabitsHandler } from '../modules/activity';
 import {
   AUTO_CONFIRM_CRON,
@@ -84,6 +85,9 @@ await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jaka
 await boss.createQueue(EXPORT_RETENTION_QUEUE);
 await boss.work(EXPORT_RETENTION_QUEUE, exportRetentionHandler(storage, logger));
 await boss.schedule(EXPORT_RETENTION_QUEUE, '50 2 * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(WORKSPACE_EXPORT_RETENTION_QUEUE);
+await boss.work(WORKSPACE_EXPORT_RETENTION_QUEUE, workspaceExportRetentionHandler(storage, logger));
+await boss.schedule(WORKSPACE_EXPORT_RETENTION_QUEUE, '52 2 * * *', null, { tz: 'Asia/Jakarta' });
 await boss.createQueue(VISITOR_PHOTOS_QUEUE);
 await boss.work(VISITOR_PHOTOS_QUEUE, visitorPhotosHandler(storage, logger));
 await boss.schedule(VISITOR_PHOTOS_QUEUE, '55 2 * * *', null, { tz: 'Asia/Jakarta' });
@@ -157,6 +161,7 @@ const consumers: Consumer[] = [
   ...academicConsumers(storage),
   ...attendanceConsumers(),
   ...reportConsumers(storage),
+  ...workspaceExportConsumers(storage),
   ...subscriptionConsumers(paymentProvider),
   ...studentBillingConsumers(paymentProvider),
   ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
