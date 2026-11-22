@@ -7886,6 +7886,53 @@
           "items"
         ]
       },
+      "MyRooms": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "room": {
+                  "$ref": "#/components/schemas/ExamRoom"
+                },
+                "period": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "startsOn": {
+                      "type": "string"
+                    },
+                    "endsOn": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "startsOn",
+                    "endsOn"
+                  ]
+                }
+              },
+              "required": [
+                "room",
+                "period"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -25867,6 +25914,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BillingClassList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exam/my-rooms": {
+      "get": {
+        "tags": [
+          "exam"
+        ],
+        "summary": "The rooms I am the pengawas of, for exams not closed and not over (UJN-03)",
+        "description": "Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored. Rooms (UJN-03): wakasek and admin arrange; kepsek reads; a room's own pengawas reads that room's seat list. Any staff member: this is how a guru who is a pengawas finds their room, since listing a period's rooms is for those who read exams.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "My rooms",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyRooms"
                 }
               }
             }

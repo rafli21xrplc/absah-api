@@ -64,3 +64,9 @@ export type RoomRoster = z.infer<typeof RoomRoster>;
 
 export const ExamRoomIdParam = z.object({ roomId: z.uuid() });
 export const ExamRoomSeatParam = z.object({ roomId: z.uuid(), enrollmentId: z.uuid() });
+
+/** The rooms the caller supervises in exams still ahead or on today: how a pengawas finds their room (UJN-03). */
+export const MyRooms = z
+  .object({ items: z.array(z.object({ room: ExamRoom, period: z.object({ id: z.uuid(), name: z.string(), startsOn: z.string(), endsOn: z.string() }) })) })
+  .meta({ id: 'MyRooms' });
+export type MyRooms = z.infer<typeof MyRooms>;

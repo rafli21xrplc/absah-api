@@ -7,7 +7,7 @@ import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-wa
 import { BillIdParam, BillingClassList, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
 import { MyExams } from './exam/mine';
 import { ExamCheckIn, ExamCheckInRequest, ExamScanRequest, RoomAttendance } from './exam/attendance';
-import { CreateExamRoomRequest, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest } from './exam/rooms';
+import { CreateExamRoomRequest, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, MyRooms, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest } from './exam/rooms';
 import { EligibilityList, EligibilityQuery } from './exam/eligibility';
 import { CreateExamPeriodRequest, ExamPeriod, ExamPeriodIdParam, ExamPeriodList, ExamPeriodsQuery, UpdateExamPeriodRequest } from './exam/periods';
 import { BillingRecap, BillingRecapQuery } from './student-billing/recap';
@@ -1766,6 +1766,16 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
     responses: { 200: json(BillingClassList, 'Rombel'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/my-rooms`,
+    tags: ['exam'],
+    summary: 'The rooms I am the pengawas of, for exams not closed and not over (UJN-03)',
+    description: `${roomNote} Any staff member: this is how a guru who is a pengawas finds their room, since listing a period's rooms is for those who read exams.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(MyRooms, 'My rooms'), ...errors(401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

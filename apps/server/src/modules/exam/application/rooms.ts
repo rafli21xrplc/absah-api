@@ -1,15 +1,15 @@
-import type { CreateExamRoomRequest, ExamRoom, ExamRoomList, UpdateExamRoomRequest } from '@absah/contracts';
+import { STAFF_ROLES, type CreateExamRoomRequest, type ExamRoom, type ExamRoomList, type MyRooms, type UpdateExamRoomRequest } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../../shared/errors';
 import { isUniqueViolation } from '../../../shared/pg-errors';
-import type { Actor } from '../../../shared/policy';
+import { anyRole, type Actor } from '../../../shared/policy';
 import { canManageExams, canReadExams } from '../domain/policies';
 import { roomHasCheckIns } from '../infrastructure/attendance-repo';
 import { findPeriod } from '../infrastructure/period-repo';
-import { deleteRoom, findRoom, insertRoom, isStaffMember, listRooms, unseatedCount, updateRoom, type RoomRow } from '../infrastructure/room-repo';
+import { deleteRoom, findRoom, insertRoom, isStaffMember, listRooms, roomsSupervisedBy, unseatedCount, updateRoom, type RoomRow } from '../infrastructure/room-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 const NAME_KEY = 'exam_rooms_period_name_key';
@@ -88,4 +88,12 @@ export function removeExamRoom(actor: Actor, auditCtx: AuditContext, roomId: str
     await deleteRoom(tx, roomId);
     await audit(tx, auditCtx, 'exam.room_removed', { type: 'exam_room', id: roomId }, { before: forAudit({ name: room.name, seated: room.seated }) });
   });
+}
+
+/** GET /exam/my-rooms: any staff member sees the rooms they are the pengawas of, for exams not closed and not over. */
+export function myExamRooms(actor: Actor, today: string): Promise<MyRooms> {
+  authorize(actor, anyRole(...STAFF_ROLES));
+  return withTenant(scope(actor), async (tx) => ({
+    items: (await roomsSupervisedBy(tx, actor.userId, today)).map((r) => ({ room: viewRoom(r), period: { id: r.periodId, name: r.periodName, startsOn: r.periodStartsOn, endsOn: r.periodEndsOn } })),
+  }));
 }
