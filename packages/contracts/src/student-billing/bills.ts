@@ -103,3 +103,9 @@ export type VoidBillRequest = z.infer<typeof VoidBillRequest>;
 /** What a parent (or the student) owes: the bills of their own children, paid ones for the history, void ones left out. */
 export const MyBillsList = z.object({ items: z.array(StudentBill) }).meta({ id: 'MyBillsList' });
 export type MyBillsList = z.infer<typeof MyBillsList>;
+
+/** The rombel a bill can be issued to (TGH-01): the bendahara cannot read the registry's /classes, so billing lists them itself. */
+export const BillingClassList = z
+  .object({ items: z.array(z.object({ id: z.uuid(), name: z.string(), grade: z.number().int(), activeStudents: z.number().int() })) })
+  .meta({ id: 'BillingClassList' });
+export type BillingClassList = z.infer<typeof BillingClassList>;
