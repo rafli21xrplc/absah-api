@@ -5,6 +5,7 @@ export * from './auth';
 export * from './capabilities';
 export * from './gate';
 export * from './student-affairs';
+export * from './teacher';
 export * from './tppk';
 export * from './activity';
 export * from './pkl';
