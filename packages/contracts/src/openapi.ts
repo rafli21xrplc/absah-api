@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { EligibilityList, EligibilityQuery } from './exam/eligibility';
 import { CreateExamPeriodRequest, ExamPeriod, ExamPeriodIdParam, ExamPeriodList, ExamPeriodsQuery, UpdateExamPeriodRequest } from './exam/periods';
 import { BillingRecap, BillingRecapQuery } from './student-billing/recap';
 import { InstallmentIdParam, RequestStudentPaymentRequest, StudentPayment } from './student-billing/payments';
@@ -1619,6 +1620,17 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: ExamPeriodIdParam, body: { content: { 'application/json': { schema: UpdateExamPeriodRequest } } } },
     responses: { 200: json(ExamPeriod, 'Updated'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/periods/{periodId}/eligibility`,
+    tags: ['exam'],
+    summary: 'Who may sit the exam, and why not (UJN-02)',
+    description: `${examNote} By default only the students who may not sit, each with the reasons: attendance (the student's percent and the minimum) and/or bills (how many installments due by the first exam day are unpaid; never the amount). show=all lists every active student. A wali kelas sees only their own rombel (another rombel's classId is 404); wakasek, kepsek and admin see all, or one with classId. Computed from live data on each call, so it changes the moment a bill is paid or an edit changes the rule. A student with no attendance record is not held to the attendance rule.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ExamPeriodIdParam, query: EligibilityQuery },
+    responses: { 200: json(EligibilityList, 'Eligibility'), ...errors(400, 401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

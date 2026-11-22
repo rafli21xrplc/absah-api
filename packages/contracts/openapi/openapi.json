@@ -7217,6 +7217,140 @@
           }
         }
       },
+      "EligibilityList": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EligibilityItem"
+            }
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "students": {
+                "type": "integer"
+              },
+              "eligible": {
+                "type": "integer"
+              },
+              "ineligible": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "students",
+              "eligible",
+              "ineligible"
+            ]
+          }
+        },
+        "required": [
+          "period",
+          "items",
+          "counts"
+        ]
+      },
+      "EligibilityItem": {
+        "type": "object",
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EligibilityReason"
+            }
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "student",
+          "className",
+          "eligible",
+          "reasons"
+        ]
+      },
+      "EligibilityReason": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "attendance"
+                ]
+              },
+              "percent": {
+                "type": "number"
+              },
+              "minimum": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind",
+              "percent",
+              "minimum"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bills"
+                ]
+              },
+              "unpaidInstallments": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind",
+              "unpaidInstallments"
+            ]
+          }
+        ]
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -23987,6 +24121,115 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exam/periods/{periodId}/eligibility": {
+      "get": {
+        "tags": [
+          "exam"
+        ],
+        "summary": "Who may sit the exam, and why not (UJN-02)",
+        "description": "Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored. By default only the students who may not sit, each with the reasons: attendance (the student's percent and the minimum) and/or bills (how many installments due by the first exam day are unpaid; never the amount). show=all lists every active student. A wali kelas sees only their own rombel (another rombel's classId is 404); wakasek, kepsek and admin see all, or one with classId. Computed from live data on each call, so it changes the moment a bill is paid or an edit changes the rule. A student with no attendance record is not held to the attendance rule.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "periodId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "classId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ineligible",
+                "all"
+              ],
+              "default": "ineligible"
+            },
+            "required": false,
+            "name": "show",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibilityList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {
