@@ -53,6 +53,8 @@ export const EVENTS = {
   'gate.unlisted_pickup': z.object({ pickupEventId: z.uuid() }),
   /** UKS sent a student home (KSW-08): attendance marks the rest of the day S (source uks), notify tells the parents. */
   'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
+  /** An unpaid student bill installment is due within days (TGH-04): notify sends the parents one WhatsApp. */
+  'student_bill.reminder_due': z.object({ installmentId: z.uuid() }),
   /** A pelanggaran took a student across a point threshold (KSW-03): a follow-up task was made; notify tells the parents when the tier asks for it. */
   'ksw.threshold_reached': z.object({ taskId: z.uuid() }),
   /** The early-warning job saw a pattern in a student's attendance (KSW-04): push to the wali kelas and guru BK. */

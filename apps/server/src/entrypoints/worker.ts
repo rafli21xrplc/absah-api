@@ -42,7 +42,7 @@ import {
   issueInvoicesHandler,
   subscriptionConsumers,
 } from '../modules/subscription';
-import { APPLY_STUDENT_PAYMENTS_CRON, APPLY_STUDENT_PAYMENTS_QUEUE, applyStudentPaymentsHandler, studentBillingConsumers } from '../modules/student-billing';
+import { APPLY_STUDENT_PAYMENTS_CRON, APPLY_STUDENT_PAYMENTS_QUEUE, REMIND_DUE_CRON, REMIND_DUE_QUEUE, applyStudentPaymentsHandler, remindDueHandler, studentBillingConsumers } from '../modules/student-billing';
 import { createPaymentProvider } from '../shared/payments';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
@@ -124,6 +124,9 @@ await boss.schedule(MISSING_CHECKIN_QUEUE, MISSING_CHECKIN_CRON, null, { tz: 'UT
 await boss.createQueue(EARLY_WARNING_QUEUE);
 await boss.work(EARLY_WARNING_QUEUE, earlyWarningHandler(logger));
 await boss.schedule(EARLY_WARNING_QUEUE, EARLY_WARNING_CRON, null, { tz: 'UTC' });
+await boss.createQueue(REMIND_DUE_QUEUE);
+await boss.work(REMIND_DUE_QUEUE, remindDueHandler(logger));
+await boss.schedule(REMIND_DUE_QUEUE, REMIND_DUE_CRON, null, { tz: 'UTC' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);

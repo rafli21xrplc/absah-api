@@ -342,3 +342,13 @@ export async function teacherLeaveOwner(tx: Tx, teacherLeaveId: string): Promise
   const [row] = await tx.select({ userId: schema.teacherLeaves.userId }).from(schema.teacherLeaves).where(eq(schema.teacherLeaves.id, teacherLeaveId));
   return row?.userId;
 }
+
+/** An installment still to be paid on an open bill (TGH-04): who owes it and when it is due. */
+export async function dueInstallment(tx: Tx, installmentId: string) {
+  const [row] = await tx
+    .select({ enrollmentId: schema.studentBills.enrollmentId, dueOn: schema.billInstallments.dueOn, paidAt: schema.billInstallments.paidAt, billStatus: schema.studentBills.status })
+    .from(schema.billInstallments)
+    .innerJoin(schema.studentBills, eq(schema.studentBills.id, schema.billInstallments.billId))
+    .where(eq(schema.billInstallments.id, installmentId));
+  return row && !row.paidAt && row.billStatus === 'open' ? row : null;
+}

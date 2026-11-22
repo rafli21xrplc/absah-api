@@ -5,6 +5,7 @@ import type { MessageSender } from '../../../shared/messaging';
 import { schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine, releaseTime } from '../domain/messages';
 import {
+  dueInstallment,
   guardiansOf,
   heldPickup,
   homeroomContact,
@@ -190,6 +191,33 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
         recipients: guardians,
         dedupKey: (r) => `threshold:${event.payload.taskId}:${r.guardianId}`,
         params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? '') },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  /**
+   * TGH-04: parents hear that a bill is due soon. First name and the date only: never the amount or what it is for
+   * (details are behind the link). Paid or voided in the meantime: nothing is sent.
+   */
+  const billDue = defineConsumer({
+    name: 'notify_student_bill_due',
+    event: 'student_bill.reminder_due',
+    async handle(tx, event) {
+      const due = await dueInstallment(tx, event.payload.installmentId);
+      if (!due) return;
+      const [school, guardians] = await Promise.all([schoolOf(tx, event.schoolId), guardiansOf(tx, due.enrollmentId)]);
+      if (!school || guardians.length === 0) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'student_bill_due',
+        enrollmentId: due.enrollmentId,
+        recipients: guardians,
+        dedupKey: (r) => `bill_due:${event.payload.installmentId}:${r.guardianId}`,
+        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), date: dateLabel(due.dueOn) },
         appUrl: deps.appUrl,
         now: deps.now?.(),
       });
@@ -395,5 +423,5 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, disciplineThreshold, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, deliverConsumer(deps.sender)];
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, disciplineThreshold, billDue, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, deliverConsumer(deps.sender)];
 }
