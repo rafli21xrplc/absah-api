@@ -115,7 +115,7 @@ import {
 } from './attendance/corrections';
 import { JournalQuery, JournalResponse } from './attendance/journal';
 import { ClassStudentHours, ClassStudentHoursParams, ClassStudentHoursQuery } from './attendance/student-hours';
-import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
+import { SessionDetail, SessionIdParam, SubmitSessionRequest, SyncSessionRequest, SyncSessionResult, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
 import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
@@ -630,6 +630,17 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SubmitSessionRequest } } } },
     responses: { 200: json(SessionDetail, 'Filled session'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/sessions/{sessionId}/sync`,
+    tags: ['attendance'],
+    summary: 'Send a session filled offline (PRS-08)',
+    description: 'Same list as submit plus capturedAt. A session still open is submitted (outcome submitted, session set); one locked meanwhile is not refused: the students whose answer differs from the record become correction requests (outcome correction_requested), skipping izin/UKS rows and those already pending; nothing different gives unchanged. Safe to retry with the same Idempotency-Key.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SyncSessionRequest } } } },
+    responses: { 200: json(SyncSessionResult, 'Outcome'), ...errors(400, 401, 403, 404, 409) },
   });
   registry.registerPath({
     method: 'get',

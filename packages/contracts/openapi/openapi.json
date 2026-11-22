@@ -2495,6 +2495,244 @@
         ],
         "additionalProperties": false
       },
+      "SyncSessionResult": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "correction_requested",
+              "unchanged"
+            ]
+          },
+          "session": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionDetail"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            ]
+          },
+          "corrections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Correction"
+            }
+          },
+          "skipped": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "outcome",
+          "session",
+          "corrections",
+          "skipped"
+        ]
+      },
+      "Correction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "session": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "schoolDate": {
+                "type": "string",
+                "format": "date"
+              },
+              "ownerName": {
+                "type": "string"
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "period": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "schoolDate",
+              "ownerName",
+              "subject",
+              "period"
+            ]
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "enrollmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "enrollmentId",
+              "name",
+              "className"
+            ]
+          },
+          "fromStatus": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "toStatus": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CorrectionStatus"
+          },
+          "requestedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "decidedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "decisionNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "session",
+          "student",
+          "fromStatus",
+          "toStatus",
+          "reason",
+          "status",
+          "requestedBy",
+          "decidedBy",
+          "decidedAt",
+          "decisionNote",
+          "createdAt"
+        ]
+      },
+      "CorrectionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ]
+      },
+      "SyncSessionRequest": {
+        "type": "object",
+        "properties": {
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "S",
+                    "I",
+                    "A",
+                    "T"
+                  ]
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "status"
+              ]
+            },
+            "maxItems": 300
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "exceptions",
+          "capturedAt"
+        ],
+        "additionalProperties": false
+      },
       "ClassStudentHours": {
         "type": "object",
         "properties": {
@@ -2814,159 +3052,6 @@
         },
         "required": [
           "items"
-        ]
-      },
-      "Correction": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "session": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "schoolDate": {
-                "type": "string",
-                "format": "date"
-              },
-              "ownerName": {
-                "type": "string"
-              },
-              "subject": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "period": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              }
-            },
-            "required": [
-              "id",
-              "schoolDate",
-              "ownerName",
-              "subject",
-              "period"
-            ]
-          },
-          "student": {
-            "type": "object",
-            "properties": {
-              "enrollmentId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "name": {
-                "type": "string"
-              },
-              "className": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "enrollmentId",
-              "name",
-              "className"
-            ]
-          },
-          "fromStatus": {
-            "$ref": "#/components/schemas/AttendanceStatus"
-          },
-          "toStatus": {
-            "$ref": "#/components/schemas/AttendanceStatus"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/CorrectionStatus"
-          },
-          "requestedBy": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "name"
-            ]
-          },
-          "decidedBy": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "name"
-            ]
-          },
-          "decidedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "decisionNote": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "session",
-          "student",
-          "fromStatus",
-          "toStatus",
-          "reason",
-          "status",
-          "requestedBy",
-          "decidedBy",
-          "decidedAt",
-          "decisionNote",
-          "createdAt"
-        ]
-      },
-      "CorrectionStatus": {
-        "type": "string",
-        "enum": [
-          "pending",
-          "approved",
-          "rejected"
         ]
       },
       "CreateCorrectionsRequest": {
@@ -16580,6 +16665,122 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{sessionId}/sync": {
+      "post": {
+        "tags": [
+          "attendance"
+        ],
+        "summary": "Send a session filled offline (PRS-08)",
+        "description": "Same list as submit plus capturedAt. A session still open is submitted (outcome submitted, session set); one locked meanwhile is not refused: the students whose answer differs from the record become correction requests (outcome correction_requested), skipping izin/UKS rows and those already pending; nothing different gives unchanged. Safe to retry with the same Idempotency-Key.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncSessionResult"
                 }
               }
             }
