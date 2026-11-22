@@ -138,9 +138,12 @@ describe('issuing bills (TGH-01, TGH-02)', () => {
     const again = await issue({ target: { kind: 'class', classId: class8a } }).expect(201);
     expect(again.body).toEqual({ created: 0, skipped: 3, billed: 0 });
     const k = key();
-    const [one, two] = await Promise.all([issue({ period: '2026-12', target: { kind: 'class', classId: class8a } }, A('bendahara'), k), issue({ period: '2026-12', target: { kind: 'class', classId: class8a } }, A('bendahara'), k)]);
-    expect([one.status, two.status].sort()).toEqual([201, 201]);
-    expect(one.body).toEqual(two.body);
+    const send = () => issue({ period: '2026-12', target: { kind: 'class', classId: class8a } }, A('bendahara'), k);
+    // The same key at the same moment: one runs, the other may be told it is still in progress (409) and tries again.
+    const settled = await Promise.all([send(), send()].map(async (p) => ((await p).status === 409 ? send() : p)));
+    const [one, two] = settled;
+    expect([one?.status, two?.status]).toEqual([201, 201]);
+    expect(one?.body).toEqual(two?.body);
     const december = await bills('?period=2026-12');
     expect(december.total).toBe(3);
   });
