@@ -630,6 +630,16 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   never the note; READS are audited too (ksw.counseling_read). GET /counseling-notes/students?q= (guru BK) finds a
   student by name because the guru BK does not read the registry (same shape as /point-entries/students). Endpoints read the school date through
   student-affairs/http/clock.ts todayOf.
+- Tagihan siswa (TGH-01..04, behind student.billing, default on; schema packages/db/src/schema/student-billing.ts,
+  migrations 0090-0091, constants in contracts/student-billing/constants.ts; new role `bendahara`, the treasurer who
+  reads the payment recap). fee_types (name unique ignoring case, kind spp|kegiatan|lainnya, active flag, bills keep
+  pointing at it); student_bills per enrollment (unique school/enrollment/fee type/period, so a mass issue repeated is
+  the same bill; total > 0; void needs voided_at; never deleted); bill_installments (cicilan: a bill without a plan has
+  exactly one; paid_at, reminded_at); student_payments (same life as subscription payments: requested -> pending ->
+  paid, provider_txn_id unique per provider). Grants: only the columns of each row's life update (fees: name, kind,
+  amount, active; bills: status, paid_at, voided_at, void_reason; installments: paid_at, reminded_at; payments: gateway
+  steps, never the amount). Reuses paymentMethod/paymentStatus from subscription. Not built, by design: student savings
+  and school cash.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

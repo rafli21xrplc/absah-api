@@ -12,6 +12,7 @@ export const ROLES = [
   'petugas_uks',
   'guru_bk',
   'guru_tahfidz',
+  'bendahara',
   'tppk',
   'pembina',
   'humas_pkl',
