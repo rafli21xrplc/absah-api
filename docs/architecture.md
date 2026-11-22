@@ -349,6 +349,7 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | KSW | `POST /uks/visits` | `student.uks` | petugas UKS |
 | KSW | `GET\|POST /point-rules`, `PUT /point-rules/{id}` | `student.points` | baca: admin, kepsek, wakasek, wali kelas, guru; tulis: admin, wakasek |
 | KSW | `POST /point-entries`, `POST /point-entries/evidence` | `student.points` | admin, wakasek, wali kelas, guru |
+| KSW | `GET /point-entries/students?q=` | `student.points` | admin, wakasek, wali kelas, guru |
 | KSW | `POST /point-entries/{id}/reverse` | `student.points` | admin, wakasek |
 | KSW | `GET /students/{enrollmentId}/points`, `GET /point-entries/{id}/evidence` | `student.points` | admin, kepsek, wakasek, wali kelas kelasnya |
 | KSW | `GET\|POST /point-thresholds`, `PUT /point-thresholds/{id}` | `student.points` | baca: admin, kepsek, wakasek, wali kelas, guru BK; tulis: admin, wakasek |

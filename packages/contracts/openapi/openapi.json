@@ -5008,6 +5008,37 @@
         },
         "additionalProperties": false
       },
+      "PointStudentList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "name",
+                "className"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "CreatePointEvidenceResponse": {
         "type": "object",
         "properties": {
@@ -18604,6 +18635,94 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/point-entries/students": {
+      "get": {
+        "tags": [
+          "student-affairs"
+        ],
+        "summary": "Find an active student by name to record a point entry (admin, wakasek, wali kelas, guru)",
+        "description": "Behind student.points (404 CAPABILITY_DISABLED otherwise). Pelanggaran are negative points, prestasi positive; rules are switched off, never deleted. Entries are insert-only: a mistake is undone by a reversing entry. The note is encrypted and never audited. At most 20, by name; the student registry itself is closed to teachers.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Students",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointStudentList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {

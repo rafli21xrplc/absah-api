@@ -29,7 +29,9 @@ import {
   PointRuleIdParam,
   PointRuleList,
   PointRulesQuery,
+  PointStudentList,
   PointStudentParam,
+  PointStudentQuery,
   ReversePointEntryRequest,
   StudentPoints,
   UpdatePointRuleRequest,
@@ -1174,6 +1176,17 @@ function buildRegistry(): OpenAPIRegistry {
     responses: { 200: json(PointRule, 'Updated'), ...errors(400, 401, 403, 404, 409) },
   });
   const entryNote = `${pointNote} Entries are insert-only: a mistake is undone by a reversing entry. The note is encrypted and never audited.`;
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/point-entries/students`,
+    tags: ['student-affairs'],
+    summary: 'Find an active student by name to record a point entry (admin, wakasek, wali kelas, guru)',
+    description: `${entryNote} At most 20, by name; the student registry itself is closed to teachers.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: PointStudentQuery },
+    responses: { 200: json(PointStudentList, 'Students'), ...errors(400, 401, 403, 404) },
+  });
   registry.registerPath({
     method: 'post',
     path: `${API_BASE_PATH}/point-entries/evidence`,

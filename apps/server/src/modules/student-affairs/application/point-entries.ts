@@ -5,6 +5,7 @@ import {
   type CreatePointEvidenceResponse,
   type PointEntry,
   type PointEvidenceLink,
+  type PointStudentList,
   type ReversePointEntryRequest,
   type StudentPoints,
 } from '@absah/contracts';
@@ -19,6 +20,7 @@ import type { Actor } from '../../../shared/policy';
 import { addDays } from '../../../shared/school-date';
 import { storageKey, type ObjectStorage } from '../../../shared/storage';
 import { canReadStudentPoints, canRecordPoints, canReversePoints, canSeeAllPoints } from '../domain/policies';
+import { searchStudents } from '../infrastructure/uks-repo';
 import { lockStudentPoints } from '../infrastructure/followup-repo';
 import { entriesOf, findEnrollment, findEntry, insertEntry, totalsOf, type EntryRow } from '../infrastructure/point-entry-repo';
 import { raiseThresholdTasks } from './followups';
@@ -61,6 +63,12 @@ async function readableStudent(tx: Tx, actor: Actor, enrollmentId: string) {
 async function violationTotalLocked(tx: Tx, enrollmentId: string): Promise<number> {
   await lockStudentPoints(tx, enrollmentId);
   return -(await totalsOf(tx, enrollmentId)).violationPoints;
+}
+
+/** GET /point-entries/students?q=: whoever may record points finds the student by name (the registry is closed to teachers). */
+export function findPointStudents(actor: Actor, text: string): Promise<PointStudentList> {
+  authorize(actor, canRecordPoints);
+  return withTenant(scope(actor), async (tx) => ({ items: await searchStudents(tx, text) }));
 }
 
 /** POST /point-entries/evidence: presigned PUT under schools/{id}/ksw/{uuid}. */

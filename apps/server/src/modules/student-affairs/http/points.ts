@@ -22,7 +22,9 @@ import {
   PointThresholdIdParam,
   PointThresholdList,
   PointThresholdsQuery,
+  PointStudentList,
   PointStudentParam,
+  PointStudentQuery,
   ReversePointEntryRequest,
   StudentPoints,
   UpdatePointRuleRequest,
@@ -39,7 +41,7 @@ import { resolveContext, type Auth } from '../../platform';
 import { listEarlyWarnings } from '../application/early-warning';
 import { completeFollowup, listFollowups } from '../application/followups';
 import { createPointThreshold, listPointThresholds, updatePointThreshold } from '../application/thresholds';
-import { createPointEvidence, pointEvidenceLink, recordPointEntry, reversePointEntry, studentPoints } from '../application/point-entries';
+import { createPointEvidence, findPointStudents, pointEvidenceLink, recordPointEntry, reversePointEntry, studentPoints } from '../application/point-entries';
 import { createPointRule, listPointRules, updatePointRule } from '../application/point-rules';
 import { todayOf } from './clock';
 
@@ -63,6 +65,9 @@ export function pointsRouter(auth: Auth, storage: ObjectStorage): Router {
     sendContract(res, PointRule, await updatePointRule(actor, auditContext(req, actor), ruleId, UpdatePointRuleRequest.parse(req.body)));
   });
 
+  router.get('/point-entries/students', ...points, async (req, res) => {
+    sendContract(res, PointStudentList, await findPointStudents(getActor(req), PointStudentQuery.parse(req.query).q));
+  });
   router.post('/point-entries/evidence', ...points, idempotent(), async (req, res) => {
     sendContract(res, CreatePointEvidenceResponse, await createPointEvidence(getActor(req), storage, CreatePointEvidenceRequest.parse(req.body)), 201);
   });

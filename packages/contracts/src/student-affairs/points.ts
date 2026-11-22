@@ -134,3 +134,12 @@ export type StudentPoints = z.infer<typeof StudentPoints>;
 
 export const PointEvidenceLink = z.object({ url: z.url(), expiresAt: z.iso.datetime({ offset: true }) }).meta({ id: 'PointEvidenceLink' });
 export type PointEvidenceLink = z.infer<typeof PointEvidenceLink>;
+
+/** GET /api/v1/point-entries/students?q= (admin, wakasek, wali kelas, guru): active students by name, at most 20, to pick who the entry is for. */
+export const PointStudentQuery = z.object({ q: z.string().trim().min(2, 'Ketik minimal 2 huruf.').max(60) }).meta({ id: 'PointStudentQuery' });
+export type PointStudentQuery = z.infer<typeof PointStudentQuery>;
+
+export const PointStudentList = z
+  .object({ items: z.array(z.object({ enrollmentId: z.uuid(), name: z.string(), className: z.string() })) })
+  .meta({ id: 'PointStudentList' });
+export type PointStudentList = z.infer<typeof PointStudentList>;

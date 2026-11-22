@@ -228,6 +228,29 @@ describe('POST /point-entries (KSW-02)', () => {
   });
 });
 
+describe('GET /point-entries/students (KSW-02)', () => {
+  const search = (agent: Agent, q: string, schoolId = school) => get(agent, `/point-entries/students?q=${encodeURIComponent(q)}`, schoolId);
+  const found = (res: { body: unknown }) => (res.body as { items: { name: string; className: string; enrollmentId: string }[] }).items;
+
+  it('lets whoever may record find an active student by name, with the class', async () => {
+    for (const agent of [guru, wali, wakasek, admin]) {
+      const items = found(await search(agent, 'ani').expect(200));
+      expect(items).toEqual([{ enrollmentId: enrollments['ANI RAJIN'], name: 'ANI RAJIN', className: '8B' }]);
+    }
+    expect(found(await search(guru, 'KELAS').expect(200)).map((s) => s.name)).toEqual(['DONI KELAS C']);
+  });
+
+  it('leaves out students who left, and students of other schools', async () => {
+    expect(found(await search(guru, 'CICI').expect(200))).toEqual([]);
+    expect(found(await search(guru, 'SEKOLAH LAIN').expect(200))).toEqual([]);
+  });
+
+  it('needs two letters and is closed to roles that do not record', async () => {
+    await search(guru, 'a').expect(400);
+    for (const agent of [kepsek, petugas]) await search(agent, 'ani').expect(403);
+  });
+});
+
 describe('evidence (KSW-02)', () => {
   it('stores an uploaded file under schools/{id}/ksw and links it for the readers of the profile', async () => {
     const evidenceId = await upload(guru);
