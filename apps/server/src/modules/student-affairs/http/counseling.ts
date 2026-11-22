@@ -1,4 +1,4 @@
-import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from '@absah/contracts';
+import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest, PointStudentList, PointStudentQuery } from '@absah/contracts';
 import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -6,7 +6,7 @@ import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
-import { completeCounselingFollowUp, listCounselingNotes, recordCounselingNote } from '../application/counseling';
+import { completeCounselingFollowUp, findCounselingStudents, listCounselingNotes, recordCounselingNote } from '../application/counseling';
 import { todayOf } from './clock';
 
 /** BK notes (KSW-05), behind student.counseling. */
@@ -14,6 +14,9 @@ export function counselingRouter(auth: Auth): Router {
   const router = Router();
   const bk = [resolveContext(auth, { school: 'required' }), requireCap('student.counseling')];
 
+  router.get('/counseling-notes/students', ...bk, async (req, res) => {
+    sendContract(res, PointStudentList, await findCounselingStudents(getActor(req), PointStudentQuery.parse(req.query).q));
+  });
   router.get('/counseling-notes', ...bk, async (req, res) => {
     const actor = getActor(req);
     sendContract(res, CounselingNoteList, await listCounselingNotes(actor, auditContext(req, actor), CounselingNotesQuery.parse(req.query)));

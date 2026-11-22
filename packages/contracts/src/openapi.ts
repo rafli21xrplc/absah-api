@@ -1325,6 +1325,17 @@ function buildRegistry(): OpenAPIRegistry {
   });
   registry.registerPath({
     method: 'get',
+    path: `${API_BASE_PATH}/counseling-notes/students`,
+    tags: ['student-affairs'],
+    summary: 'Find an active student by name to write a BK note (guru BK)',
+    description: `${bkNote} At most 20, by name; the guru BK does not read the student registry. Nothing about BK is returned.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: PointStudentQuery },
+    responses: { 200: json(PointStudentList, 'Students'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
     path: `${API_BASE_PATH}/counseling-notes`,
     tags: ['student-affairs'],
     summary: 'BK notes, optionally of one student or one follow-up status (guru BK, admin)',

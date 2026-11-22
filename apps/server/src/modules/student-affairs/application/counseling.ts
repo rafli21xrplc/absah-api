@@ -1,4 +1,4 @@
-import type { CounselingNote, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from '@absah/contracts';
+import type { CounselingNote, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest, PointStudentList } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
@@ -6,6 +6,7 @@ import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
 import { canReadCounseling, canWriteCounseling } from '../domain/policies';
+import { searchStudents } from '../infrastructure/uks-repo';
 import { activeStudent, completeFollowUp, findNote, insertNote, listNotes, type NoteRow } from '../infrastructure/counseling-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
@@ -22,6 +23,12 @@ function view(r: NoteRow): CounselingNote {
     followedUpAt: r.followedUpAt?.toISOString() ?? null,
     recordedBy: r.recordedById ? { id: r.recordedById, name: r.recordedByName ?? '' } : null,
   };
+}
+
+/** GET /counseling-notes/students?q= (guru BK): finds an active student by name, since the guru BK does not read the registry. */
+export function findCounselingStudents(actor: Actor, text: string): Promise<PointStudentList> {
+  authorize(actor, canWriteCounseling);
+  return withTenant(scope(actor), async (tx) => ({ items: await searchStudents(tx, text) }));
 }
 
 /**
