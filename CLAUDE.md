@@ -570,7 +570,7 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   admin and wakasek only), POST and PUT /point-rules/{id} (admin, wakasek; idempotent; the kind cannot change, new
   points keep its sign). Audit ksw.point_rule_created|updated logs the title as `rule`, not `name`: the audit
   sanitiser redacts every key called name. New role guru_bk (membership_role) and capabilities student.points and
-  student.counseling (default true) arrive here; the BK notes themselves come in 5.8e.
+  student.counseling (default true) arrive here; the BK notes themselves are KSW-05 below.
 - Point entries (KSW-02, behind student.points; migrations 0079-0080, schema point_entries): a pelanggaran or
   prestasi against an enrollment, so totals are per student per academic year. INSERT-ONLY (absah_app has no
   UPDATE, DELETE or TRUNCATE): rule_id plus a copy of kind, category, rule_name and points, so editing or
@@ -616,6 +616,18 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   early-warning, url /peringatan-dini. GET /early-warnings[?days] (admin, kepsek, wakasek, guru BK all; a wali kelas
   their class; guru 403). "Consecutive" counts recorded school days (daily_attendance rows), not calendar days. Do not
   Promise.all queries inside one withTenant transaction (one connection; pg deprecation warning).
+- BK notes (KSW-05, behind student.counseling; migrations 0086-0087, schema counseling_notes): the most private table
+  of a school. Access is enforced by RLS on the role, not only by the API: SELECT for the school's active guru_bk and
+  admin (policy looks at memberships), INSERT and UPDATE only for guru_bk; no DELETE policy, and absah_app has no
+  DELETE/TRUNCATE and only a column-level UPDATE on follow_up and followed_up_at (the note never changes). The wali
+  kelas, kepsek, wakasek, jobs (no user) and Absah support see 0 rows. Tests prove it straight at the database
+  (withTenant with each user) and check the Postgres cause text, because Drizzle wraps it ("Failed query"): use
+  err.cause.message, and always add a positive control so a refusal is the policy's and not a typo. note is
+  encrypted (counseling_notes.note). follow_up none|planned|done (+ followUpOn), planned to done once (409
+  not_planned). POST /counseling-notes and POST /counseling-notes/{id}/complete (guru BK only; admin reads only),
+  GET /counseling-notes[?enrollmentId&followUp] (guru BK, admin; everyone else 403). Audit keeps ids and counts and
+  never the note; READS are audited too (ksw.counseling_read). Endpoints read the school date through
+  student-affairs/http/clock.ts todayOf.
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

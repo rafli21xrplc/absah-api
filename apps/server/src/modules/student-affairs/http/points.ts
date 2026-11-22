@@ -28,13 +28,12 @@ import {
   UpdatePointRuleRequest,
   UpdatePointThresholdRequest,
 } from '@absah/contracts';
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
-import { getActor, getCtx } from '../../../shared/context';
+import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
-import { schoolDate } from '../../../shared/school-date';
 import type { ObjectStorage } from '../../../shared/storage';
 import { resolveContext, type Auth } from '../../platform';
 import { listEarlyWarnings } from '../application/early-warning';
@@ -42,11 +41,8 @@ import { completeFollowup, listFollowups } from '../application/followups';
 import { createPointThreshold, listPointThresholds, updatePointThreshold } from '../application/thresholds';
 import { createPointEvidence, pointEvidenceLink, recordPointEntry, reversePointEntry, studentPoints } from '../application/point-entries';
 import { createPointRule, listPointRules, updatePointRule } from '../application/point-rules';
+import { todayOf } from './clock';
 
-const todayOf = (req: Request) => {
-  const ctx = getCtx(req);
-  return schoolDate(ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta');
-};
 
 /** Discipline points (KSW-01 rules, KSW-02 entries, KSW-03 thresholds and follow-up tasks; early warnings follow), behind student.points. */
 export function pointsRouter(auth: Auth, storage: ObjectStorage): Router {

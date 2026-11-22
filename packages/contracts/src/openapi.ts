@@ -2,6 +2,7 @@
 // bundles that import contracts do not pull in the generator.
 import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import {
   CompleteFollowupRequest,
@@ -1295,6 +1296,41 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: EarlyWarningsQuery },
     responses: { 200: json(EarlyWarningList, 'Warnings'), ...errors(400, 401, 403, 404) },
+  });
+  const bkNote =
+    'Behind student.counseling (404 CAPABILITY_DISABLED otherwise). BK notes are the most private data of the school: only guru BK and admin read them, only guru BK write, and the database enforces it (RLS). The note is encrypted and never appears in the audit log; reads are audited.';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/counseling-notes`,
+    tags: ['student-affairs'],
+    summary: 'Write a BK note (guru BK)',
+    description: `${bkNote} Date defaults to today, never in the future. followUp none (default) or planned, with an optional followUpOn.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateCounselingNoteRequest } } } },
+    responses: { 201: json(CounselingNote, 'Recorded'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/counseling-notes`,
+    tags: ['student-affairs'],
+    summary: 'BK notes, optionally of one student or one follow-up status (guru BK, admin)',
+    description: `${bkNote} Newest first, at most 200. 403 for every other role, the wali kelas included.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: CounselingNotesQuery },
+    responses: { 200: json(CounselingNoteList, 'Notes'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/counseling-notes/{noteId}/complete`,
+    tags: ['student-affairs'],
+    summary: 'Mark a planned follow-up as done (guru BK)',
+    description: `${bkNote} 409 not_planned when the follow-up is not planned.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: CounselingNoteIdParam },
+    responses: { 200: json(CounselingNote, 'Done'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

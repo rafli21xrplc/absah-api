@@ -1,4 +1,4 @@
-import { EARLY_WARNING_KINDS, FOLLOWUP_STATUSES, POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
+import { COUNSELING_FOLLOW_UPS, EARLY_WARNING_KINDS, FOLLOWUP_STATUSES, POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { boolean, check, date, foreignKey, index, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
@@ -9,6 +9,7 @@ import { schools } from './platform';
 
 export const uksOutcome = pgEnum('uks_outcome', UKS_OUTCOMES);
 export const pointKind = pgEnum('point_kind', POINT_KINDS);
+export const counselingFollowUp = pgEnum('counseling_follow_up', COUNSELING_FOLLOW_UPS);
 export const earlyWarningKind = pgEnum('early_warning_kind', EARLY_WARNING_KINDS);
 export const followupStatus = pgEnum('followup_status', FOLLOWUP_STATUSES);
 
@@ -189,4 +190,33 @@ export const earlyWarningRuns = pgTable(
     ranAt: timestamp('ran_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.schoolId, t.schoolDate] })],
+);
+
+/**
+ * BK notes (KSW-05). RLS lets only the school's guru BK and admin read them, and only guru BK write: the
+ * database refuses the wali kelas, kepsek, wakasek, jobs and Absah support even if an endpoint forgot to.
+ * The note never changes; only follow_up and followed_up_at may be updated (column-level GRANT).
+ */
+export const counselingNotes = pgTable(
+  'counseling_notes',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    sessionDate: date('session_date').notNull(),
+    note: encryptedText('note', 'counseling_notes.note').notNull(),
+    followUp: counselingFollowUp('follow_up').notNull().default('none'),
+    followUpOn: date('follow_up_on'),
+    followedUpAt: timestamp('followed_up_at', { withTimezone: true }),
+    recordedBy: uuid('recorded_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('counseling_notes_school_id_enrollment_id_idx').on(t.schoolId, t.enrollmentId, t.sessionDate),
+    index('counseling_notes_school_id_planned_idx').on(t.schoolId, t.followUpOn).where(sql`${t.followUp} = 'planned'`),
+    check('counseling_notes_follow_up_on_check', sql`${t.followUpOn} is null or ${t.followUp} in ('planned', 'done')`),
+    check('counseling_notes_done_check', sql`(${t.followUp} = 'done') = (${t.followedUpAt} is not null)`),
+  ],
 );
