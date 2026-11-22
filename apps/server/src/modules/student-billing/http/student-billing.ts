@@ -1,4 +1,4 @@
-import { BillIdParam, BillsQuery, CreateFeeTypeRequest, FeeType, InstallmentIdParam, MyBillsList, RequestStudentPaymentRequest, StudentPayment, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, UpdateFeeTypeRequest, VoidBillRequest } from '@absah/contracts';
+import { BillIdParam, BillingRecap, BillingRecapQuery, BillsQuery, CreateFeeTypeRequest, FeeType, InstallmentIdParam, MyBillsList, RequestStudentPaymentRequest, StudentPayment, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, UpdateFeeTypeRequest, VoidBillRequest } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import type { PaymentProvider } from '../../../shared/payments';
 import { auditContext } from '../../../shared/audit';
@@ -11,6 +11,7 @@ import { resolveContext, type Auth } from '../../platform';
 import { issueBills, listStudentBills, voidBill } from '../application/bills';
 import { createFeeType, listFeeTypesFor, updateFeeTypeFor } from '../application/fees';
 import { myBills, requestStudentPayment } from '../application/payments';
+import { billingRecap } from '../application/recap';
 
 /** Today on the selected school's clock (default Asia/Jakarta). */
 const today = (req: Request): string => {
@@ -46,6 +47,9 @@ export function studentBillingRouter(auth: Auth, provider: PaymentProvider | nul
     sendContract(res, StudentBill, await voidBill(actor, auditContext(req, actor), BillIdParam.parse(req.params).billId, VoidBillRequest.parse(req.body), today(req)));
   });
 
+  router.get('/student-billing/recap', ...billing, async (req, res) => {
+    sendContract(res, BillingRecap, await billingRecap(getActor(req), today(req), BillingRecapQuery.parse(req.query)));
+  });
   // A parent or the student: their own bills, and a charge (VA / QRIS) for one installment.
   router.get('/student-billing/mine', ...billing, async (req, res) => {
     sendContract(res, MyBillsList, await myBills(getActor(req), today(req)));
