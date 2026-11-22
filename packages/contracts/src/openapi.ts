@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { MyExams } from './exam/mine';
 import { ExamCheckIn, ExamCheckInRequest, ExamScanRequest, RoomAttendance } from './exam/attendance';
 import { CreateExamRoomRequest, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest } from './exam/rooms';
 import { EligibilityList, EligibilityQuery } from './exam/eligibility';
@@ -1745,6 +1746,16 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: ExamRoomIdParam },
     responses: { 200: json(RoomAttendance, 'Attendance'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/mine`,
+    tags: ['exam'],
+    summary: 'Exam card status of my own children, or of myself (UJN-01)',
+    description: `${examNote} For parents and students, each exam not closed and not over, per own student: eligible (by the school's rule, right now), the reasons when not (attendance: own percent and the minimum; bills: how many installments are open, never the amount), the room and seat once arranged, and whether the student has already arrived. The QR on the exam card is the same dynamic QR as the daily card (GET /cards/mine, card device keys): the PWA shows it while an exam is open and eligible is true.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(MyExams, 'My exams'), ...errors(401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

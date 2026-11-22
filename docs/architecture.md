@@ -367,6 +367,7 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | UJN | `/exam/periods` (GET, POST, PATCH) | `exam.enabled` | wakasek, admin write; kepsek, wali_kelas read |
 | UJN | `/exam/periods/{id}/rooms`, `/exam/rooms/{id}` and `/students` | `exam.enabled` | wakasek, admin arrange; kepsek reads; the room's pengawas reads own room |
 | UJN | `/exam/rooms/{id}/attendance`, `/attendance`, `/scan` | `exam.enabled` | wakasek, admin, the room's pengawas record; kepsek reads |
+| UJN | `/exam/mine` | `exam.enabled` | orang_tua, siswa see their own children's exam card status |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |

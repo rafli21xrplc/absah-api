@@ -1,4 +1,4 @@
-import { CreateExamPeriodRequest, CreateExamRoomRequest, EligibilityList, EligibilityQuery, ExamPeriod, ExamPeriodIdParam, ExamCheckIn, ExamCheckInRequest, ExamPeriodList, ExamPeriodsQuery, ExamScanRequest, RoomAttendance, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest, UpdateExamPeriodRequest } from '@absah/contracts';
+import { CreateExamPeriodRequest, CreateExamRoomRequest, EligibilityList, EligibilityQuery, ExamPeriod, ExamPeriodIdParam, ExamCheckIn, ExamCheckInRequest, MyExams, ExamPeriodList, ExamPeriodsQuery, ExamScanRequest, RoomAttendance, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest, UpdateExamPeriodRequest } from '@absah/contracts';
 import { Router } from 'express';
 import { getCtx } from '../../../shared/context';
 import { schoolDate } from '../../../shared/school-date';
@@ -10,6 +10,7 @@ import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
 import { examEligibility } from '../application/eligibility';
 import { checkInByCard, checkInManually, roomAttendance } from '../application/attendance';
+import { myExams } from '../application/mine';
 import { createExamRoom, listExamRooms, removeExamRoom, updateExamRoom } from '../application/rooms';
 import { roomRoster, seatStudents, unseatStudent } from '../application/seating';
 import { createExamPeriod, listExamPeriods, updateExamPeriod } from '../application/periods';
@@ -19,6 +20,11 @@ export function examRouter(auth: Auth): Router {
   const router = Router();
   const exam = [resolveContext(auth, { school: 'required' }), requireCap('exam.enabled')];
 
+  router.get('/exam/mine', ...exam, async (req, res) => {
+    const ctx = getCtx(req);
+    const today = schoolDate(ctx.memberships.find((m) => m.schoolId === ctx.schoolId)?.timezone ?? 'Asia/Jakarta');
+    sendContract(res, MyExams, await myExams(getActor(req), today));
+  });
   router.get('/exam/periods', ...exam, async (req, res) => {
     sendContract(res, ExamPeriodList, await listExamPeriods(getActor(req), ExamPeriodsQuery.parse(req.query).includeClosed));
   });
