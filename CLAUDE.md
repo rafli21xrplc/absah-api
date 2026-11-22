@@ -603,6 +603,19 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   guru BK see all; a wali kelas only their class; guru 403), POST /followup-tasks/{id}/complete (admin, wakasek, guru
   BK, the class's wali kelas; kepsek reads only; open to done once, 409 already_done; the note is encrypted and not
   audited). Staff push for new tasks is not wired yet (early warnings in 5.8d will push).
+- Early warnings (KSW-04, behind student.early_warning, new capability default true; migrations 0084-0085, schema
+  early_warnings and early_warning_runs, both insert-only): job ksw.early-warning, cron every 5 minutes UTC, per-school
+  clock like pkl.missing-checkin: from 18.00 (EARLY_WARNING_AT) a school's day is handled once, marked in
+  early_warning_runs (marker and warnings share one transaction, so a failure retries next tick). Pure
+  domain/patterns.ts detectPatterns(window, today, rules) with table tests: consecutive_alpa (3 recorded school days of
+  A ending recently), repeated_late (3 T in the last 7 recorded days), bolos_jam (2 days present H/T yet A in a jam
+  pelajaran, per_period sessions) and pkl_absence (2 A days on PKL sessions). Focus follows capabilities, never the
+  level: bolos_jam when attendance.mode is per_period, pkl_absence when pkl.enabled; the other two always. A kind already
+  warned for a student in the last 7 days is skipped (withoutRecent). Each new warning emits ksw.early_warning_raised;
+  push consumer notify_push_early_warning tells the class's wali kelas and every active guru BK, generic text, tag
+  early-warning, url /peringatan-dini. GET /early-warnings[?days] (admin, kepsek, wakasek, guru BK all; a wali kelas
+  their class; guru 403). "Consecutive" counts recorded school days (daily_attendance rows), not calendar days. Do not
+  Promise.all queries inside one withTenant transaction (one connection; pg deprecation warning).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

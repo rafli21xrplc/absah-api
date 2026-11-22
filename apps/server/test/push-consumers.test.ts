@@ -30,9 +30,9 @@ const run = (name: string, event: ReturnType<typeof envelope>) => {
 };
 const to = () => sender.sent.map((s) => s.target.endpoint);
 
-async function member(key: string, n: number, enable = true) {
+async function member(key: string, n: number, enable = true, role: 'guru' | 'guru_bk' = 'guru') {
   const s = await t.staff(`Staf ${key}`);
-  await t.member(school, s.id, 'guru');
+  await t.member(school, s.id, role);
   const agent = t.agent();
   await signIn(agent, s.email).expect(200);
   const body = sub(n);
@@ -56,6 +56,7 @@ beforeAll(async () => {
   await member('host', 2);
   await member('off', 3, false);
   await member('guru', 4);
+  await member('bk', 5, true, 'guru_bk');
   await withTenant({ schoolId: school, userId: null }, async (tx) => {
     const [year] = await tx.insert(schema.academicYears).values({ schoolId: school, name: '2026/2027', startsOn: '2026-07-01', endsOn: '2027-06-30', isActive: true }).returning();
     const [cls] = await tx.insert(schema.classes).values({ schoolId: school, academicYearId: year?.id ?? '', name: 'X-1', grade: 10, homeroomTeacherId: staff.wali?.id }).returning();
@@ -104,6 +105,20 @@ describe('staff push consumers (NTF-06)', () => {
     await run('notify_push_leave_requested', envelope('leave.requested', { leaveRequestId: await leave(staff.wali?.id ?? null, 'pending') }));
     await run('notify_push_leave_requested', envelope('leave.requested', { leaveRequestId: await leave(null, 'approved') }));
     expect(sender.sent).toHaveLength(before + 1);
+  });
+
+  it('tells the wali kelas and guru BK, and nobody else, that an early warning waits', async () => {
+    const warningId = uuidv7();
+    await withTenant({ schoolId: school, userId: null }, (tx) =>
+      tx.insert(schema.earlyWarnings).values({ id: warningId, schoolId: school, enrollmentId: enrollment, kind: 'consecutive_alpa', schoolDate: today, dates: [today] }),
+    );
+    const before = sender.sent.length;
+    const event = envelope('ksw.early_warning_raised', { warningId });
+    expect(await run('notify_push_early_warning', event)).toBe('handled');
+    expect(sender.sent.slice(before).map((s) => s.target.endpoint).sort()).toEqual([staff.wali?.endpoint, staff.bk?.endpoint].sort());
+    expect(sender.sent.at(-1)?.message).toMatchObject({ body: 'Ada peringatan dini kehadiran siswa. Ketuk untuk melihat.', url: '/peringatan-dini', tag: 'early-warning' });
+    expect(await run('notify_push_early_warning', event)).toBe('duplicate');
+    expect(sender.sent).toHaveLength(before + 2);
   });
 
   it('never puts a name or any personal data in a message', () => {

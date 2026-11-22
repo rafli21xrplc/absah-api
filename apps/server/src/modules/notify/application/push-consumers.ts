@@ -1,6 +1,6 @@
 import { defineConsumer, type Consumer } from '../../../shared/outbox';
 import type { PushSender } from '../../../shared/push';
-import { leaveApprover, schoolOf } from '../infrastructure/notify-repo';
+import { earlyWarningRecipients, leaveApprover, schoolOf } from '../infrastructure/notify-repo';
 import { pushToUser } from './push';
 
 /**
@@ -42,5 +42,16 @@ export function pushConsumers(deps: { push: PushSender }): Consumer[] {
     },
   });
 
-  return [visitorArrived, sessionUnfilled, leaveRequested];
+  /** The early-warning job saw a pattern (KSW-04): the wali kelas and guru BK are told that one waits, not who. One tag, so a busy evening is one notification. */
+  const earlyWarning = defineConsumer({
+    name: 'notify_push_early_warning',
+    event: 'ksw.early_warning_raised',
+    async handle(tx, event) {
+      const [school, recipients] = await Promise.all([schoolOf(tx, event.schoolId), earlyWarningRecipients(tx, event.payload.warningId)]);
+      if (!school) return;
+      for (const userId of recipients) await pushToUser(tx, deps.push, userId, { title: school.name, body: 'Ada peringatan dini kehadiran siswa. Ketuk untuk melihat.', url: '/peringatan-dini', tag: 'early-warning' });
+    },
+  });
+
+  return [visitorArrived, sessionUnfilled, leaveRequested, earlyWarning];
 }

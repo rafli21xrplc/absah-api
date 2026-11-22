@@ -305,3 +305,20 @@ export async function leaveApprover(tx: Tx, leaveRequestId: string): Promise<str
     .where(eq(l.id, leaveRequestId));
   return row && row.status === 'pending' && row.homeroom && row.homeroom !== row.requestedBy ? row.homeroom : undefined;
 }
+
+/**
+ * NTF-06: who is told about an early warning (KSW-04): the wali kelas of the student's class and every active guru BK
+ * of the school. The tab in a school's memberships is not rolled over by year for BK, so no year filter applies.
+ */
+export async function earlyWarningRecipients(tx: Tx, warningId: string): Promise<string[]> {
+  const w = schema.earlyWarnings;
+  const [warning] = await tx
+    .select({ homeroom: schema.classes.homeroomTeacherId })
+    .from(w)
+    .innerJoin(schema.enrollments, eq(schema.enrollments.id, w.enrollmentId))
+    .innerJoin(schema.classes, eq(schema.classes.id, schema.enrollments.classId))
+    .where(eq(w.id, warningId));
+  if (!warning) return [];
+  const counselors = await tx.select({ userId: schema.memberships.userId }).from(schema.memberships).where(and(eq(schema.memberships.role, 'guru_bk'), eq(schema.memberships.status, 'active')));
+  return [...new Set([...(warning.homeroom ? [warning.homeroom] : []), ...counselors.map((c) => c.userId)])];
+}
