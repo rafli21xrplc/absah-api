@@ -1,4 +1,4 @@
-import { Arrival, Visitor, VisitorIdParam, VisitorList, VisitorPhotoLink, VisitorsQuery, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
+import { Arrival, ArrivalBoard, Visitor, VisitorIdParam, VisitorList, VisitorPhotoLink, VisitorsQuery, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -8,7 +8,7 @@ import type { ObjectStorage } from '../../../shared/storage';
 import { idempotent } from '../../../shared/idempotency';
 import { schoolDate } from '../../../shared/school-date';
 import { resolveContext, type Auth } from '../../platform';
-import { gateToday, recordManualArrival } from '../application/arrivals';
+import { arrivalBoard, gateToday, recordManualArrival } from '../application/arrivals';
 import { bindCardDevice, getDeviceKeys, getMyCards } from '../application/cards';
 import { createPairing, getKiosks, revoke } from '../application/kiosks';
 import { leaveVisitor, listVisitors, visitorPhotoLink } from '../application/visitors';
@@ -52,6 +52,9 @@ export function gateRouter(auth: Auth, storage: ObjectStorage): Router {
   router.post('/gate/arrivals', ...gate, idempotent(), async (req, res) => {
     const actor = getActor(req);
     sendContract(res, Arrival, await recordManualArrival(actor, auditContext(req, actor), schoolClock(req).timezone, ManualArrivalRequest.parse(req.body)));
+  });
+  router.get('/gate/board', ...gate, async (req, res) => {
+    sendContract(res, ArrivalBoard, await arrivalBoard(getActor(req), schoolClock(req).timezone));
   });
   router.get('/gate/today', ...gate, async (req, res) => {
     sendContract(res, GateToday, await gateToday(getActor(req), schoolClock(req).timezone));

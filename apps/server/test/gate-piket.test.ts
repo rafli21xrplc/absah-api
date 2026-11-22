@@ -83,4 +83,23 @@ describe('piket at the gate (GRB-05, GRB-06)', () => {
     expect(body.late.map((l) => l.name)).toContain('BUDI');
     expect(body.notArrived).toEqual([expect.objectContaining({ name: 'CITRA', leave: 'S' }), expect.objectContaining({ name: 'DODI', leave: null })]);
   });
+
+  it('gives the live board per rombel as counts only (GRB-08)', async () => {
+    await guru.get('/api/v1/gate/board').set('X-School-Id', school).expect(403);
+    const board = (await piket.get('/api/v1/gate/board').set('X-School-Id', school).expect(200)).body as {
+      schoolDate: string;
+      updatedAt: string;
+      totals: { onTime: number; late: number } & Record<string, number>;
+      classes: { className: string; students: number; onTime: number; late: number; notArrived: number; excused: number }[];
+    };
+    expect(board.schoolDate).toBe(today);
+    expect(Date.now() - new Date(board.updatedAt).getTime()).toBeLessThan(60_000);
+    // BUDI is late, ANI came in by hand (late or on time by the clock), CITRA has an izin, DODI is not in.
+    expect(board.totals).toMatchObject({ students: 4, notArrived: 2, excused: 1 });
+    expect(board.totals.onTime + board.totals.late).toBe(2);
+    expect(board.totals.late).toBeGreaterThanOrEqual(1);
+    expect(board.classes).toHaveLength(1);
+    expect(board.classes[0]).toMatchObject({ className: '6A', students: 4, notArrived: 2, excused: 1 });
+    expect(JSON.stringify(board)).not.toMatch(/BUDI|CITRA|DODI/); // counts only, no names
+  });
 });

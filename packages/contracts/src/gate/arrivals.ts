@@ -34,3 +34,19 @@ export const GateToday = z
   })
   .meta({ id: 'GateToday' });
 export type GateToday = z.infer<typeof GateToday>;
+
+/**
+ * GET /api/v1/gate/board (GRB-08): the live arrival board, light enough to poll every 5 seconds. Per rombel: on time, late, and
+ * not in yet (`excused` of those are covered by an approved izin, nobody needs to chase them).
+ */
+export const ArrivalBoard = z
+  .object({
+    schoolDate: z.iso.date(),
+    lateAfter: z.string(),
+    /** When the server computed it, so a screen can show "diperbarui 07.41". */
+    updatedAt: z.iso.datetime({ offset: true }),
+    totals: z.object({ students: z.int(), onTime: z.int(), late: z.int(), notArrived: z.int(), excused: z.int() }),
+    classes: z.array(z.object({ className: z.string(), students: z.int(), onTime: z.int(), late: z.int(), notArrived: z.int(), excused: z.int() })),
+  })
+  .meta({ id: 'ArrivalBoard' });
+export type ArrivalBoard = z.infer<typeof ArrivalBoard>;

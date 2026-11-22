@@ -1,10 +1,11 @@
-import type { Arrival, GateToday, ManualArrivalRequest } from '@absah/contracts';
+import type { Arrival, ArrivalBoard, GateToday, ManualArrivalRequest } from '@absah/contracts';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
 import { schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { applyGateArrivals, schoolStartTime } from '../../attendance';
+import { boardByClass } from '../domain/board';
 import { canRecordArrivals, canSeeGateToday } from '../domain/policies';
 import { activeStudent, excusedOn, studentsWithArrival } from '../infrastructure/arrival-repo';
 import { insertScan } from '../infrastructure/scan-repo';
@@ -64,5 +65,18 @@ export function gateToday(actor: Actor, timezone: string): Promise<GateToday> {
       late: late.sort((a, b) => a.arrivedAt.localeCompare(b.arrivedAt)),
       notArrived,
     };
+  });
+}
+
+/** GRB-08: the counts the live board polls, per rombel; no names, so it stays small for 900 students. */
+export function arrivalBoard(actor: Actor, timezone: string): Promise<ArrivalBoard> {
+  if (!canSeeGateToday.allows(actor)) throw new ForbiddenError('Papan kedatangan untuk guru piket dan pimpinan sekolah.');
+  return withTenant(scope(actor), async (tx) => {
+    const now = new Date();
+    const today = schoolDate(timezone, now);
+    const rows = await studentsWithArrival(tx, today);
+    const excused = await excusedOn(tx, today);
+    const { classes, totals } = boardByClass(rows.map((r) => ({ className: r.className, arrived: r.arrivedAt !== null, late: r.outcome === 'late', excused: excused.has(r.enrollmentId) })));
+    return { schoolDate: today, lateAfter: await schoolStartTime(tx, today), updatedAt: now.toISOString(), totals, classes };
   });
 }
