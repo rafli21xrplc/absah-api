@@ -1,14 +1,14 @@
 import type { MyBillsList, RequestStudentPaymentRequest, StudentPayment } from '@absah/contracts';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
-import { withTenant } from '../../../shared/db';
+import { withPlatform, withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError } from '../../../shared/errors';
-import { defineConsumer, emit, type Consumer } from '../../../shared/outbox';
+import { defineConsumer, emit, markWebhookProcessed, type Consumer } from '../../../shared/outbox';
 import { anyRole, type Actor } from '../../../shared/policy';
-import { PaymentError, type PaymentProvider } from '../../../shared/payments';
+import { PaymentError, type PaymentEvent, type PaymentProvider } from '../../../shared/payments';
 import { canPayStudentBills } from '../domain/policies';
 import { findBill } from '../infrastructure/bill-repo';
-import { insertPayment, lockMyInstallment, lockPayment, myBillIds, openPayments, updatePayment } from '../infrastructure/payment-repo';
+import { insertPayment, lockInstallment, lockMyInstallment, lockPayment, markBillPaid, markInstallmentPaid, myBillIds, openPayments, paymentByProviderRef, pendingWebhooks, unpaidInstallments, updatePayment } from '../infrastructure/payment-repo';
 import { viewBills } from './bills';
 import { toPayment } from './payment-view';
 
@@ -84,4 +84,48 @@ export function studentBillingConsumers(provider: PaymentProvider | null, now: (
     },
   });
   return [open];
+}
+
+/**
+ * Job tgh.apply-payments: applies the gateway events stored in the inbox that are for a student payment. The inbox is
+ * shared with the Absah invoices (same gateway, same webhook): an event whose charge is not one of ours is left for the
+ * other job, and the subscription job drops true orphans after a day. The school is unknown until the charge is found,
+ * so the inbox read and that lookup use withPlatform; the change runs in the school's withTenant.
+ *
+ * A paid event is recorded once: the payment's own state, plus a unique provider_txn_id, so the same webhook twice (or
+ * redelivered after a crash) changes nothing the second time. Money below the amount leaves the installment open. When
+ * the installment was already paid (a VA and a QRIS both paid) or the bill was voided meanwhile, the payment is still
+ * recorded, with a note, because the money did arrive; no installment is counted twice or paid on a void bill.
+ */
+export async function applyStudentPaymentWebhooks(provider: PaymentProvider, limit = 200): Promise<{ applied: number }> {
+  const rows = await withPlatform((tx) => pendingWebhooks(tx, `payment:${provider.name}`, limit));
+  let applied = 0;
+  for (const row of rows) {
+    const e = row.payload as { providerRef: string; providerTxnId: string; status: PaymentEvent['status']; amount: number; at: string };
+    const target = await withPlatform((tx) => paymentByProviderRef(tx, provider.name, e.providerRef));
+    if (!target) continue;
+    await withTenant({ schoolId: target.schoolId, userId: null }, async (tx) => {
+      const payment = await lockPayment(tx, target.id);
+      if (!payment || payment.status === 'paid') return;
+      if (e.status !== 'paid') {
+        await updatePayment(tx, payment.id, { status: e.status, lastError: e.status === 'failed' ? 'gateway_failed' : null });
+        return;
+      }
+      if (e.amount < payment.amount) {
+        await updatePayment(tx, payment.id, { lastError: `underpaid:${e.amount}` });
+        return;
+      }
+      const at = new Date(e.at);
+      const installment = await lockInstallment(tx, payment.installmentId);
+      const note = !installment || installment.billStatus === 'void' ? 'bill_void' : installment.paidAt ? 'paid_twice' : null;
+      await updatePayment(tx, payment.id, { status: 'paid', paidAt: at, providerTxnId: e.providerTxnId, lastError: note });
+      if (installment && !note) {
+        await markInstallmentPaid(tx, installment.id, at);
+        if ((await unpaidInstallments(tx, installment.billId)) === 0) await markBillPaid(tx, installment.billId, at);
+      }
+    });
+    await markWebhookProcessed(row.id);
+    applied += 1;
+  }
+  return { applied };
 }

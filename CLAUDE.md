@@ -661,6 +661,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   attempt of the same method is reused; 404 for installments not of the caller's child, 409 already_paid / bill_void /
   payments_unavailable (no gateway). The installment is locked FOR UPDATE so two taps do not open two charges. The
   webhook side (5.10d) records the money; nothing marks an installment paid yet.
+- Webhook pembayaran siswa (TGH-03, job tgh.apply-payments every minute, application/payments.ts
+  applyStudentPaymentWebhooks): the gateway posts to the same /webhooks/payments as the Absah invoices; the inbox row is
+  stored once per `<txn id>:<status>` (recordWebhook). Each job applies only events whose charge is its own table's
+  (student_payments by provider ref, cross-tenant lookup in withPlatform) and leaves the rest; the subscription job
+  still drops true orphans after 24h. A paid event: payment status/unique provider_txn_id make a repeat a no-op; less
+  than the amount -> `underpaid:<n>`, stays pending; installment.paid_at set, bill `paid` when no installment is
+  unpaid. Money for an already paid installment (VA + QRIS both paid) or a bill voided meanwhile is recorded paid with
+  last_error `paid_twice` / `bill_void` and counts nothing (no refunds built). expired/failed events mark the attempt so
+  the parent can ask again.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once
