@@ -1,4 +1,5 @@
-import type { BillsQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, VoidBillRequest } from '@absah/contracts';
+import type { BillsQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, StudentPayment, VoidBillRequest } from '@absah/contracts';
+import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
@@ -8,12 +9,24 @@ import type { Actor } from '../../../shared/policy';
 import { isOverdue, paidAmount, planInstallments } from '../domain/installments';
 import { canManageBilling, canReadStudentBills } from '../domain/policies';
 import { findFeeType } from '../infrastructure/fee-repo';
+import { latestPayments } from '../infrastructure/payment-repo';
+import { toPayment } from './payment-view';
 import { activeEnrollmentsOf, classExists, findBill, hasPaidInstallment, insertInstallments, insertNewBills, installmentsOf, listBills, lockBill, markVoid, type BillRow, type InstallmentRow } from '../infrastructure/bill-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 
-function view(row: BillRow, parts: InstallmentRow[], today: string): StudentBill {
-  const items = parts.map((p) => ({ id: p.id, number: p.number, amount: p.amount, dueOn: p.dueOn, paidAt: p.paidAt?.toISOString() ?? null }));
+/** The bills with the latest payment attempt of each installment (the charge to pay, or what came of it). */
+export async function viewBills(tx: Tx, rows: BillRow[], today: string, now = new Date()): Promise<StudentBill[]> {
+  const parts = await installmentsOf(tx, rows.map((r) => r.id));
+  const attempts = await latestPayments(tx, parts.map((p) => p.id));
+  return rows.map((r) => view(r, parts.filter((p) => p.billId === r.id), today, (id) => {
+    const a = attempts.get(id);
+    return a ? toPayment(a, now) : null;
+  }));
+}
+
+function view(row: BillRow, parts: InstallmentRow[], today: string, paymentOf: (installmentId: string) => StudentPayment | null): StudentBill {
+  const items = parts.map((p) => ({ id: p.id, number: p.number, amount: p.amount, dueOn: p.dueOn, paidAt: p.paidAt?.toISOString() ?? null, payment: paymentOf(p.id) }));
   return {
     id: row.id,
     enrollmentId: row.enrollmentId,
@@ -66,8 +79,7 @@ export function listStudentBills(actor: Actor, query: BillsQuery, today: string)
   authorize(actor, canReadStudentBills);
   return withTenant(scope(actor), async (tx) => {
     const { rows, total } = await listBills(tx, query, today);
-    const parts = await installmentsOf(tx, rows.map((r) => r.id));
-    return { items: rows.map((r) => view(r, parts.filter((p) => p.billId === r.id), today)), total };
+    return { items: await viewBills(tx, rows, today), total };
   });
 }
 
@@ -86,6 +98,6 @@ export function voidBill(actor: Actor, auditCtx: AuditContext, billId: string, i
     await audit(tx, auditCtx, 'billing.bill_voided', { type: 'student_bill', id: billId }, { after: { reason: input.reason } });
     const row = await findBill(tx, billId);
     if (!row) throw new Error('bill vanished');
-    return view(row, await installmentsOf(tx, [billId]), today);
+    return (await viewBills(tx, [row], today))[0] as StudentBill;
   });
 }

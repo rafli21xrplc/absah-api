@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_INSTALLMENTS, BillStatus } from './constants';
+import { StudentPayment } from './payments';
 
 const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus YYYY-MM-DD.');
 
@@ -45,7 +46,15 @@ export const IssueBillsResult = z
 export type IssueBillsResult = z.infer<typeof IssueBillsResult>;
 
 export const BillInstallment = z
-  .object({ id: z.uuid(), number: z.number().int(), amount: z.number().int(), dueOn: z.string(), paidAt: z.string().nullable() })
+  .object({
+    id: z.uuid(),
+    number: z.number().int(),
+    amount: z.number().int(),
+    dueOn: z.string(),
+    paidAt: z.string().nullable(),
+    /** The latest attempt to pay it (a VA or QRIS being paid, paid, or expired/failed so a new one can be asked), if any. */
+    payment: StudentPayment.nullable(),
+  })
   .meta({ id: 'BillInstallment' });
 export type BillInstallment = z.infer<typeof BillInstallment>;
 
@@ -90,3 +99,7 @@ export const BillIdParam = z.object({ billId: z.uuid() });
 
 export const VoidBillRequest = z.object({ reason: z.string().trim().min(1, 'Tulis alasan membatalkan.').max(200) }).meta({ id: 'VoidBillRequest' });
 export type VoidBillRequest = z.infer<typeof VoidBillRequest>;
+
+/** What a parent (or the student) owes: the bills of their own children, paid ones for the history, void ones left out. */
+export const MyBillsList = z.object({ items: z.array(StudentBill) }).meta({ id: 'MyBillsList' });
+export type MyBillsList = z.infer<typeof MyBillsList>;

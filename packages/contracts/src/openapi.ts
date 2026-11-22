@@ -4,7 +4,8 @@ import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
-import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { InstallmentIdParam, RequestStudentPaymentRequest, StudentPayment } from './student-billing/payments';
 import { CreateFeeTypeRequest, FeeType, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, UpdateFeeTypeRequest } from './student-billing/fees';
 import { TeacherAttendance, TeacherToday } from './teacher/attendance';
 import { TeacherReport, TeacherReportQuery } from './teacher/report';
@@ -1550,6 +1551,27 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: BillIdParam, body: { content: { 'application/json': { schema: VoidBillRequest } } } },
     responses: { 200: json(StudentBill, 'Voided'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/student-billing/mine`,
+    tags: ['student-billing'],
+    summary: "The bills of the caller's own children, or of the student themself, with the charge to pay (TGH-03)",
+    description: `${billingNote} For orang_tua and siswa only (403 for staff). Void bills are left out; each installment carries its latest payment attempt, if any (a pending one past its expiry reads as expired).`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(MyBillsList, 'Bills'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/student-billing/installments/{installmentId}/payments`,
+    tags: ['student-billing'],
+    summary: 'Ask for a VA or QRIS to pay one installment (TGH-03)',
+    description: `${billingNote} Stored as requested and answered 202; the worker opens the charge at the gateway, so poll /student-billing/mine. An open attempt of the same method is reused. 404 for an installment that is not the caller's child's; 409 already_paid, bill_void, payments_unavailable.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: InstallmentIdParam, body: { content: { 'application/json': { schema: RequestStudentPaymentRequest } } } },
+    responses: { 202: json(StudentPayment, 'Requested'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

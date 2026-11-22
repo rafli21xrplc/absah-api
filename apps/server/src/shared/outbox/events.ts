@@ -43,6 +43,8 @@ export const EVENTS = {
   'mbg.forecast_ready': z.object({ schoolDate: z.iso.date() }),
   /** An admin asked to pay an invoice; subscription opens the VA/QRIS at the gateway in the worker (BIL). */
   'payment.requested': z.object({ paymentId: z.uuid() }),
+  /** A parent or student asked to pay a student bill installment; student-billing opens the VA/QRIS at the gateway in the worker (TGH-03). */
+  'student_payment.requested': z.object({ paymentId: z.uuid() }),
   /** A guest signed in at the kiosk for a staff member (GRB-11); the push to them arrives with NTF-06 (5.7). */
   'gate.visitor_arrived': z.object({ visitorId: z.uuid(), hostUserId: z.uuid() }),
   /** A student left with a penjemput (GRB-10): notify tells the parents who and when. */
