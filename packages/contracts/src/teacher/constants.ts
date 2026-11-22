@@ -8,4 +8,3 @@ export type TeacherAttendanceSource = (typeof TEACHER_ATTENDANCE_SOURCES)[number
 
 /** dinas = away on school business: the lessons still need someone, like sick leave. */
 export const TEACHER_LEAVE_KINDS = ['sakit', 'izin', 'dinas'] as const;
-export type TeacherLeaveKind = (typeof TEACHER_LEAVE_KINDS)[number];

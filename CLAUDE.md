@@ -644,6 +644,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   jam pelajaran, 07.00 default), the start minute is on time. School day by schoolDayOf. Tests pin only `Date`
   (vi.useFakeTimers({ toFake: ['Date'] })) so supertest keeps working; 2026-11-23 is a Monday, 06.50 WIB = 22 Nov 23:50Z.
   Kiosk teacher cards are NOT built (source 'kiosk' exists in the enum for them).
+- Izin guru (GRU-02, teacher/{application,http}/leave.ts): POST /teacher-leaves (always pending; dates like a student
+  izin: 30 days, 7 days back; 409 overlap under an advisory lock per teacher), GET /teacher-leaves[?status=pending|..|all
+  &mine=true] (deciders see everyone, a teacher only their own), POST /{id}/decide (wakasek, kepsek, admin; never on their
+  own izin = 403; 409 already_decided under FOR UPDATE), POST /{id}/cancel (owner only, pending or approved and not over;
+  404 for another teacher's). Reason encrypted, never audited. Events teacher.leave_requested -> push to the wakasek
+  (kepsek and admin when the school has none; never the requester) and teacher.leave_decided -> push to the teacher
+  (generic text, url /izin-guru). Approved leave is what GRU-03 reads to find sessions without a teacher.
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

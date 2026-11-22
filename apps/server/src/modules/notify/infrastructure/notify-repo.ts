@@ -322,3 +322,23 @@ export async function earlyWarningRecipients(tx: Tx, warningId: string): Promise
   const counselors = await tx.select({ userId: schema.memberships.userId }).from(schema.memberships).where(and(eq(schema.memberships.role, 'guru_bk'), eq(schema.memberships.status, 'active')));
   return [...new Set([...(warning.homeroom ? [warning.homeroom] : []), ...counselors.map((c) => c.userId)])];
 }
+
+/**
+ * NTF-06: who decides a teacher's izin (GRU-02): the active wakasek of the school, or the kepsek and admin when it has
+ * none. Never the teacher who asked.
+ */
+export async function teacherLeaveDeciders(tx: Tx, teacherLeaveId: string): Promise<string[]> {
+  const [leave] = await tx.select({ userId: schema.teacherLeaves.userId, status: schema.teacherLeaves.status }).from(schema.teacherLeaves).where(eq(schema.teacherLeaves.id, teacherLeaveId));
+  if (!leave || leave.status !== 'pending') return [];
+  const m = schema.memberships;
+  const withRole = async (...roles: ('wakasek' | 'kepsek' | 'admin')[]) =>
+    (await tx.select({ userId: m.userId }).from(m).where(and(inArray(m.role, roles), eq(m.status, 'active')))).map((r) => r.userId).filter((id) => id !== leave.userId);
+  const wakasek = await withRole('wakasek');
+  return [...new Set(wakasek.length > 0 ? wakasek : await withRole('kepsek', 'admin'))];
+}
+
+/** The teacher whose izin was decided (GRU-02). */
+export async function teacherLeaveOwner(tx: Tx, teacherLeaveId: string): Promise<string | undefined> {
+  const [row] = await tx.select({ userId: schema.teacherLeaves.userId }).from(schema.teacherLeaves).where(eq(schema.teacherLeaves.id, teacherLeaveId));
+  return row?.userId;
+}

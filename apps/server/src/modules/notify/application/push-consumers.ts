@@ -1,6 +1,6 @@
 import { defineConsumer, type Consumer } from '../../../shared/outbox';
 import type { PushSender } from '../../../shared/push';
-import { earlyWarningRecipients, leaveApprover, schoolOf } from '../infrastructure/notify-repo';
+import { earlyWarningRecipients, leaveApprover, schoolOf, teacherLeaveDeciders, teacherLeaveOwner } from '../infrastructure/notify-repo';
 import { pushToUser } from './push';
 
 /**
@@ -53,5 +53,27 @@ export function pushConsumers(deps: { push: PushSender }): Consumer[] {
     },
   });
 
-  return [visitorArrived, sessionUnfilled, leaveRequested, earlyWarning];
+  /** A teacher's izin waits for the wakasek (GRU-02). One tag, so several requests show as one notification. */
+  const teacherLeaveRequested = defineConsumer({
+    name: 'notify_push_teacher_leave_requested',
+    event: 'teacher.leave_requested',
+    async handle(tx, event) {
+      const [school, deciders] = await Promise.all([schoolOf(tx, event.schoolId), teacherLeaveDeciders(tx, event.payload.teacherLeaveId)]);
+      if (!school) return;
+      for (const userId of deciders) await pushToUser(tx, deps.push, userId, { title: school.name, body: 'Ada izin guru yang menunggu persetujuan Anda.', url: '/izin-guru', tag: 'teacher-leave-approval' });
+    },
+  });
+
+  /** The decision reaches the teacher; the text does not say which way, the screen does. */
+  const teacherLeaveDecided = defineConsumer({
+    name: 'notify_push_teacher_leave_decided',
+    event: 'teacher.leave_decided',
+    async handle(tx, event) {
+      const [school, owner] = await Promise.all([schoolOf(tx, event.schoolId), teacherLeaveOwner(tx, event.payload.teacherLeaveId)]);
+      if (!school || !owner) return;
+      await pushToUser(tx, deps.push, owner, { title: school.name, body: 'Izin Anda sudah diputuskan. Ketuk untuk melihat.', url: '/izin-guru', tag: `teacher-leave:${event.payload.teacherLeaveId}` });
+    },
+  });
+
+  return [visitorArrived, sessionUnfilled, leaveRequested, earlyWarning, teacherLeaveRequested, teacherLeaveDecided];
 }
