@@ -10,6 +10,7 @@ import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { activitiesRouter, habitsRouter, memorizationRouter } from './modules/activity';
 import { counselingRouter, pointsRouter, tppkRouter, uksRouter } from './modules/student-affairs';
+import { teacherAttendanceRouter } from './modules/teacher';
 import { pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
@@ -93,6 +94,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(uksRouter(auth));
   v1.use(pointsRouter(auth, storage));
   v1.use(counselingRouter(auth));
+  v1.use(teacherAttendanceRouter(auth));
   v1.use(tppkRouter(auth));
   v1.use(activitiesRouter(auth));
   v1.use(habitsRouter(auth));
