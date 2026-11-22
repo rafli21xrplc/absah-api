@@ -662,6 +662,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   first row's from_teacher_id). Event teacher.substitute_assigned -> push to the substitute (url /sesi/{id}). Only the
   sessions the school generated for the day appear (generation runs from the morning); future days are empty by design.
   Substitute roles: guru, wali kelas, piket, wakasek. Do not Promise.all queries inside one tx (pg deprecation).
+- Laporan kehadiran guru (GRU-04, teacher/{domain/report.ts,application/report.ts}): GET /teacher-attendance/report
+  ?month=YYYY-MM[&teacherId=] for kepsek, wakasek, admin. School days come from attendance's schoolDaysBetween (calendar
+  holidays out, make-up days in, up to today); per teacher present (a check-in wins over an izin), late, approved izin
+  by kind, noRecord (never called alpa), rate, substitutionsTaken; teacherId adds the days with times. Teachers = active
+  staff of TEACHER_CHECKIN_ROLES plus anyone with a record that month. Month in the future: 0 school days, rate null.
+  No xlsx/pdf export yet (the other reports use ReportExporter).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

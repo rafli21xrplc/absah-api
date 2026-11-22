@@ -7,7 +7,7 @@ import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError } from '../../../shared/errors';
 import { emit } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
-import { isoWeekday, listSessions, type SessionRow } from '../../attendance';
+import { findSchool, isoWeekday, listSessions, type SessionRow } from '../../attendance';
 import { canAssignSubstitute, canSeeSubstitutions } from '../domain/policies';
 import { isSubstitutableMode, rankCandidates, unavailableReason } from '../domain/substitutes';
 import {
@@ -68,14 +68,14 @@ export function listSubstitutions(actor: Actor, today: string, date: string | un
 }
 
 /** Everything needed to say who may take a session over: the teacher it belongs to, who is free, who is on izin. */
-async function availability(tx: Tx, session: SessionRow, absentTeacherId: string) {
+async function availability(tx: Tx, session: SessionRow, absentTeacherId: string, timezone: string) {
   const date = session.schoolDate;
   const [pool, leaves, busy, checkedIn, counts, sameSubject] = [
     await substitutePool(tx, SUBSTITUTE_ROLES),
     await leavesOn(tx, date),
     await busyTeachers(tx, { date, weekday: isoWeekday(date), period: session.mode === 'per_period' ? session.periodNumber : null }),
     await checkedInOn(tx, date),
-    await substitutionCounts(tx, date),
+    await substitutionCounts(tx, date, timezone),
     session.subjectId ? await teachersOfSubject(tx, session.subjectId, date) : new Set<string>(),
   ];
   const poolIds = new Set(pool.map((p) => p.userId));
@@ -91,6 +91,10 @@ async function availability(tx: Tx, session: SessionRow, absentTeacherId: string
 async function absentTeacherOf(tx: Tx, session: { id: string; teacherId: string | null }): Promise<{ id: string | null; changed: boolean }> {
   const [first] = await substitutionRows(tx, [session.id]);
   return first ? { id: first.fromTeacherId, changed: true } : { id: session.teacherId, changed: false };
+}
+
+async function timezoneOf(tx: Tx, schoolId: string): Promise<string> {
+  return (await findSchool(tx, schoolId))?.timezone ?? 'Asia/Jakarta';
 }
 
 async function isOnLeave(tx: Tx, userId: string, date: string): Promise<boolean> {
@@ -110,7 +114,7 @@ export function substituteCandidates(actor: Actor, sessionId: string): Promise<C
     const session = await sessionById(tx, sessionId);
     const absent = await absentTeacherOf(tx, session);
     if (!absent.id || (!absent.changed && !(await isOnLeave(tx, absent.id, session.schoolDate)))) throw new ConflictError('Guru sesi ini tidak sedang izin.', { reason: 'not_needed' });
-    return { items: (await availability(tx, session, absent.id)).candidates };
+    return { items: (await availability(tx, session, absent.id, await timezoneOf(tx, actor.schoolId))).candidates };
   });
 }
 
@@ -133,7 +137,7 @@ export function assignSubstitute(actor: Actor, auditCtx: AuditContext, input: As
     if (!absent.id || (!absent.changed && !(await isOnLeave(tx, absent.id, session.schoolDate)))) throw new ConflictError('Guru sesi ini tidak sedang izin.', { reason: 'not_needed' });
     if (locked.teacherId === input.substituteId && input.substituteId !== absent.id) throw new ConflictError('Guru ini sudah menjadi pengganti sesi ini.', { reason: 'already_assigned' });
 
-    const { reasonOf } = await availability(tx, session, absent.id);
+    const { reasonOf } = await availability(tx, session, absent.id, await timezoneOf(tx, actor.schoolId));
     const reason = reasonOf(input.substituteId);
     if (reason) {
       const message = { not_a_teacher: 'Orang ini bukan guru yang bisa menggantikan.', is_absent_teacher: 'Pengganti tidak boleh guru yang izin.', on_leave: 'Guru ini sedang izin.', busy: 'Guru ini punya jam lain pada waktu yang sama.' }[reason];

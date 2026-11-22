@@ -5792,6 +5792,181 @@
           "source"
         ]
       },
+      "TeacherReport": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "schoolDays": {
+            "type": "integer"
+          },
+          "through": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherReportRow"
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "present": {
+                "type": "integer"
+              },
+              "late": {
+                "type": "integer"
+              },
+              "leave": {
+                "type": "integer"
+              },
+              "noRecord": {
+                "type": "integer"
+              },
+              "rate": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "present",
+              "late",
+              "leave",
+              "noRecord",
+              "rate"
+            ]
+          }
+        },
+        "required": [
+          "month",
+          "schoolDays",
+          "through",
+          "items",
+          "totals"
+        ]
+      },
+      "TeacherReportRow": {
+        "type": "object",
+        "properties": {
+          "teacher": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "present": {
+            "type": "integer"
+          },
+          "late": {
+            "type": "integer"
+          },
+          "leave": {
+            "type": "object",
+            "properties": {
+              "sakit": {
+                "type": "integer"
+              },
+              "izin": {
+                "type": "integer"
+              },
+              "dinas": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "sakit",
+              "izin",
+              "dinas"
+            ]
+          },
+          "noRecord": {
+            "type": "integer"
+          },
+          "rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "substitutionsTaken": {
+            "type": "integer"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/TeacherDayStatus"
+                },
+                "checkedInAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "checkedOutAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "date",
+                "status",
+                "checkedInAt",
+                "checkedOutAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "teacher",
+          "present",
+          "late",
+          "leave",
+          "noRecord",
+          "rate",
+          "substitutionsTaken"
+        ]
+      },
+      "TeacherDayStatus": {
+        "type": "string",
+        "enum": [
+          "present",
+          "late",
+          "sakit",
+          "izin",
+          "dinas",
+          "none"
+        ]
+      },
       "TeacherLeaveList": {
         "type": "object",
         "properties": {
@@ -20924,6 +21099,102 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teacher-attendance/report": {
+      "get": {
+        "tags": [
+          "teacher"
+        ],
+        "summary": "Monthly teacher attendance for the kepsek: days present, late, on izin and without a record (GRU-04)",
+        "description": "Behind teacher.attendance (404 CAPABILITY_DISABLED otherwise). Staff who teach (guru, wali kelas, wakasek, piket, guru BK, guru tahfidz) check themselves in; other roles get 403. Read by kepsek, wakasek and admin. School days follow the calendar (holidays out, make-up days in) up to today. A day counts as present with a check-in (which wins over an izin), as sakit/izin/dinas with an approved izin, otherwise as noRecord: the school asks, the system does not call it alpa. teacherId adds that teacher's day by day with the times.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            },
+            "required": false,
+            "name": "month",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "teacherId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {

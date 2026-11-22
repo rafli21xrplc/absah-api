@@ -14,7 +14,7 @@ export { sessionsRouter } from './http/sessions';
 export { journalRouter } from './http/journal';
 export { correctionsRouter } from './http/corrections';
 export { findSchool, markReminded as markSessionsReminded } from './infrastructure/session-repo';
-export { schoolDayOf } from './application/school-day';
+export { schoolDayOf, schoolDaysBetween } from './application/school-day';
 export { attendanceConsumers } from './application/consumers';
 export { applyGateArrivals, schoolStartTime } from './application/gate-marks';
 export { openActivitySession } from './application/activity-sessions';

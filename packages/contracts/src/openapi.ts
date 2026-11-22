@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { TeacherAttendance, TeacherToday } from './teacher/attendance';
+import { TeacherReport, TeacherReportQuery } from './teacher/report';
 import { AssignSubstituteRequest, CandidateList, CandidatesQuery, SubstitutionItem, SubstitutionList, SubstitutionsQuery } from './teacher/substitutions';
 import { CreateTeacherLeaveRequest, DecideTeacherLeaveRequest, TeacherLeave, TeacherLeaveIdParam, TeacherLeaveList, TeacherLeavesQuery } from './teacher/leave';
 import {
@@ -1390,6 +1391,17 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     responses: { 200: json(TeacherAttendance, 'Checked out'), ...errors(401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teacher-attendance/report`,
+    tags: ['teacher'],
+    summary: "Monthly teacher attendance for the kepsek: days present, late, on izin and without a record (GRU-04)",
+    description: `${teacherNote} Read by kepsek, wakasek and admin. School days follow the calendar (holidays out, make-up days in) up to today. A day counts as present with a check-in (which wins over an izin), as sakit/izin/dinas with an approved izin, otherwise as noRecord: the school asks, the system does not call it alpa. teacherId adds that teacher's day by day with the times.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: TeacherReportQuery },
+    responses: { 200: json(TeacherReport, 'Report'), ...errors(400, 401, 403, 404) },
   });
   const leaveNote = `${teacherNote} A teacher's izin is always pending; the wakasek, kepsek or admin decides, never on their own izin (403). The reason is encrypted and never enters the audit log.`;
   registry.registerPath({
