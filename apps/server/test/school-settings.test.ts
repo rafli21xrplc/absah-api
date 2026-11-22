@@ -217,7 +217,8 @@ describe('school identity in PATCH /school/profile', () => {
       .db.select()
       .from(schema.auditLogs)
       .where(and(eq(schema.auditLogs.schoolId, school), eq(schema.auditLogs.action, 'school.profile_updated')));
-    expect(logs.map((l) => Object.keys(l.after as object).sort())).toEqual([['name', 'npsn', 'timezone'], ['npsn']]);
+    // No ORDER BY: rows written in the same instant may come back in either order, so compare as a set.
+    expect(logs.map((l) => Object.keys(l.after as object).sort().join(',')).sort()).toEqual(['name,npsn,timezone', 'npsn']);
   });
 
   it('rejects malformed identifiers and NPSN used by another school', async () => {
