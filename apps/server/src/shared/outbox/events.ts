@@ -37,6 +37,8 @@ export const EVENTS = {
   'leave.cancelled': z.object({ leaveRequestId: z.uuid() }),
   /** A rekap export was asked for; report builds the file in the worker (RKP-02, RKP-03). */
   'export.requested': z.object({ exportJobId: z.uuid() }),
+  /** The admin asked for the whole workspace as a ZIP; the worker builds it (PLT-11). */
+  'workspace_export.requested': z.object({ workspaceExportId: z.uuid() }),
   /** MBG numbers of a school date were stored (cutoff, or a correction); notify sends them to the PIC (RKP-08). */
   'mbg.count_ready': z.object({ schoolDate: z.iso.date(), correction: z.boolean() }),
   /** The H-3 forecast of a school date was stored (13.00, three days before); notify sends it to the PIC (RKP-09). */

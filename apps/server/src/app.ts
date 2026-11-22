@@ -15,6 +15,7 @@ import { studentBillingRouter } from './modules/student-billing';
 import { substitutionsRouter, teacherAttendanceRouter, teacherLeaveRouter } from './modules/teacher';
 import { pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
+import { workspaceExportsRouter } from './modules/workspace-export';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
 import { notificationsRouter, preferencesRouter, pushRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
@@ -121,6 +122,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(liaisonRouter(auth));
   v1.use(reportsRouter(auth));
   v1.use(exportsRouter(auth, storage));
+  v1.use(workspaceExportsRouter(auth, storage));
   v1.use(mbgRouter(auth));
   v1.use(invoicesRouter(auth));
   v1.use(paymentsRouter(auth, paymentProvider));

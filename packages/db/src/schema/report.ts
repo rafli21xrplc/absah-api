@@ -1,6 +1,6 @@
 import { EXPORT_FORMATS, EXPORT_STATUSES, EXPORT_TARGETS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
-import { date, index, integer, pgEnum, pgTable, text, time, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { bigint, boolean, date, index, integer, pgEnum, pgTable, text, time, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
 import { classes, classStream, semesters } from './academic';
 import { user } from './auth';
@@ -42,6 +42,35 @@ export const exportJobs = pgTable(
   (t) => [
     index('export_jobs_school_id_requested_by_idx').on(t.schoolId, t.requestedBy, t.createdAt),
     index('export_jobs_school_id_status_idx').on(t.schoolId, t.status, t.finishedAt),
+  ],
+);
+
+/**
+ * Workspace data export (PLT-11): a ZIP of one CSV per table plus the school's own files, built by the worker into object
+ * storage under file_key (schools/{id}/workspace_exports/{id}); removed after WORKSPACE_EXPORT_RETENTION_DAYS. include_tppk is
+ * decided when it is asked for (the requester is a TPPK member) and never widened later. One queued export per school.
+ */
+export const workspaceExports = pgTable(
+  'workspace_exports',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    status: exportStatus('status').notNull().default('queued'),
+    includeFiles: boolean('include_files').notNull().default(true),
+    includeTppk: boolean('include_tppk').notNull().default(false),
+    fileKey: text('file_key').notNull(),
+    fileName: text('file_name'),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    tableCount: integer('table_count'),
+    fileCount: integer('file_count'),
+    error: text('error'),
+    requestedBy: uuid('requested_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    finishedAt: at('finished_at'),
+  },
+  (t) => [
+    index('workspace_exports_school_id_created_at_idx').on(t.schoolId, t.createdAt),
+    uniqueIndex('workspace_exports_one_queued_key').on(t.schoolId).where(sql`${t.status} = 'queued'`),
   ],
 );
 
