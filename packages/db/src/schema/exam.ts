@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, index, pgTable, smallint, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
-import { academicYears } from './academic';
+import { boolean, check, date, foreignKey, index, pgTable, smallint, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { academicYears, enrollments } from './academic';
 import { createdAt, id, schoolId } from './_shared';
 import { user } from './auth';
 import { schools } from './platform';
@@ -39,5 +39,50 @@ export const examPeriods = pgTable(
     index('exam_periods_school_id_starts_on_idx').on(t.schoolId, t.startsOn),
     check('exam_periods_dates_check', sql`${t.endsOn} >= ${t.startsOn}`),
     check('exam_periods_min_attendance_check', sql`${t.minAttendance} is null or (${t.minAttendance} between 1 and 100)`),
+  ],
+);
+
+/** A room where an exam period is sat (UJN-03); the pengawas (supervisor) is a member of the school, optional. */
+export const examRooms = pgTable(
+  'exam_rooms',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    periodId: uuid('period_id')
+      .notNull()
+      .references(() => examPeriods.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    capacity: smallint('capacity'),
+    supervisorId: uuid('supervisor_id').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('exam_rooms_period_name_key').on(t.periodId, t.name),
+    unique('exam_rooms_id_period_key').on(t.id, t.periodId),
+    index('exam_rooms_school_id_period_id_idx').on(t.schoolId, t.periodId),
+    check('exam_rooms_capacity_check', sql`${t.capacity} is null or ${t.capacity} > 0`),
+  ],
+);
+
+/** A student's place in a room for a period: one room per student per period; seat numbers are unique within a room. */
+export const examSeats = pgTable(
+  'exam_seats',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    periodId: uuid('period_id').notNull(),
+    roomId: uuid('room_id').notNull(),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    seatNo: smallint('seat_no').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('exam_seats_period_enrollment_key').on(t.periodId, t.enrollmentId),
+    unique('exam_seats_room_seat_key').on(t.roomId, t.seatNo),
+    // The period of a seat is the period of its room: a seat cannot name a room of another period.
+    foreignKey({ columns: [t.roomId, t.periodId], foreignColumns: [examRooms.id, examRooms.periodId], name: 'exam_seats_room_period_fk' }),
+    index('exam_seats_school_id_room_id_idx').on(t.schoolId, t.roomId),
   ],
 );

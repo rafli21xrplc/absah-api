@@ -54,3 +54,49 @@ describe('exam_periods (UJN-01)', () => {
     expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examPeriods).values({ ...values, name: 'PTS' })))).toMatch(/exam_periods_school_year_name_key/);
   });
 });
+
+describe('exam_rooms and exam_seats (UJN-03)', () => {
+  let roomId: string;
+  let otherRoomId: string;
+  let otherPeriodId: string;
+  let enrollmentId: string;
+
+  beforeAll(async () => {
+    await inSchool(school, async (tx) => {
+      const [cls] = await tx.insert(schema.classes).values({ schoolId: school, academicYearId: yearId, name: '8A', grade: 8 }).returning();
+      const [st] = await tx.insert(schema.students).values({ schoolId: school, name: 'Siswa Ruang' }).returning();
+      const [en] = await tx.insert(schema.enrollments).values({ schoolId: school, studentId: st?.id ?? '', classId: cls?.id ?? '', academicYearId: yearId, startsOn: '2026-07-13' }).returning();
+      enrollmentId = en?.id ?? '';
+      const [p2] = await tx.insert(schema.examPeriods).values({ schoolId: school, academicYearId: yearId, name: 'PAS', startsOn: '2027-06-01', endsOn: '2027-06-05' }).returning();
+      otherPeriodId = p2?.id ?? '';
+      const [room, room2] = await tx.insert(schema.examRooms).values([{ schoolId: school, periodId, name: 'R1', capacity: 2 }, { schoolId: school, periodId: otherPeriodId, name: 'R1' }]).returning();
+      roomId = room?.id ?? '';
+      otherRoomId = room2?.id ?? '';
+    });
+  });
+
+  it('are visible to their own school only, and a row for another school is refused', async () => {
+    expect(await inSchool(school, (tx) => tx.select().from(schema.examRooms))).toHaveLength(2);
+    expect(await inSchool(other, (tx) => tx.select().from(schema.examRooms))).toHaveLength(0);
+    expect(await refusal(inSchool(other, (tx) => tx.insert(schema.examRooms).values({ schoolId: school, periodId, name: 'X' })))).toMatch(/row-level security/);
+    expect(await refusal(inSchool(other, (tx) => tx.insert(schema.examSeats).values({ schoolId: school, periodId, roomId, enrollmentId, seatNo: 1 })))).toMatch(/row-level security/);
+  });
+
+  it('keep a student in one room per period, a seat number once per room, and a seat in a room of its own period', async () => {
+    const seat = (room: string, period: string, no: number) => inSchool(school, (tx) => tx.insert(schema.examSeats).values({ schoolId: school, periodId: period, roomId: room, enrollmentId, seatNo: no }));
+    expect(await refusal(seat(otherRoomId, periodId, 1))).toMatch(/exam_seats_room_period_fk/); // a room of another period
+    expect(await refusal(seat(roomId, periodId, 1))).toBeNull();
+    expect(await refusal(seat(roomId, periodId, 2))).toMatch(/exam_seats_period_enrollment_key/);
+    expect(await refusal(seat(otherRoomId, otherPeriodId, 1))).toBeNull(); // another period: another seat
+    expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examRooms).values({ schoolId: school, periodId, name: 'R1' })))).toMatch(/exam_rooms_period_name_key/);
+    expect(await refusal(inSchool(school, (tx) => tx.insert(schema.examRooms).values({ schoolId: school, periodId, name: 'Nol', capacity: 0 })))).toMatch(/exam_rooms_capacity_check/);
+  });
+
+  it('let a room’s details and a seat’s place change, and nothing else', async () => {
+    expect(await refusal(inSchool(school, (tx) => tx.update(schema.examRooms).set({ name: 'Lab', capacity: 5 }).where(eq(schema.examRooms.id, roomId))))).toBeNull();
+    expect(await refusal(inSchool(school, (tx) => tx.update(schema.examRooms).set({ periodId: otherPeriodId }).where(eq(schema.examRooms.id, roomId))))).toMatch(/permission denied/);
+    expect(await refusal(inSchool(school, (tx) => tx.update(schema.examSeats).set({ seatNo: 9 }).where(eq(schema.examSeats.roomId, roomId))))).toBeNull();
+    expect(await refusal(inSchool(school, (tx) => tx.update(schema.examSeats).set({ enrollmentId: crypto.randomUUID() }).where(eq(schema.examSeats.roomId, roomId))))).toMatch(/permission denied/);
+    expect(await refusal(inSchool(school, (tx) => tx.execute(sql`truncate exam_seats`)))).toMatch(/permission denied/);
+  });
+});

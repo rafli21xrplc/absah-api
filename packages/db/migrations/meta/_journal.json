@@ -666,6 +666,20 @@
       "when": 1795349767945,
       "tag": "0094_exam_periods_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1795350503627,
+      "tag": "0095_exam_rooms",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1795350503628,
+      "tag": "0096_exam_rooms_rls",
+      "breakpoints": true
     }
   ]
 }
