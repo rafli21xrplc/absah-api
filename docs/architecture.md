@@ -347,6 +347,9 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | KSW | `GET\|POST /tppk/cases`, `POST /tppk/cases/{id}/events` | `student.tppk` | anggota TPPK |
 | KSW | `POST /uks/visits` | `student.uks` | petugas UKS |
 | KSW | `GET\|POST /point-rules`, `PUT /point-rules/{id}` | `student.points` | baca: admin, kepsek, wakasek, wali kelas, guru; tulis: admin, wakasek |
+| KSW | `POST /point-entries`, `POST /point-entries/evidence` | `student.points` | admin, wakasek, wali kelas, guru |
+| KSW | `POST /point-entries/{id}/reverse` | `student.points` | admin, wakasek |
+| KSW | `GET /students/{enrollmentId}/points`, `GET /point-entries/{id}/evidence` | `student.points` | admin, kepsek, wakasek, wali kelas kelasnya |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |

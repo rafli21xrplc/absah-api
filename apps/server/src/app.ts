@@ -91,7 +91,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(correctionsRouter(auth));
   v1.use(leaveRouter(auth, storage));
   v1.use(uksRouter(auth));
-  v1.use(pointsRouter(auth));
+  v1.use(pointsRouter(auth, storage));
   v1.use(tppkRouter(auth));
   v1.use(activitiesRouter(auth));
   v1.use(habitsRouter(auth));
