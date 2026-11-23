@@ -102,6 +102,7 @@ import { CreateUksVisitRequest, UksStudentList, UksStudentQuery, UksVisit, UksVi
 import { CreateKioskPickupPhotoRequest, KioskUnlistedPickup, KioskUnlistedPickupRequest, LinkHeldPickups, LinkPickupDecisionRequest, PickupEvent, PickupEventActionParam, PickupEventIdParam, PickupEventList, PickupEventsQuery, KioskCheckoutBatch, KioskCheckoutResults, CreatePickupGuardianRequest, CreatePickupPhotoRequest, CreatePickupPhotoResponse, PickupGuardian, PickupGuardianActionParam, PickupGuardianIdParam, PickupGuardianList, PickupGuardiansQuery, PickupPhotoLink } from './gate/pickup';
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
+import { NotificationPreferences, UpdateNotificationPreferencesRequest } from './notify/preferences';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
 import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance } from './portal/links';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
@@ -1367,6 +1368,28 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
     responses: { 200: json(PortalAttendance, 'History'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/portal/notification-preferences`,
+    tags: ['portal'],
+    summary: "PWA: the orang tua's own WhatsApp message choices at this school (ORT-06)",
+    description: 'No stored choice means the defaults: every message, outside the quiet hours. 403 for anyone but an orang tua.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(NotificationPreferences, 'Preferences'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/portal/notification-preferences`,
+    tags: ['portal'],
+    summary: 'PWA: switch message types off and hold late messages (ORT-06)',
+    description:
+      'Replaces the choices. Only absent_marked, leave_approved, leave_rejected, student_sent_home, student_picked_up and liaison_message can be switched off; safety messages always arrive. noLateMessages holds anything created after 19.00 school time until 06.00.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: UpdateNotificationPreferencesRequest } } } },
+    responses: { 200: json(NotificationPreferences, 'Preferences'), ...errors(400, 401, 403, 404, 422) },
   });
   registry.registerPath({
     method: 'get',

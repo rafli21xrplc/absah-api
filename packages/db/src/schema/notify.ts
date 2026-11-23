@@ -1,6 +1,6 @@
 import { NOTIFICATION_STATUSES, TEMPLATE_APPROVALS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
-import { index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
 import { enrollments, guardians } from './academic';
 import { createdAt, id, schoolId } from './_shared';
@@ -73,4 +73,23 @@ export const notifications = pgTable(
     index('notifications_school_id_unreleased_idx').on(t.schoolId, t.scheduledFor).where(sql`${t.releasedAt} is null`),
     uniqueIndex('notifications_provider_message_id_key').on(t.providerMessageId).where(sql`${t.providerMessageId} is not null`),
   ],
+);
+
+/**
+ * A parent's choices for the messages that go to their number (ORT-06), one row per guardian
+ * (guardians are per school). No row = the defaults: every message, outside the quiet hours.
+ * muted_types only ever holds MUTABLE_TEMPLATE_CODES; the API validates it.
+ */
+export const notificationPreferences = pgTable(
+  'notification_preferences',
+  {
+    guardianId: uuid('guardian_id')
+      .primaryKey()
+      .references(() => guardians.id, { onDelete: 'cascade' }),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    mutedTypes: text('muted_types').array().notNull().default(sql`'{}'::text[]`),
+    noLateMessages: boolean('no_late_messages').notNull().default(false),
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('notification_preferences_school_id_idx').on(t.schoolId)],
 );
