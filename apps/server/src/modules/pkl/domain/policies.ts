@@ -11,3 +11,6 @@ export const canCheckIn = anyRole('siswa');
 
 /** Confirms and disputes check-ins of the students at their place (PKL-02); rows filter by industry_mentor_id. */
 export const canSuperviseAtDudi = anyRole('pembimbing_industri');
+
+/** Reads the DUDI assessment aspects and results (PKL-04): the PKL managers, kepsek, guru pembimbing and the industry supervisors. */
+export const canReadPklAssessment = anyRole('admin', 'wakasek', 'humas_pkl', 'kepsek', 'pembimbing_pkl', 'pembimbing_industri');

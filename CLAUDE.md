@@ -1067,3 +1067,14 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - The report reaches points and habits/activities only through the student-affairs (pointTotalsInRange) and activity (habitTallies,
   activityTallies) module indexes, never their tables from other modules' code paths.
 
+## Penilaian DUDI: aspek (PKL-04; modules/pkl assessment-aspects)
+- Tables pkl_assessment_aspects / pkl_assessments / pkl_assessment_scores (migrations 0102-0103). Aspects are set by canManagePkl
+  with PUT /pkl/assessment-aspects = the WHOLE list in form order (domain/assessment-aspects.ts planAspects: id edits, no id adds,
+  an existing aspect left out is RETIRED, never deleted, because scores point at it). Names are unique among ACTIVE aspects
+  (partial unique index), so applyAspectPlan retires first and renames through the aspect id so two aspects can swap names. Scores keep
+  their own copy of aspect name and weight (aspect_name, weight): editing an aspect later never changes an assessment already given.
+- Readers: canReadPklAssessment (managers, kepsek, pembimbing_pkl, pembimbing_industri). Behind pkl.enabled. The form itself and
+  the results are prompt 6.2b/6.2c.
+- Drizzle-kit gotcha: 0101 (enum value) has no snapshot, so the next `db:generate` repeats its ALTER TYPE; delete that line from the
+  generated file (the new snapshot then includes it), as 0102 did.
+
