@@ -4,7 +4,7 @@ import { loadConfig } from '../shared/config';
 import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { createLogger } from '../shared/logger';
-import { FakeMessageSender } from '../shared/messaging/message-sender';
+import { createMessageSender } from '../shared/messaging';
 import { createObjectStorage } from '../shared/storage';
 
 const config = loadConfig();
@@ -12,17 +12,8 @@ const logger = createLogger({ level: config.LOG_LEVEL, pretty: config.NODE_ENV =
 initCrypto(config);
 const { db } = initDb(config);
 
-if (config.NODE_ENV === 'production') {
-  // The WhatsApp provider adapter arrives with prompt 3.2; refuse to run production without it.
-  throw new Error('No production MessageSender configured yet (prompt 3.2)');
-}
-// Dev: OTP codes are kept in memory and logged at debug level for local testing only.
-const messageSender = new (class extends FakeMessageSender {
-  override async sendOtp(input: { to: string; code: string; purpose: 'login' }): Promise<void> {
-    await super.sendOtp(input);
-    logger.debug({ devOtp: input.code }, 'dev OTP generated (FakeMessageSender)');
-  }
-})();
+// Login OTP goes out inline (the one exception to "no provider calls in request handlers", see CLAUDE.md).
+const messageSender = createMessageSender(config, logger);
 const auth = createAuth({ db, config, messageSender });
 
 const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage: createObjectStorage(config), kioskOrigins: config.KIOSK_ORIGINS });

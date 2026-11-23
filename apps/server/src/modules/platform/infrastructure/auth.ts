@@ -77,7 +77,8 @@ export function createAuth({ db, config, messageSender }: AuthDeps) {
             where: [{ field: 'phoneNumber', value: to }],
           });
           if (!existing) return;
-          // TODO(prompt 1.3/3.2): enqueue through the outbox instead of sending inline.
+          // Inline on purpose: the user is waiting, there is no school (no tenant outbox) and the
+          // route is rate limited. The one exception to rule 3 (CLAUDE.md, Notifications).
           await messageSender.sendOtp({ to, code, purpose: 'login' });
         },
       }),
