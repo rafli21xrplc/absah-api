@@ -13,6 +13,12 @@ export const EVENTS = {
     from: MembershipStatus,
     to: MembershipStatus,
   }),
+  /** Delivery of the link over WhatsApp/email arrives with notifications (prompt 3.2). */
+  'membership.invited': z.object({
+    membershipId: z.uuid(),
+    invitationId: z.uuid(),
+    channel: z.enum(['email', 'whatsapp']),
+  }),
 } as const;
 
 export type EventType = keyof typeof EVENTS;

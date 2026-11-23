@@ -28,3 +28,8 @@ export const TWO_FACTOR_REQUIRED_ROLES: readonly Role[] = ['admin', 'operator'];
 export const MEMBERSHIP_STATUSES = ['active', 'invited', 'suspended'] as const;
 export const MembershipStatus = z.enum(MEMBERSHIP_STATUSES).meta({ id: 'MembershipStatus' });
 export type MembershipStatus = z.infer<typeof MembershipStatus>;
+
+/** Roles an admin can invite as staff (parents and students join through their own flows). */
+export const STAFF_ROLES = ROLES.filter((r): r is Exclude<Role, 'orang_tua' | 'siswa'> => r !== 'orang_tua' && r !== 'siswa');
+export const StaffRole = z.enum(STAFF_ROLES as [Exclude<Role, 'orang_tua' | 'siswa'>, ...Exclude<Role, 'orang_tua' | 'siswa'>[]]).meta({ id: 'StaffRole' });
+export type StaffRole = z.infer<typeof StaffRole>;

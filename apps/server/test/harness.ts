@@ -36,7 +36,7 @@ export function buildTestApp() {
   const { db } = initDb(config);
   const messageSender = new FakeMessageSender();
   const auth = createAuth({ db, config, messageSender });
-  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS });
+  const app = createApp({ logger: pino({ level: 'silent' }), version: 'test', auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL });
 
   const created = { schools: [] as string[], users: [] as string[] };
 

@@ -15,9 +15,11 @@ import { listSchoolMembers } from '../application/list-school-members';
 import { updateMembershipStatus } from '../application/update-membership-status';
 import type { Auth } from '../infrastructure/auth';
 import { resolveContext } from './context';
+import { invitationsRouter } from './invitations';
 
-export function platformRouter(auth: Auth): Router {
+export function platformRouter(auth: Auth, appUrl: string): Router {
   const router = Router();
+  router.use(invitationsRouter(auth, appUrl));
 
   router.get('/me/context', resolveContext(auth, { school: 'optional' }), (req, res) => {
     sendContract(res, MeContextResponse, getMyContext(getCtx(req)));

@@ -17,9 +17,11 @@ export interface AppDeps {
   auth: Auth;
   /** Trusted client IP headers (AUTH_IP_HEADERS). */
   ipHeaders: readonly string[];
+  /** Web origin for links in API responses (BETTER_AUTH_URL). */
+  appUrl: string;
 }
 
-export function createApp({ logger, version, auth, ipHeaders }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders, appUrl }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
@@ -47,7 +49,7 @@ export function createApp({ logger, version, auth, ipHeaders }: AppDeps): Expres
   const openapi = generateOpenApiDocument(version);
   const v1 = express.Router();
   v1.use(healthRouter(version));
-  v1.use(platformRouter(auth));
+  v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
