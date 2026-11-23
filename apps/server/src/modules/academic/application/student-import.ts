@@ -66,14 +66,17 @@ export async function createStudentImport(
   return { import: toResponse(row), upload: { ...upload, expiresAt: upload.expiresAt.toISOString() } };
 }
 
-/** Queues parsing once the browser has uploaded the file. Calling it again changes nothing. */
+/**
+ * Queues parsing once the browser has uploaded the file, or again to refresh a ready preview whose
+ * data changed. Calling it while parsing changes nothing.
+ */
 export async function requestImportParse(actor: Actor, importId: string): Promise<StudentImportResponse> {
   authorize(actor, canManageStudentData);
   return withTenant(scope(actor), async (tx) => {
     const row = await findImport(tx, importId, { lock: true });
     if (!row) throw new NotFoundError('Import tidak ditemukan.');
     if (row.status === 'committed') throw new ConflictError('Import ini sudah diterapkan.');
-    if (row.status === 'awaiting_upload' || row.status === 'failed') {
+    if (row.status === 'awaiting_upload' || row.status === 'failed' || row.status === 'ready') {
       await updateImport(tx, row.id, { status: 'parsing', error: null });
       await emit(tx, 'student_import.uploaded', { importId: row.id });
       return toResponse({ ...row, status: 'parsing', error: null, preview: null });

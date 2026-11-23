@@ -11,8 +11,11 @@ export const CLASS_STREAMS = ['ipa', 'ips', 'bahasa', 'keagamaan'] as const;
 export const ClassStream = z.enum(CLASS_STREAMS).meta({ id: 'ClassStream' });
 export type ClassStream = z.infer<typeof ClassStream>;
 
-/** active = in the class now; moved = transferred to another school; left = graduated or dropped out. */
-export const ENROLLMENT_STATUSES = ['active', 'moved', 'left'] as const;
+/**
+ * active = in the class now; moved = transferred to another school; left = graduated or dropped
+ * out; class_changed = moved to another rombel of the same school (a new active enrollment exists).
+ */
+export const ENROLLMENT_STATUSES = ['active', 'moved', 'left', 'class_changed'] as const;
 export const EnrollmentStatus = z.enum(ENROLLMENT_STATUSES).meta({ id: 'EnrollmentStatus' });
 export type EnrollmentStatus = z.infer<typeof EnrollmentStatus>;
 
