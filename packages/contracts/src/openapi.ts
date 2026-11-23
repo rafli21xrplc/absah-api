@@ -178,7 +178,7 @@ import {
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
 import { CreateWorkspaceExportRequest, WorkspaceExport, WorkspaceExportDownload, WorkspaceExportIdParam, WorkspaceExportList } from './platform/workspace-export';
-import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
+import { CreateCharacterReportRequest, CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
 import { CollectionDashboardList, PrincipalDashboard } from './report/dashboard';
 import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
@@ -2165,6 +2165,18 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: CreateExportRequest } } } },
     responses: { 202: json(ExportJob, 'Queued'), ...errors(400, 401, 403, 404, 409, 422) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exports/character-reports`,
+    tags: ['report'],
+    summary: 'Queue the semester character report (KEG-04) of one rombel: a PDF with one page per student',
+    description:
+      "Per student: attendance, points, the 7 KAIH habits (incl. ibadah) and activities of the semester. Wali kelas of the rombel or kepsek, wakasek and admin. The job is an ordinary export (target rapor_karakter, format pdf): poll GET /exports/{exportId}, download from /exports/{exportId}/download.",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateCharacterReportRequest } } } },
+    responses: { 202: json(ExportJob, 'Queued'), ...errors(400, 401, 403, 404, 422) },
   });
   registry.registerPath({
     method: 'get',

@@ -8,8 +8,8 @@ export const EXPORT_FORMATS = ['xlsx', 'pdf'] as const;
 export const ExportFormat = z.enum(EXPORT_FORMATS).meta({ id: 'ExportFormat' });
 export type ExportFormat = z.infer<typeof ExportFormat>;
 
-/** Report system the file is shaped for; comes from the school's report.target capability. */
-export const EXPORT_TARGETS = ['erapor', 'rdm'] as const;
+/** Report system the file is shaped for; comes from the school's report.target capability. rapor_karakter (KEG-04) is the school's own semester character report, never a school's report.target. */
+export const EXPORT_TARGETS = ['erapor', 'rdm', 'rapor_karakter'] as const;
 export const ExportTarget = z.enum(EXPORT_TARGETS).meta({ id: 'ExportTarget' });
 export type ExportTarget = z.infer<typeof ExportTarget>;
 
@@ -63,3 +63,10 @@ export const ExportDownload = z
   .object({ url: z.url(), fileName: z.string(), expiresAt: z.iso.datetime() })
   .meta({ id: 'ExportDownload' });
 export type ExportDownload = z.infer<typeof ExportDownload>;
+
+/**
+ * POST /api/v1/exports/character-reports (Idempotency-Key): the semester character report (KEG-04) of every student of one rombel,
+ * one PDF page per student. Answers 202 with the queued job (target rapor_karakter, format pdf). Wali kelas of the rombel or managers.
+ */
+export const CreateCharacterReportRequest = z.object({ semesterId: z.uuid(), classId: z.uuid() }).strict().meta({ id: 'CreateCharacterReportRequest' });
+export type CreateCharacterReportRequest = z.infer<typeof CreateCharacterReportRequest>;

@@ -4,3 +4,4 @@ export { habitsRouter } from './http/habits';
 export { memorizationRouter } from './http/memorization';
 export { LOCK_HABITS_CRON, LOCK_HABITS_QUEUE, lockHabitsHandler } from './jobs/lock-habits';
 export { lockHabits } from './application/habits';
+export { activityTallies, habitTallies, type ActivityTally, type HabitTally } from './infrastructure/character-repo';

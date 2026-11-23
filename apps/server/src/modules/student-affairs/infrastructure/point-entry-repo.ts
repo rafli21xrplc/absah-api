@@ -1,6 +1,6 @@
 import { schema, sensitive, type Tx } from '@absah/db';
 import type { PointKind } from '@absah/contracts';
-import { asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { directoryName } from '../../../shared/directory-name';
 
 const p = schema.pointEntries;
@@ -82,4 +82,22 @@ export async function totalsOf(tx: Tx, enrollmentId: string): Promise<{ violatio
     .orderBy(asc(p.kind));
   const of = (kind: PointKind) => rows.find((r) => r.kind === kind)?.total ?? 0;
   return { violationPoints: of('violation'), achievementPoints: of('achievement') };
+}
+
+/** Net points per kind of many enrollments within a date range (the semester character report). Enrollments without entries are absent. */
+export async function totalsInRange(tx: Tx, enrollmentIds: string[], from: string, to: string) {
+  if (enrollmentIds.length === 0) return new Map<string, { violationPoints: number; achievementPoints: number }>();
+  const rows = await tx
+    .select({ enrollmentId: p.enrollmentId, kind: p.kind, total: sql<number>`coalesce(sum(${p.points}), 0)::int` })
+    .from(p)
+    .where(and(inArray(p.enrollmentId, enrollmentIds), gte(p.occurredOn, from), lte(p.occurredOn, to)))
+    .groupBy(p.enrollmentId, p.kind);
+  const out = new Map<string, { violationPoints: number; achievementPoints: number }>();
+  for (const r of rows) {
+    const entry = out.get(r.enrollmentId) ?? { violationPoints: 0, achievementPoints: 0 };
+    if (r.kind === 'violation') entry.violationPoints = r.total;
+    else entry.achievementPoints = r.total;
+    out.set(r.enrollmentId, entry);
+  }
+  return out;
 }

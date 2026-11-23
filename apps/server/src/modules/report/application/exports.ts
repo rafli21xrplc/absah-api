@@ -9,8 +9,12 @@ import { defineConsumer, emit, type Consumer } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
 import { schoolDate } from '../../../shared/school-date';
 import { storageKey, type ObjectStorage } from '../../../shared/storage';
+import { characterFileName } from '../domain/character-report';
+import { buildCharacterReport } from './character-report';
+import { view } from './export-view';
 import { canReadAllRecaps } from '../domain/policies';
 import { EXPORT_CONTENT_TYPES, exportFileName, semesterStudentsByClass, type SemesterRecap } from '../domain/semester-recap';
+import { characterPdf } from '../infrastructure/exporters/common/character-pdf';
 import { exporterFor } from '../infrastructure/exporters';
 import {
   classesOfYear,
@@ -29,22 +33,6 @@ import {
 } from '../infrastructure/export-repo';
 
 const tenant = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
-
-function view(row: ExportJobRow): ExportJob {
-  return {
-    id: row.id,
-    target: row.target,
-    format: row.format,
-    semester: { id: row.semesterId, academicYear: row.academicYear, number: row.semesterNumber },
-    class: row.classId && row.className ? { id: row.classId, name: row.className } : null,
-    stream: row.stream,
-    status: row.status,
-    fileName: row.fileName,
-    error: row.error,
-    createdAt: row.createdAt.toISOString(),
-    finishedAt: row.finishedAt?.toISOString() ?? null,
-  };
-}
 
 /**
  * RKP-02/03: queue a semester rekap file. Managers may export the whole year; a wali kelas only their
@@ -142,6 +130,12 @@ export function exportConsumer(storage: ObjectStorage) {
       try {
         // Savepoint: a database error inside still lets the last attempt record the failure.
         await tx.transaction(async (sp) => {
+          if (job.target === 'rapor_karakter') {
+            const report = await buildCharacterReport(sp, event.schoolId, job);
+            await storage.write(job.fileKey, await characterPdf(report), EXPORT_CONTENT_TYPES.pdf);
+            await finishJob(sp, job.id, { status: 'done', fileName: characterFileName(report) });
+            return;
+          }
           const exporter = exporterFor(job.target);
           if (!exporter) throw new Error(`no exporter for ${job.target}`);
           const { recap, className } = await semesterRecap(sp, event.schoolId, job);

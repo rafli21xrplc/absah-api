@@ -1055,3 +1055,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   trend adds days per date. Schools in the collection where the caller only teaches are not counted and not listed.
 - Collections are created by hand for now (no CLI or API): insert a `collections` row and set schools.collection_id.
 
+## Rapor karakter semester (KEG-04; report application/character-report.ts)
+- POST /exports/character-reports {semesterId, classId} queues an ORDINARY export job: target `rapor_karakter` (migration 0101 adds
+  the enum value; it is never a school's report.target capability), format pdf, one rombel. Wali kelas of that rombel or
+  kepsek/wakasek/admin (canReadAllRecaps). Listed, polled and downloaded through the existing /exports routes, requester only, 7 days retention.
+- The consumer (exportConsumer) branches on job.target: buildCharacterReport gathers a rombel's semester under the requester's RLS
+  and character-pdf.ts draws one A4 page per student: attendance (H/T/S/I/A), points (prestasi; pelanggaran stored negative, shown as the
+  amount taken off), the 7 KAIH habits incl. beribadah (share of FILLED days, "Belum diisi" when never filled, never 0%) and kegiatan
+  (present of recorded sessions). Roster rule = the rekap's: a student is on the rombel they ended the semester in, all their
+  enrollments of the year count, leavers are on none (domain/character-report.ts characterRoster).
+- The report reaches points and habits/activities only through the student-affairs (pointTotalsInRange) and activity (habitTallies,
+  activityTallies) module indexes, never their tables from other modules' code paths.
+
