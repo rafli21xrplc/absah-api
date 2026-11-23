@@ -1,4 +1,4 @@
-import { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookIdParam, WebhookList } from '@absah/contracts';
+import { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookDeliveryList, WebhookIdParam, WebhookList, WebhookTestQueued } from '@absah/contracts';
 import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -6,7 +6,7 @@ import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
-import { createWebhookEndpoint, deleteWebhookEndpoint, listWebhookEndpoints, updateWebhookEndpoint } from '../application/webhooks';
+import { createWebhookEndpoint, deleteWebhookEndpoint, listWebhookDeliveries, listWebhookEndpoints, testWebhookEndpoint, updateWebhookEndpoint } from '../application/webhooks';
 
 /** PLT-09: the admin manages where the school's webhooks go. Behind platform.openApi. */
 export function webhooksRouter(auth: Auth): Router {
@@ -30,6 +30,14 @@ export function webhooksRouter(auth: Auth): Router {
     const actor = getActor(req);
     await deleteWebhookEndpoint(actor, auditContext(req, actor), WebhookIdParam.parse(req.params).webhookId);
     res.status(204).end();
+  });
+  router.get('/integrations/webhooks/:webhookId/deliveries', ...admin, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    sendContract(res, WebhookDeliveryList, await listWebhookDeliveries(getActor(req), WebhookIdParam.parse(req.params).webhookId));
+  });
+  router.post('/integrations/webhooks/:webhookId/test', ...admin, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, WebhookTestQueued, await testWebhookEndpoint(actor, auditContext(req, actor), WebhookIdParam.parse(req.params).webhookId), 202);
   });
   return router;
 }

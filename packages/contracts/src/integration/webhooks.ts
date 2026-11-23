@@ -58,3 +58,31 @@ export const CreatedWebhook = Webhook.extend({ secret: z.string() }).meta({ id: 
 export type CreatedWebhook = z.infer<typeof CreatedWebhook>;
 
 export const WebhookIdParam = z.object({ webhookId: z.uuid() });
+
+/** The ping the admin can send to one address ("kirim tes"): same signature and headers, nothing in `data`. */
+export const WEBHOOK_TEST_EVENT = 'webhook.test';
+export const WEBHOOK_DELIVERIES_SHOWN = 20;
+
+export const WebhookDelivery = z
+  .object({
+    id: z.uuid(),
+    /** One of WEBHOOK_EVENTS, or webhook.test for a ping. */
+    eventType: z.string(),
+    status: z.enum(['pending', 'delivered', 'failed']),
+    attempts: z.number().int(),
+    /** The receiver's HTTP status of the last attempt, when it answered. */
+    lastStatus: z.number().int().nullable(),
+    /** Why it failed: http_<status>, dns, network, blocked_address, endpoint_off. Never the receiver's answer text. */
+    lastError: z.string().nullable(),
+    createdAt: z.iso.datetime({ offset: true }),
+    finishedAt: z.iso.datetime({ offset: true }).nullable(),
+  })
+  .meta({ id: 'WebhookDelivery' });
+export type WebhookDelivery = z.infer<typeof WebhookDelivery>;
+
+export const WebhookDeliveryList = z.object({ items: z.array(WebhookDelivery) }).meta({ id: 'WebhookDeliveryList' });
+export type WebhookDeliveryList = z.infer<typeof WebhookDeliveryList>;
+
+/** POST /integrations/webhooks/{id}/test answers 202: the ping is queued; look for it in the delivery list. */
+export const WebhookTestQueued = z.object({ deliveryId: z.uuid() }).meta({ id: 'WebhookTestQueued' });
+export type WebhookTestQueued = z.infer<typeof WebhookTestQueued>;

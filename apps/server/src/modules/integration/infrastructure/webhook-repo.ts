@@ -1,5 +1,5 @@
 import { schema, sensitive, type Tx } from '@absah/db';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
 
 const w = schema.webhookEndpoints;
 export type WebhookRow = typeof w.$inferSelect;
@@ -58,4 +58,20 @@ export async function deliveryForSend(tx: Tx, deliveryId: string) {
 
 export async function finishDelivery(tx: Tx, deliveryId: string, outcome: { status: 'delivered' | 'failed'; attempts: number; lastStatus: number | null; lastError: string | null }): Promise<void> {
   await tx.update(d).set({ ...outcome, finishedAt: sql`now()` }).where(eq(d.id, deliveryId));
+}
+
+export type DeliveryRow = typeof d.$inferSelect;
+
+/** Newest first. The payload is selected too (the table row), but the view never sends it out. */
+export const recentDeliveries = (tx: Tx, endpointId: string, limit: number) =>
+  tx.select().from(d).where(eq(d.endpointId, endpointId)).orderBy(desc(d.createdAt), desc(d.id)).limit(limit);
+
+/** A ping of this address that is still waiting and was made in the last `minutes` (an older one is stuck, not waiting). */
+export async function pendingTest(tx: Tx, endpointId: string, eventType: string, minutes: number): Promise<boolean> {
+  const rows = await tx
+    .select({ id: d.id })
+    .from(d)
+    .where(and(eq(d.endpointId, endpointId), eq(d.eventType, eventType), eq(d.status, 'pending'), gt(d.createdAt, sql`now() - make_interval(mins => ${minutes})`)))
+    .limit(1);
+  return rows.length > 0;
 }
