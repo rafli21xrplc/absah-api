@@ -46,6 +46,8 @@ export const webhookEndpoints = pgTable(
     secret: encryptedText('secret', 'webhook_endpoints.secret').notNull(),
     events: text('events').array().notNull(),
     active: boolean('active').notNull().default(true),
+    /** Set when Absah switched the address off by itself (too_many_failures); cleared whenever the admin switches it on or off. */
+    disabledReason: text('disabled_reason'),
     createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: at('updated_at', { withTimezone: true }).notNull().defaultNow(),

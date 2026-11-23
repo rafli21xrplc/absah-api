@@ -1,10 +1,12 @@
-import type { WebhookEventType } from '@absah/contracts';
+import { WEBHOOK_TEST_EVENT, type WebhookEventType } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
+import { audit } from '../../../shared/audit';
 import { readCapabilityRows, resolveFromRows } from '../../../shared/capability';
 import { defineConsumer, emit, type Consumer } from '../../../shared/outbox';
 import { schoolDate } from '../../../shared/school-date';
 import { schoolOfKey } from '../infrastructure/api-key-repo';
-import { deliveryForSend, endpointsFor, finishDelivery, insertDelivery } from '../infrastructure/webhook-repo';
+import { shouldDisable, WEBHOOK_AUTO_DISABLE_AFTER } from '../domain/webhook-health';
+import { deliveryForSend, disableForFailures, endpointsFor, finishDelivery, insertDelivery, recentOutcomes } from '../infrastructure/webhook-repo';
 import { WebhookSendError, type WebhookSender } from '../infrastructure/webhook-sender';
 
 /** Total attempts = this + 1, with pg-boss's backoff between them: a receiver that is down for a few minutes still gets it. */
@@ -60,7 +62,14 @@ function sendConsumer(sender: WebhookSender): Consumer {
       if (!found || found.delivery.status !== 'pending') return;
       const { delivery: row, endpoint } = found;
       const attempts = delivery.attempt + 1;
-      const fail = (lastError: string, lastStatus: number | null = null) => finishDelivery(tx, row.id, { status: 'failed', attempts, lastStatus, lastError });
+      const fail = async (lastError: string, lastStatus: number | null = null) => {
+        await finishDelivery(tx, row.id, { status: 'failed', attempts, lastStatus, lastError });
+        // A ping is the admin's own try and a call refused because the address is off says nothing about the receiver.
+        if (row.eventType === WEBHOOK_TEST_EVENT || lastError === 'endpoint_off') return;
+        if (shouldDisable(await recentOutcomes(tx, row.endpointId, WEBHOOK_AUTO_DISABLE_AFTER)) && (await disableForFailures(tx, row.endpointId))) {
+          await audit(tx, { schoolId: row.schoolId, actorUserId: null, requestId: null, ip: null }, 'integration.webhook_auto_disabled', { type: 'webhook', id: row.endpointId }, { after: { active: false, reason: 'too_many_failures', failures: WEBHOOK_AUTO_DISABLE_AFTER } });
+        }
+      };
       if (!endpoint?.active) return fail('endpoint_off');
 
       try {

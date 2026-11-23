@@ -14,6 +14,8 @@ export type WebhookEventType = z.infer<typeof WebhookEventType>;
 export const WEBHOOK_MAX_ENDPOINTS = 5;
 export const WEBHOOK_SECRET_PREFIX = 'whsec_';
 export const WEBHOOK_URL_MAX = 500;
+/** Final failures in a row before an address is switched off by itself (the server's rule; shown to the admin). */
+export const WEBHOOK_AUTO_DISABLE_AFTER = 10;
 
 /** The shape only (https, no credentials in the address). Private and loopback hosts are refused by the server. */
 export const WebhookUrl = z
@@ -34,6 +36,8 @@ export const Webhook = z
     urlPreview: z.string(),
     events: z.array(WebhookEventType),
     active: z.boolean(),
+    /** too_many_failures: Absah switched it off after WEBHOOK_AUTO_DISABLE_AFTER calls in a row failed. Null when on, or when the admin switched it off. */
+    disabledReason: z.enum(['too_many_failures']).nullable(),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
