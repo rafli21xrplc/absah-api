@@ -186,3 +186,86 @@ describe('PATCH /school/profile', () => {
       .expect(403);
   });
 });
+
+describe('school identity in PATCH /school/profile', () => {
+  const digits = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join('');
+
+  it('updates name, NPSN/NSM and timezone, audited with only the changed fields', async () => {
+    const school = await newSchool();
+    const npsn = digits(8);
+    const res = await patchProfile(school, { name: '  SMA Negeri Uji  ', npsn, timezone: 'Asia/Makassar' }).expect(200);
+    expect(res.body).toMatchObject({ name: 'SMA Negeri Uji', npsn, nsm: null, timezone: 'Asia/Makassar', level: 'sma' });
+
+    const cleared = await patchProfile(school, { npsn: null }).expect(200);
+    expect(cleared.body).toMatchObject({ npsn: null });
+
+    const logs = await getDb()
+      .db.select()
+      .from(schema.auditLogs)
+      .where(and(eq(schema.auditLogs.schoolId, school), eq(schema.auditLogs.action, 'school.profile_updated')));
+    expect(logs.map((l) => Object.keys(l.after as object).sort())).toEqual([['name', 'npsn', 'timezone'], ['npsn']]);
+  });
+
+  it('rejects malformed identifiers and NPSN used by another school', async () => {
+    const a = await newSchool();
+    const b = await newSchool();
+    const npsn = digits(8);
+    await patchProfile(a, { npsn }).expect(200);
+    const taken = await patchProfile(b, { npsn }).expect(409);
+    expect(taken.body).toMatchObject({ code: 'CONFLICT', message: 'NPSN sudah dipakai sekolah lain.' });
+    await patchProfile(b, { npsn: '1234' }).expect(400);
+    await patchProfile(b, { nsm: digits(8) }).expect(400);
+    await patchProfile(b, { timezone: 'Europe/Berlin' }).expect(400);
+    await patchProfile(b, { name: 'X' }).expect(400);
+  });
+});
+
+describe('setup wizard progress', () => {
+  const setupGet = (school: string) => admin.get('/api/v1/school/setup').set('X-School-Id', school);
+  const mark = (school: string, step: string, status: string) =>
+    admin.put(`/api/v1/school/setup/steps/${step}`).set('X-School-Id', school).send({ status });
+  const complete = (school: string) => admin.post('/api/v1/school/setup/complete').set('X-School-Id', school);
+
+  it('starts with every step todo and the current profile', async () => {
+    const school = await newSchool('sd');
+    const res = await setupGet(school).expect(200);
+    expect(res.body).toMatchObject({
+      completedAt: null,
+      profile: { level: 'sd', isMadrasah: false, timezone: 'Asia/Jakarta' },
+    });
+    expect((res.body as { steps: { status: string }[] }).steps.map((s) => s.status)).toEqual(Array(6).fill('todo'));
+  });
+
+  it('keeps progress, refuses to skip required steps and finishes once', async () => {
+    const school = await newSchool();
+    await mark(school, 'profile', 'done').expect(200);
+    await mark(school, 'level', 'skipped').expect(400);
+    await mark(school, 'mbg', 'skipped').expect(200);
+    await mark(school, 'nope', 'done').expect(400);
+
+    const early = await complete(school).expect(409);
+    expect(early.body).toMatchObject({ code: 'CONFLICT', details: { steps: ['level'] } });
+
+    await mark(school, 'level', 'done').expect(200);
+    const done = await complete(school).expect(200);
+    const again = await complete(school).expect(200);
+    expect((done.body as { completedAt: string }).completedAt).not.toBeNull();
+    expect((again.body as { completedAt: string }).completedAt).toBe((done.body as { completedAt: string }).completedAt);
+
+    const res = await setupGet(school).expect(200);
+    expect((res.body as { steps: { id: string; status: string }[] }).steps).toEqual([
+      { id: 'profile', status: 'done' },
+      { id: 'level', status: 'done' },
+      { id: 'mbg', status: 'skipped' },
+      { id: 'import', status: 'todo' },
+      { id: 'gate', status: 'todo' },
+      { id: 'invite', status: 'todo' },
+    ]);
+  });
+
+  it('is admin only', async () => {
+    const school = await newSchool();
+    await guru.get('/api/v1/school/setup').set('X-School-Id', school).expect(403);
+    await guru.put('/api/v1/school/setup/steps/profile').set('X-School-Id', school).send({ status: 'done' }).expect(403);
+  });
+});

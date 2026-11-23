@@ -326,6 +326,24 @@
       "SchoolProfileResponse": {
         "type": "object",
         "properties": {
+          "name": {
+            "type": "string"
+          },
+          "npsn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nsm": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
           "level": {
             "$ref": "#/components/schemas/SchoolLevel"
           },
@@ -337,6 +355,10 @@
           }
         },
         "required": [
+          "name",
+          "npsn",
+          "nsm",
+          "timezone",
           "level",
           "isMadrasah",
           "capabilities"
@@ -345,6 +367,28 @@
       "UpdateSchoolProfileRequest": {
         "type": "object",
         "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "npsn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{8}$"
+          },
+          "nsm": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{12}$"
+          },
+          "timezone": {
+            "$ref": "#/components/schemas/SchoolTimezone"
+          },
           "level": {
             "$ref": "#/components/schemas/SchoolLevel"
           },
@@ -353,6 +397,14 @@
           }
         },
         "additionalProperties": false
+      },
+      "SchoolTimezone": {
+        "type": "string",
+        "enum": [
+          "Asia/Jakarta",
+          "Asia/Makassar",
+          "Asia/Jayapura"
+        ]
       },
       "SchoolCapabilitiesResponse": {
         "type": "object",
@@ -449,6 +501,116 @@
         },
         "required": [
           "values"
+        ],
+        "additionalProperties": false
+      },
+      "SchoolSetupResponse": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/SetupStep"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/SetupStepStatus"
+                }
+              },
+              "required": [
+                "id",
+                "status"
+              ]
+            }
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/SchoolProfile"
+          }
+        },
+        "required": [
+          "steps",
+          "completedAt",
+          "profile"
+        ]
+      },
+      "SetupStep": {
+        "type": "string",
+        "enum": [
+          "profile",
+          "level",
+          "mbg",
+          "import",
+          "gate",
+          "invite"
+        ]
+      },
+      "SetupStepStatus": {
+        "type": "string",
+        "enum": [
+          "todo",
+          "done",
+          "skipped"
+        ]
+      },
+      "SchoolProfile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "npsn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nsm": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/SchoolLevel"
+          },
+          "isMadrasah": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "npsn",
+          "nsm",
+          "timezone",
+          "level",
+          "isMadrasah"
+        ]
+      },
+      "UpdateSetupStepRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "skipped"
+            ]
+          }
+        },
+        "required": [
+          "status"
         ],
         "additionalProperties": false
       }
@@ -1015,6 +1177,236 @@
           },
           "403": {
             "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/setup": {
+      "get": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Setup wizard progress of the active school (admin)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wizard progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolSetupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/setup/steps/{step}": {
+      "put": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Mark a wizard step done or skipped (admin)",
+        "description": "Naturally idempotent. profile and level cannot be skipped.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SetupStep"
+            },
+            "required": true,
+            "name": "step",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSetupStepRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wizard progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolSetupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/setup/complete": {
+      "post": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Finish the setup wizard (admin)",
+        "description": "Naturally idempotent (keeps the first completion time). 409 until profile and level are done.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wizard progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolSetupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
             "content": {
               "application/json": {
                 "schema": {
