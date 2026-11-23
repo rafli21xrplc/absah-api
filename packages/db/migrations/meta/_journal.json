@@ -778,6 +778,20 @@
       "when": 1795444233912,
       "tag": "0110_api_keys_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1795445122437,
+      "tag": "0111_webhook_endpoints",
+      "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1795445123564,
+      "tag": "0112_webhook_endpoints_rls",
+      "breakpoints": true
     }
   ]
 }

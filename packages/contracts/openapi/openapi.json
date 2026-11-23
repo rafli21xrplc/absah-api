@@ -14477,6 +14477,152 @@
         ],
         "additionalProperties": false
       },
+      "WebhookList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Webhook"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "urlPreview": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventType"
+            }
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "urlPreview",
+          "events",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "WebhookEventType": {
+        "type": "string",
+        "enum": [
+          "attendance.absent_marked",
+          "attendance.session_locked",
+          "leave.approved",
+          "leave.cancelled"
+        ]
+      },
+      "CreatedWebhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "urlPreview": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventType"
+            }
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "urlPreview",
+          "events",
+          "active",
+          "createdAt",
+          "updatedAt",
+          "secret"
+        ]
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "$ref": "#/components/schemas/WebhookUrl"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventType"
+            },
+            "minItems": 1,
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "url",
+          "events"
+        ],
+        "additionalProperties": false
+      },
+      "WebhookUrl": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "UpdateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "$ref": "#/components/schemas/WebhookUrl"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventType"
+            },
+            "minItems": 1,
+            "maxItems": 4
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "OpenDailyAttendance": {
         "type": "object",
         "properties": {
@@ -38134,6 +38280,363 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/webhooks": {
+      "get": {
+        "tags": [
+          "integration"
+        ],
+        "summary": "The school's webhook addresses (host only; never the secret)",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "integration"
+        ],
+        "summary": "Register a webhook address and pick events; the answer holds the signing secret, once",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. 409 reason too_many at 5 addresses.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The webhook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedWebhook"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/webhooks/{webhookId}": {
+      "patch": {
+        "tags": [
+          "integration"
+        ],
+        "summary": "Change the address, the events, or switch a webhook on or off",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "webhookId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Webhook"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "integration"
+        ],
+        "summary": "Delete a webhook address",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "webhookId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
           },
           "401": {
             "description": "No session (UNAUTHENTICATED)",
