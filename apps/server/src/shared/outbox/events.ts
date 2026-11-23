@@ -81,6 +81,8 @@ export const EVENTS = {
   'pkl.checkin_missing': z.object({ sessionId: z.uuid() }),
   /** The BKK invited an alumnus to the tracer study (PKL-05); notify mints the link and sends it over WhatsApp. */
   'tracer.invitation_requested': z.object({ alumnusId: z.uuid() }),
+  /** A webhook call is stored for one endpoint; the integration sender posts it (PLT-09). */
+  'webhook.delivery_requested': z.object({ deliveryId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;
