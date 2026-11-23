@@ -21,3 +21,4 @@ export * from './gate/cards';
 export * from './gate/scans';
 export * from './gate/arrivals';
 export * from './notify/enums';
+export * from './notify/notifications';
