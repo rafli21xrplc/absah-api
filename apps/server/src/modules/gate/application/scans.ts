@@ -3,7 +3,7 @@ import type { Tx } from '@absah/db';
 import { withTenant } from '../../../shared/db';
 import { addDays, schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { applyGateArrivals, schoolStartTime } from '../../attendance';
-import { firstName } from '../domain/names';
+import { firstName } from '../../../shared/names';
 import { dayKeys, schoolSecret } from '../infrastructure/gate-secret-repo';
 import { cardForScan, insertScan, kioskRoster, knownScans, type ScanRow } from '../infrastructure/scan-repo';
 import type { KioskCaller } from './kiosks';

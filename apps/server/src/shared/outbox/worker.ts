@@ -16,14 +16,15 @@ export async function startOutbox(
     const queue = consumerQueue(consumer);
     if (queues.has(queue)) throw new Error(`duplicate outbox consumer: ${queue}`);
     queues.add(queue);
-    await boss.createQueue(queue, CONSUMER_QUEUE_OPTIONS);
-    await boss.updateQueue(queue, CONSUMER_QUEUE_OPTIONS); // createQueue keeps an existing queue's policy
+    const policy = { ...CONSUMER_QUEUE_OPTIONS, retryLimit: consumer.retryLimit ?? CONSUMER_QUEUE_OPTIONS.retryLimit };
+    await boss.createQueue(queue, policy);
+    await boss.updateQueue(queue, policy); // createQueue keeps an existing queue's policy
     await boss.work<unknown>(
       queue,
       { pollingIntervalSeconds: options.pollingIntervalSeconds ?? 2 },
       async (jobs) => {
         for (const job of jobs) {
-          const result = await runConsumer(consumer, job.data);
+          const result = await runConsumer(consumer, job.data, { attempt: job.retryCount, lastAttempt: job.retryCount >= policy.retryLimit });
           logger.debug({ queue, jobId: job.id, result }, 'outbox event consumed');
         }
       },
