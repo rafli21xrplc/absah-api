@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { CreateExamPeriodRequest, ExamPeriod, ExamPeriodIdParam, ExamPeriodList, ExamPeriodsQuery, UpdateExamPeriodRequest } from './exam/periods';
 import { BillingRecap, BillingRecapQuery } from './student-billing/recap';
 import { InstallmentIdParam, RequestStudentPaymentRequest, StudentPayment } from './student-billing/payments';
 import { CreateFeeTypeRequest, FeeType, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, UpdateFeeTypeRequest } from './student-billing/fees';
@@ -1584,6 +1585,40 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: BillingRecapQuery },
     responses: { 200: json(BillingRecap, 'Recap'), ...errors(400, 401, 403, 404) },
+  });
+  const examNote = 'Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/periods`,
+    tags: ['exam'],
+    summary: 'Exam periods, newest first (UJN-01)',
+    description: `${examNote} includeClosed=true also lists the closed ones.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: ExamPeriodsQuery },
+    responses: { 200: json(ExamPeriodList, 'Periods'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exam/periods`,
+    tags: ['exam'],
+    summary: 'Create an exam period with its rule in the active academic year (UJN-01/02)',
+    description: `${examNote} The rule: minAttendance (percent of the days with a record from attendanceFrom, default the academic year's first day, to the first exam day; sakit and izin count as present unless excusedCounts is false) and/or requirePaid (installments due on or before the first exam day, of feeTypeIds or of every fee type when empty). 409 name_taken, no_active_year.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateExamPeriodRequest } } } },
+    responses: { 201: json(ExamPeriod, 'Created'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/exam/periods/{periodId}`,
+    tags: ['exam'],
+    summary: 'Edit an exam period, or close or reopen it (UJN-01/02)',
+    description: `${examNote} A changed rule applies at once to who may sit. closed=true closes the period (kept, never deleted).`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamPeriodIdParam, body: { content: { 'application/json': { schema: UpdateExamPeriodRequest } } } },
+    responses: { 200: json(ExamPeriod, 'Updated'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

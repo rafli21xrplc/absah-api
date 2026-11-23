@@ -23,3 +23,4 @@ export * from './portal';
 export * from './report';
 export * from './subscription';
 export * from './student-billing';
+export * from './exam';

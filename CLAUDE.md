@@ -685,6 +685,14 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   outstanding, overdue (unpaid installments past due on open bills), most owed first. Raw SQL aggregates (repo
   recap-repo.ts) merged by the pure domain/recap.ts. JSON only: no xlsx/pdf export yet (ReportExporter exists for the
   other reports if the bendahara asks).
+- Ujian (UJN-01/02, module exam; behind exam.enabled, default on; schema packages/db/src/schema/exam.ts, migrations
+  0093-0094). exam_periods: name unique per school+academic year, dates (end >= start), the rule: min_attendance (1..100
+  or null), attendance_from (null = the year's first day), excused_counts (default true: sakit/izin count as present,
+  alpa never), require_paid + fee_type_ids (empty = every fee type); closed_at closes it (never deleted; only those
+  columns update, not the year or the creator). API: GET/POST /exam/periods, PATCH /exam/periods/{id} (also `closed`),
+  EXAM_MANAGERS wakasek+admin write, EXAM_VIEWERS add kepsek and wali_kelas (own rombel, next slice). periodProblem
+  (pure): end >= start, attendance_from <= start, fee types only with require_paid. Audit key `period` for the title.
+  Who may sit is NEVER stored: computed live from attendance and bills (next slice), so it changes when a bill is paid.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

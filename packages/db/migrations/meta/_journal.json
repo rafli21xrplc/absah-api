@@ -652,6 +652,20 @@
       "when": 1795330388522,
       "tag": "0092_bill_due_template",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1795349767944,
+      "tag": "0093_exam_periods",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1795349767945,
+      "tag": "0094_exam_periods_rls",
+      "breakpoints": true
     }
   ]
 }
