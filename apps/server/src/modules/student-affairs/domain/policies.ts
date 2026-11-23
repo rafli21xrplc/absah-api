@@ -27,3 +27,6 @@ export const canSeeAllFollowups = anyRole('admin', 'kepsek', 'wakasek', 'guru_bk
 export const canReadFollowups = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru_bk');
 /** The kepsek reads tasks but does not close them. */
 export const canFollowUp = anyRole('admin', 'wakasek', 'wali_kelas', 'guru_bk');
+
+/** Early warnings (KSW-04): the wali kelas of the class, guru BK and the leaders read them. */
+export const canReadEarlyWarnings = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru_bk');

@@ -53,6 +53,8 @@ export const EVENTS = {
   'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
   /** A pelanggaran took a student across a point threshold (KSW-03): a follow-up task was made; notify tells the parents when the tier asks for it. */
   'ksw.threshold_reached': z.object({ taskId: z.uuid() }),
+  /** The early-warning job saw a pattern in a student's attendance (KSW-04): push to the wali kelas and guru BK. */
+  'ksw.early_warning_raised': z.object({ warningId: z.uuid() }),
   /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
   'tppk.report_received': z.object({ reportId: z.uuid() }),
   /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */

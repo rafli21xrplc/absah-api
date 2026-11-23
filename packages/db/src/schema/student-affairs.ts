@@ -1,6 +1,6 @@
-import { FOLLOWUP_STATUSES, POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
+import { EARLY_WARNING_KINDS, FOLLOWUP_STATUSES, POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, foreignKey, index, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, foreignKey, index, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
 import { enrollments } from './academic';
 import { createdAt, id, schoolId } from './_shared';
@@ -9,6 +9,7 @@ import { schools } from './platform';
 
 export const uksOutcome = pgEnum('uks_outcome', UKS_OUTCOMES);
 export const pointKind = pgEnum('point_kind', POINT_KINDS);
+export const earlyWarningKind = pgEnum('early_warning_kind', EARLY_WARNING_KINDS);
 export const followupStatus = pgEnum('followup_status', FOLLOWUP_STATUSES);
 
 /**
@@ -154,4 +155,38 @@ export const followupTasks = pgTable(
     index('followup_tasks_school_id_status_idx').on(t.schoolId, t.status, t.createdAt),
     check('followup_tasks_done_check', sql`(${t.status} = 'done') = (${t.completedAt} is not null)`),
   ],
+);
+
+/**
+ * Early warnings (KSW-04): one row per student per pattern per school date, made by ksw.early-warning.
+ * Insert-only: a warning is a record of what the job saw that evening.
+ */
+export const earlyWarnings = pgTable(
+  'early_warnings',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    kind: earlyWarningKind('kind').notNull(),
+    schoolDate: date('school_date').notNull(),
+    dates: date('dates').array().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('early_warnings_enrollment_id_kind_school_date_key').on(t.enrollmentId, t.kind, t.schoolDate),
+    index('early_warnings_school_id_school_date_idx').on(t.schoolId, t.schoolDate),
+  ],
+);
+
+/** Marks the school days the job has handled, so a 5-minute cron after 18.00 runs once a day per school. */
+export const earlyWarningRuns = pgTable(
+  'early_warning_runs',
+  {
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    schoolDate: date('school_date').notNull(),
+    ranAt: timestamp('ran_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.schoolId, t.schoolDate] })],
 );

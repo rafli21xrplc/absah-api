@@ -2,6 +2,7 @@
 // bundles that import contracts do not pull in the generator.
 import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import {
   CompleteFollowupRequest,
   CreatePointThresholdRequest,
@@ -1282,6 +1283,18 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: FollowupTaskIdParam, body: { content: { 'application/json': { schema: CompleteFollowupRequest } } } },
     responses: { 200: json(FollowupTask, 'Closed'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/early-warnings`,
+    tags: ['student-affairs'],
+    summary: 'Early warnings (KSW-04): admin, kepsek, wakasek and guru BK see all; a wali kelas the warnings of their class',
+    description:
+      'Behind student.early_warning (404 CAPABILITY_DISABLED otherwise). Raised by the job ksw.early-warning after 18.00 on the school clock: consecutive alpa, repeated late, bolos jam (when attendance is per jam pelajaran) and PKL absence (when PKL is on). The same kind for a student is not repeated within 7 days. Newest first over the last `days` days (default 14).',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: EarlyWarningsQuery },
+    responses: { 200: json(EarlyWarningList, 'Warnings'), ...errors(400, 401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

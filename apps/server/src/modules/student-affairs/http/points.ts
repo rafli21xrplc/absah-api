@@ -4,6 +4,8 @@ import {
   CreatePointEvidenceRequest,
   CreatePointEvidenceResponse,
   CreatePointRuleRequest,
+  EarlyWarningList,
+  EarlyWarningsQuery,
   CreatePointThresholdRequest,
   FollowupTask,
   FollowupTaskIdParam,
@@ -35,6 +37,7 @@ import { idempotent } from '../../../shared/idempotency';
 import { schoolDate } from '../../../shared/school-date';
 import type { ObjectStorage } from '../../../shared/storage';
 import { resolveContext, type Auth } from '../../platform';
+import { listEarlyWarnings } from '../application/early-warning';
 import { completeFollowup, listFollowups } from '../application/followups';
 import { createPointThreshold, listPointThresholds, updatePointThreshold } from '../application/thresholds';
 import { createPointEvidence, pointEvidenceLink, recordPointEntry, reversePointEntry, studentPoints } from '../application/point-entries';
@@ -49,6 +52,7 @@ const todayOf = (req: Request) => {
 export function pointsRouter(auth: Auth, storage: ObjectStorage): Router {
   const router = Router();
   const points = [resolveContext(auth, { school: 'required' }), requireCap('student.points')];
+  const earlyWarning = [resolveContext(auth, { school: 'required' }), requireCap('student.early_warning')];
 
   router.get('/point-rules', ...points, async (req, res) => {
     sendContract(res, PointRuleList, await listPointRules(getActor(req), PointRulesQuery.parse(req.query).all ?? false));
@@ -101,6 +105,10 @@ export function pointsRouter(auth: Auth, storage: ObjectStorage): Router {
     const actor = getActor(req);
     const { taskId } = FollowupTaskIdParam.parse(req.params);
     sendContract(res, FollowupTask, await completeFollowup(actor, auditContext(req, actor), taskId, CompleteFollowupRequest.parse(req.body)));
+  });
+
+  router.get('/early-warnings', ...earlyWarning, async (req, res) => {
+    sendContract(res, EarlyWarningList, await listEarlyWarnings(getActor(req), todayOf(req), EarlyWarningsQuery.parse(req.query)));
   });
 
   return router;

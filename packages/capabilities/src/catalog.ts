@@ -22,6 +22,7 @@ export const CAPABILITIES = {
   'student.uks': { kind: 'bool', default: true },
   'student.points': { kind: 'bool', default: true },
   'student.counseling': { kind: 'bool', default: true },
+  'student.early_warning': { kind: 'bool', default: true },
   'portal.liaison': { kind: 'bool', default: true },
   'data.source': { kind: 'enum', values: ['dapodik', 'emis'], default: 'dapodik' },
   'report.target': { kind: 'enum', values: ['erapor', 'rdm'], default: 'erapor' },

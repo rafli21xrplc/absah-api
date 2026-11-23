@@ -32,6 +32,7 @@ import {
   MISSING_CHECKIN_QUEUE,
   missingCheckinHandler,
 } from '../modules/pkl';
+import { EARLY_WARNING_CRON, EARLY_WARNING_QUEUE, earlyWarningHandler } from '../modules/student-affairs';
 import {
   APPLY_PAYMENTS_CRON,
   APPLY_PAYMENTS_QUEUE,
@@ -119,6 +120,9 @@ await boss.schedule(AUTO_CONFIRM_QUEUE, AUTO_CONFIRM_CRON, null, { tz: 'UTC' });
 await boss.createQueue(MISSING_CHECKIN_QUEUE);
 await boss.work(MISSING_CHECKIN_QUEUE, missingCheckinHandler(logger));
 await boss.schedule(MISSING_CHECKIN_QUEUE, MISSING_CHECKIN_CRON, null, { tz: 'UTC' });
+await boss.createQueue(EARLY_WARNING_QUEUE);
+await boss.work(EARLY_WARNING_QUEUE, earlyWarningHandler(logger));
+await boss.schedule(EARLY_WARNING_QUEUE, EARLY_WARNING_CRON, null, { tz: 'UTC' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);
