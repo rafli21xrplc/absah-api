@@ -1,4 +1,4 @@
-import { PklAssessmentAspectList, PklAssessmentForm, PklAssessmentList, PklPlacementIdParam, SavePklAspectsRequest, SavePklAssessmentRequest } from '@absah/contracts';
+import { PklAssessmentAspectList, PklAssessmentForm, PklAssessmentList, PklAssessmentExportQuery, PklPlacementIdParam, SavePklAspectsRequest, SavePklAssessmentRequest } from '@absah/contracts';
 import { Router } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -7,7 +7,7 @@ import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
 import { listAspects, saveAspects } from '../application/assessment-aspects';
-import { getAssessment, giveAssessment, listAssessments } from '../application/assessments';
+import { exportAssessments, getAssessment, giveAssessment, listAssessments } from '../application/assessments';
 import { todayOf } from './clock';
 
 /** DUDI assessment (PKL-04), behind pkl.enabled. */
@@ -25,6 +25,10 @@ export function pklAssessmentsRouter(auth: Auth): Router {
 
   router.get('/pkl/assessments', ...pkl, async (req, res) => {
     sendContract(res, PklAssessmentList, await listAssessments(getActor(req), todayOf(req)));
+  });
+  router.get('/pkl/assessments/export', ...pkl, async (req, res) => {
+    const { file, fileName, contentType } = await exportAssessments(getActor(req), todayOf(req), PklAssessmentExportQuery.parse(req.query));
+    res.status(200).set({ 'Content-Type': contentType, 'Content-Disposition': `attachment; filename="${fileName}"`, 'Cache-Control': 'no-store' }).send(file);
   });
   router.get('/pkl/placements/:placementId/assessment', ...pkl, async (req, res) => {
     const { placementId } = PklPlacementIdParam.parse(req.params);

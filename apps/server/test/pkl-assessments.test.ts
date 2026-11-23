@@ -1,5 +1,6 @@
 import type { PklAssessmentAspectList, PklAssessmentForm, PklAssessmentList } from '@absah/contracts';
 import { schema } from '@absah/db';
+import ExcelJS from 'exceljs';
 import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { withTenant } from '../src/shared/db';
@@ -107,5 +108,60 @@ describe('who sees which assessments (PKL-04)', () => {
     // A single placement outside the caller's students is 404, not 403: no probing.
     await mentor.b.get(url(placement.rizky)).set('X-School-Id', w.school).expect(404);
     await w.agents.guru.get(url(placement.rizky)).set('X-School-Id', w.school).expect(404);
+  });
+});
+
+describe('results as a file (PKL-04)', () => {
+  const fetchFile = async (agent: Agent, query: string) => {
+    const res = await agent
+      .get(`/api/v1/pkl/assessments/export?${query}`)
+      .set('X-School-Id', w.school)
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks: Buffer[] = [];
+        r.on('data', (c: Buffer) => chunks.push(c));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+    return res;
+  };
+  const sheetOf = async (agent: Agent, query: string) => {
+    const res = await fetchFile(agent, query);
+    expect(res.status).toBe(200);
+    const workbook = new ExcelJS.Workbook();
+    const file = res.body as Buffer;
+    await workbook.xlsx.load(file as unknown as ArrayBuffer);
+    return workbook.getWorksheet('Penilaian DUDI');
+  };
+
+  it('gives kepsek every placement with a column per aspect, retired ones included, and the mean at the bottom', async () => {
+    const sheet = await sheetOf(w.agents.kepsek, 'format=xlsx');
+    expect(sheet?.getRow(1).values).toEqual([undefined, 'No', 'Nama siswa', 'Rombel', 'DUDI', 'Periode', 'Kerja tim', 'Inisiatif', 'Disiplin', 'Kerja sama', 'Keterampilan teknis', 'Nilai akhir', 'Catatan']);
+    const rizky = sheet?.getRow(3).values as unknown[];
+    expect(rizky[2]).toBe('RIZKY PRATAMA');
+    expect(rizky.slice(2, 5)).toEqual(['RIZKY PRATAMA', 'XI TKJ 1', 'PT Maju Jaya']);
+    // Given before the aspects changed: no score for "Kerja tim" / "Inisiatif", and the old ones keep theirs.
+    expect(rizky.slice(6, 13)).toEqual(['', '', 100, 100, 100, 100, '']);
+    // Ordered by DUDI (CV Sentosa first), then by name.
+    expect((sheet?.getRow(2).values as unknown[]).slice(2, 5)).toEqual(['BAYU SAPUTRA', 'XI TKJ 1', 'CV Sentosa']);
+    expect((sheet?.getRow(4).values as unknown[]).slice(2, 3)).toEqual(['SINTA DEWI']);
+    expect(sheet?.getRow(4).getCell(11).value).toBe('Belum dinilai');
+    expect(sheet?.lastRow?.getCell(11).value).toBe(100);
+    expect(sheet?.lastRow?.getCell(12).value).toBe('1 dari 3 siswa sudah dinilai');
+  });
+
+  it('limits to one DUDI and to the caller’s own students for a guru pembimbing', async () => {
+    const sentosa = await sheetOf(w.agents.kepsek, `format=xlsx&partnerId=${w.partners.sentosa}`);
+    expect(sentosa?.rowCount).toBe(3); // header, BAYU, mean
+    const guru = await sheetOf(w.agents.pembimbing, 'format=xlsx');
+    expect(guru?.rowCount).toBe(3); // header, RIZKY, mean
+  });
+
+  it('builds the PDF too; the industry supervisor cannot export', async () => {
+    const pdf = await fetchFile(w.agents.humas, 'format=pdf');
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+    expect((await fetchFile(mentor.a, 'format=xlsx')).status).toBe(403);
+    expect((await fetchFile(w.agents.kepsek, 'format=csv')).status).toBe(400);
   });
 });

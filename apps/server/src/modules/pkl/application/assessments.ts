@@ -1,4 +1,4 @@
-import type { PklAssessment, PklAssessmentForm, PklAssessmentItem, PklAssessmentList, SavePklAssessmentRequest } from '@absah/contracts';
+import type { PklAssessment, PklAssessmentExportQuery, PklAssessmentForm, PklAssessmentItem, PklAssessmentList, SavePklAssessmentRequest } from '@absah/contracts';
 import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
@@ -6,9 +6,11 @@ import { authorize } from '../../../shared/authorize';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
+import { assessmentTable } from '../domain/assessment-table';
 import { assessmentWindow, checkScores, type ScoreProblem, weightedScore } from '../domain/assessment-rules';
-import { canReadPklAssessment, canSeeAllPkl, canSuperviseAtDudi } from '../domain/policies';
-import { activeAspects, assessmentsOf, saveAssessment, type StoredAssessment } from '../infrastructure/assessment-repo';
+import { canExportPklAssessment, canReadPklAssessment, canSeeAllPkl, canSuperviseAtDudi } from '../domain/policies';
+import { assessmentPdf, assessmentWorkbook } from '../infrastructure/assessment-files';
+import { activeAspects, assessmentsOf, saveAssessment, schoolName, type StoredAssessment } from '../infrastructure/assessment-repo';
 import { listPlacements, type PlacementFilter, type PlacementRow } from '../infrastructure/placement-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
@@ -82,5 +84,19 @@ export function giveAssessment(actor: Actor, auditCtx: AuditContext, placementId
     await saveAssessment(tx, { schoolId: actor.schoolId, placementId, assessedBy: actor.userId, note: input.note?.trim() || null, scores, newId: uuidv7() });
     await audit(tx, auditCtx, 'pkl.assessment_given', { type: 'pkl_placement', id: placementId }, { after: { overall: weightedScore(scores) } });
     return (await form(tx, actor, placementId, today)).form;
+  });
+}
+
+/** GET /pkl/assessments/export: the results the caller may see as Excel or PDF, optionally of one DUDI. */
+export function exportAssessments(actor: Actor, today: string, query: PklAssessmentExportQuery): Promise<{ file: Buffer; fileName: string; contentType: string }> {
+  authorize(actor, canExportPklAssessment);
+  return withTenant(scope(actor), async (tx) => {
+    const rows = (await listPlacements(tx, { ...visibleTo(actor), ...(query.partnerId ? { partnerId: query.partnerId } : {}) })).filter((r) => r.status === 'active');
+    const [done, aspects, name] = await Promise.all([assessmentsOf(tx, rows.map((r) => r.id)), activeAspects(tx), schoolName(tx, actor.schoolId)]);
+    const table = assessmentTable(rows.map((r) => item(r, done.get(r.id), today)), aspects.map((a) => a.name));
+    const info = { schoolName: name, printedOn: today.split('-').reverse().join('-') };
+    return query.format === 'xlsx'
+      ? { file: await assessmentWorkbook(table, info), fileName: `penilaian-dudi-${today}.xlsx`, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      : { file: await assessmentPdf(table, info), fileName: `penilaian-dudi-${today}.pdf`, contentType: 'application/pdf' };
   });
 }

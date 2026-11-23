@@ -66,3 +66,8 @@ export async function saveAssessment(
   await tx.delete(sc).where(eq(sc.assessmentId, id));
   await tx.insert(sc).values(input.scores.map((s) => ({ schoolId: input.schoolId, assessmentId: id, ...s })));
 }
+
+export async function schoolName(tx: Tx, schoolId: string): Promise<string> {
+  const [row] = await tx.select({ name: schema.schools.name }).from(schema.schools).where(eq(schema.schools.id, schoolId));
+  return row?.name ?? '';
+}
