@@ -630,6 +630,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   never the note; READS are audited too (ksw.counseling_read). GET /counseling-notes/students?q= (guru BK) finds a
   student by name because the guru BK does not read the registry (same shape as /point-entries/students). Endpoints read the school date through
   student-affairs/http/clock.ts todayOf.
+- Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
+  0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
+  made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once
+  at check-in. teacher_leaves: kind sakit|izin|dinas, status reuses leave_status, reason encrypted, only the decision
+  and cancellation columns change, never deleted. session_substitutions: insert-only history; the session's own
+  teacher_id moves to the substitute. "Needs a substitute" is NOT stored: it is a session whose teacher has approved
+  leave covering the date, so it cannot drift. Test: test/teacher-schema.test.ts (RLS, grants, constraints).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

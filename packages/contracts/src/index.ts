@@ -33,6 +33,7 @@ export * from './student-affairs/counseling';
 export * from './student-affairs/early-warning';
 export * from './student-affairs/followup';
 export * from './student-affairs/points';
+export * from './teacher/constants';
 export * from './notify/enums';
 export * from './notify/notifications';
 export * from './notify/preferences';
