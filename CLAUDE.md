@@ -699,3 +699,17 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   pkl.partner_created|updated; workHours replaced as a whole; name taken 409). Pickers for placements:
   GET /pkl/students?q= (name or NISN, active this year), GET /pkl/school-mentors (active school staff:
   STAFF_ROLES minus pembimbing_industri, who is not school staff). OpenAPI paths in contracts pkl/paths.ts.
+- Placements (http/placements.ts, application/placements.ts): GET /pkl/placements?partnerId&scope=current|all
+  (managers + kepsek all, anyone else where they are guru pembimbing), POST /pkl/placements (batch: up to 40
+  enrollments, one DUDI, one period <= 1 year ending today or later, schoolMentorId = active school staff,
+  industryMentor {name, phoneNumber} optional), PATCH /pkl/placements/{id} (endsOn, schoolMentorId,
+  industryMentor; null removes), POST .../cancel (again = no-op). Writes run under lockPlacements (advisory
+  lock per school); overlapping active placements of an enrollment -> 409 overlap + details.enrollmentIds.
+  Audited pkl.placement_created|updated|cancelled with ids only (never the phone number).
+- Industry supervisor (pembimbing_industri): no invitation. platform sharedPhoneLogin (owner of the number
+  or a new phone account; a student's own login -> 409 phone_student), then setPortalMembership(role
+  pembimbing_industri) active while they have a placement not cancelled and not ended (syncMentorAccess on
+  every write; job pkl.expire-mentors 00.05 WIB suspends the rest on each school's own date). A new
+  supervisor emits pkl.mentor_assigned {userId} -> notify_pkl_mentor_assigned sends template
+  pkl_mentor_assigned (school, count, url /dudi; pending approval; one per supervisor per day) to the
+  number from view pkl_mentor_contacts (migration 0071, like homeroom_contacts). Responses mask the number.

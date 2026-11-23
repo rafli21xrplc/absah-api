@@ -42,3 +42,4 @@ export * from './billing/invoices';
 export * from './billing/payments';
 export * from './pkl/enums';
 export * from './pkl/partners';
+export * from './pkl/placements';

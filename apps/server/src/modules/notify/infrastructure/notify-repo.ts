@@ -198,3 +198,17 @@ export async function portalGuardians(tx: Tx, studentId: string): Promise<{ guar
     .orderBy(asc(schema.guardians.id));
   return rows.flatMap((r) => (r.phone && r.userId ? [{ guardianId: r.guardianId, userId: r.userId, phone: r.phone.reveal() }] : []));
 }
+
+/**
+ * PKL-01: the number of an industry supervisor of the current school (view pkl_mentor_contacts) and
+ * how many of their placements have not ended on `today`.
+ */
+export async function pklMentorNotice(tx: Tx, userId: string, today: string): Promise<{ phone: string; count: number } | undefined> {
+  const res = await tx.execute<{ phone_number: string | null; n: number }>(sql`
+    select c.phone_number,
+           (select count(*)::int from pkl_placements p
+             where p.industry_mentor_id = c.user_id and p.status = 'active' and p.ends_on >= ${today}::date) as n
+      from pkl_mentor_contacts c where c.user_id = ${userId}::uuid`);
+  const r = res.rows[0];
+  return r?.phone_number && r.n > 0 ? { phone: r.phone_number, count: r.n } : undefined;
+}
