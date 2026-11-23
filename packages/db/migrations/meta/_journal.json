@@ -127,6 +127,20 @@
       "when": 1794817828439,
       "tag": "0017_academic_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794818497879,
+      "tag": "0018_student_imports",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794818498420,
+      "tag": "0019_student_imports_rls",
+      "breakpoints": true
     }
   ]
 }

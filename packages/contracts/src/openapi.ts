@@ -10,6 +10,13 @@ import {
   UpdateSchoolCapabilitiesRequest,
   UpdateSchoolProfileRequest,
 } from './academic/school-settings';
+import {
+  CreateImportRequest,
+  CreateImportResponse,
+  ImportIdParam,
+  StudentImportList,
+  StudentImportResponse,
+} from './academic/imports';
 import { ErrorBody } from './common';
 import {
   AcceptInvitationRequest,
@@ -208,6 +215,57 @@ function buildRegistry(): OpenAPIRegistry {
     responses: {
       200: { description: 'Accepted', content: { 'application/json': { schema: AcceptInvitationResponse } } },
       ...errors(400, 404),
+    },
+  });
+
+  const importResponse = (description: string) => ({
+    200: { description, content: { 'application/json': { schema: StudentImportResponse } } },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/imports/dapodik`,
+    tags: ['academic'],
+    summary: 'Start a Dapodik import: returns a presigned PUT for the .xlsx (admin, operator)',
+    description: 'Needs data.source = dapodik. Upload the file to upload.url, then POST /imports/{importId}/parse.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateImportRequest } } } },
+    responses: {
+      201: { description: 'Created', content: { 'application/json': { schema: CreateImportResponse } } },
+      ...errors(400, 401, 403, 404, 409, 422),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/imports/{importId}/parse`,
+    tags: ['academic'],
+    summary: 'Queue parsing of the uploaded file (admin, operator)',
+    description: 'Naturally idempotent. Poll GET /imports/{importId} until status is ready or failed.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ImportIdParam },
+    responses: { ...importResponse('Import'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/imports/{importId}`,
+    tags: ['academic'],
+    summary: 'Import status and preview (admin, operator)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ImportIdParam },
+    responses: { ...importResponse('Import with preview'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/imports`,
+    tags: ['academic'],
+    summary: 'Recent imports without preview items (admin, operator)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: {
+      200: { description: 'Imports', content: { 'application/json': { schema: StudentImportList } } },
+      ...errors(400, 401, 403),
     },
   });
 

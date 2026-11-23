@@ -4,7 +4,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
-import { academicRouter } from './modules/academic';
+import { academicRouter, importsRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
 import { errorHandler, notFoundHandler } from './shared/http';
@@ -55,6 +55,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage }:
   v1.use(healthRouter(version));
   v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
+  v1.use(importsRouter(auth, storage));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });
