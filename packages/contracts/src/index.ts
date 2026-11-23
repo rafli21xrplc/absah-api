@@ -42,6 +42,7 @@ export * from './student-billing/constants';
 export * from './student-billing/fees';
 export * from './student-billing/bills';
 export * from './student-billing/payments';
+export * from './student-billing/recap';
 export * from './notify/enums';
 export * from './notify/notifications';
 export * from './notify/preferences';

@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { BillingRecap, BillingRecapQuery } from './student-billing/recap';
 import { InstallmentIdParam, RequestStudentPaymentRequest, StudentPayment } from './student-billing/payments';
 import { CreateFeeTypeRequest, FeeType, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, UpdateFeeTypeRequest } from './student-billing/fees';
 import { TeacherAttendance, TeacherToday } from './teacher/attendance';
@@ -1572,6 +1573,17 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: InstallmentIdParam, body: { content: { 'application/json': { schema: RequestStudentPaymentRequest } } } },
     responses: { 202: json(StudentPayment, 'Requested'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/student-billing/recap`,
+    tags: ['student-billing'],
+    summary: 'Payment recap for the bendahara: receipts of a month and what is still owed per rombel (TGH-04)',
+    description: `${billingNote} received: payments the gateway confirmed in the month (school clock), by day and method; flagged counts the ones that arrived but counted for nothing (paid_twice, bill_void). bills: every non-void bill as of today, per rombel, with billed, paid, outstanding and overdue rupiah. feeTypeId narrows both. JSON only; there is no spreadsheet export yet.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: BillingRecapQuery },
+    responses: { 200: json(BillingRecap, 'Recap'), ...errors(400, 401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

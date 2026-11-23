@@ -6891,6 +6891,136 @@
           "method"
         ]
       },
+      "BillingRecap": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "received": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "amount": {
+                "type": "integer"
+              },
+              "va": {
+                "type": "integer"
+              },
+              "qris": {
+                "type": "integer"
+              },
+              "flagged": {
+                "type": "integer"
+              },
+              "days": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "amount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "count",
+                    "amount"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "count",
+              "amount",
+              "va",
+              "qris",
+              "flagged",
+              "days"
+            ]
+          },
+          "bills": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "billed": {
+                "type": "integer"
+              },
+              "paid": {
+                "type": "integer"
+              },
+              "outstanding": {
+                "type": "integer"
+              },
+              "overdue": {
+                "type": "integer"
+              },
+              "classes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "classId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "billed": {
+                      "type": "integer"
+                    },
+                    "paid": {
+                      "type": "integer"
+                    },
+                    "outstanding": {
+                      "type": "integer"
+                    },
+                    "overdue": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "classId",
+                    "className",
+                    "count",
+                    "billed",
+                    "paid",
+                    "outstanding",
+                    "overdue"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "count",
+              "billed",
+              "paid",
+              "outstanding",
+              "overdue",
+              "classes"
+            ]
+          }
+        },
+        "required": [
+          "month",
+          "received",
+          "bills"
+        ]
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -23267,6 +23397,102 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/student-billing/recap": {
+      "get": {
+        "tags": [
+          "student-billing"
+        ],
+        "summary": "Payment recap for the bendahara: receipts of a month and what is still owed per rombel (TGH-04)",
+        "description": "Tagihan siswa (TGH), behind student.billing. The bendahara and admin manage; kepsek and wakasek read. Money is whole rupiah; a bill is never deleted, only voided. received: payments the gateway confirmed in the month (school clock), by day and method; flagged counts the ones that arrived but counted for nothing (paid_twice, bill_void). bills: every non-void bill as of today, per rombel, with billed, paid, outstanding and overdue rupiah. feeTypeId narrows both. JSON only; there is no spreadsheet export yet.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            },
+            "required": false,
+            "name": "month",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "feeTypeId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recap",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingRecap"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {

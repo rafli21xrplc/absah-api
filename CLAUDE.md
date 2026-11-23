@@ -678,6 +678,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   provider name absah_student_bill_due_v1: SUBMIT IT) to each guardian with a number: school, first name, due date,
   link; never the amount or the fee (dedup key bill_due:<installment>:<guardian>); an installment paid or voided
   since is skipped. Not in MUTABLE_TEMPLATE_CODES (a parent cannot switch it off yet).
+- Rekap pembayaran (TGH-04, application/recap.ts): GET /student-billing/recap?month=YYYY-MM&feeTypeId= for
+  BILLING_READERS. `received`: student_payments `paid` with paid_at in the month on the SCHOOL's clock (not UTC), by
+  day and method, `flagged` = those with last_error paid_twice/bill_void (money that counted for nothing, for the
+  bendahara to look at). `bills`: every non-void bill as of today, per rombel: billed, paid (paid installments),
+  outstanding, overdue (unpaid installments past due on open bills), most owed first. Raw SQL aggregates (repo
+  recap-repo.ts) merged by the pure domain/recap.ts. JSON only: no xlsx/pdf export yet (ReportExporter exists for the
+  other reports if the bendahara asks).
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once
