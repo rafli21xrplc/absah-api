@@ -8054,6 +8054,10 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "name": {
                   "type": "string"
                 },
@@ -8131,6 +8135,7 @@
               },
               "required": [
                 "studentId",
+                "enrollmentId",
                 "name",
                 "className",
                 "today",
@@ -23156,7 +23161,8 @@
         "tags": [
           "portal"
         ],
-        "summary": "PWA: the siswa's own attendance or the orang tua's children's, today and the last 30 days",
+        "summary": "PWA: the siswa's own attendance or the orang tua's children's, today and the last 30 days (up to 180 with `days`)",
+        "description": "`studentId` narrows to one child; an id that is not the caller's child gives an empty list, never another family's data.",
         "security": [
           {
             "session": []
@@ -23172,6 +23178,26 @@
               "format": "uuid"
             },
             "required": true
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 180,
+              "default": 30
+            },
+            "required": false,
+            "name": "days",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "studentId",
+            "in": "query"
           }
         ],
         "responses": {
@@ -23181,6 +23207,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PortalAttendance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }

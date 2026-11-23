@@ -63,18 +63,30 @@ export const ActionLinkCardRequest = z
   .meta({ id: 'ActionLinkCardRequest' });
 export type ActionLinkCardRequest = z.infer<typeof ActionLinkCardRequest>;
 
-/** Days of history the PWA shows (ORT-02); the parent portal (5.7) goes further back. */
+/** Days of history the PWA shows by default (ORT-02); `days` asks for more, up to PORTAL_HISTORY_MAX_DAYS (ORT-05). */
 export const PORTAL_HISTORY_DAYS = 30;
+export const PORTAL_HISTORY_MAX_DAYS = 180;
+
+/** GET /api/v1/portal/attendance?days&studentId: studentId narrows to one child (a stranger's id just finds nothing). */
+export const PortalAttendanceQuery = z
+  .object({
+    days: z.coerce.number().int().min(1).max(PORTAL_HISTORY_MAX_DAYS).default(PORTAL_HISTORY_DAYS),
+    studentId: z.uuid().optional(),
+  })
+  .meta({ id: 'PortalAttendanceQuery' });
+export type PortalAttendanceQuery = z.infer<typeof PortalAttendanceQuery>;
 
 /**
  * GET /api/v1/portal/attendance: the caller's own attendance (siswa) or their children's (orang_tua),
- * one entry per student, last PORTAL_HISTORY_DAYS school days with a rekap status, newest first.
+ * one entry per student, the last `days` (default PORTAL_HISTORY_DAYS) school days with a rekap status, newest first.
  */
 export const PortalAttendance = z
   .object({
     items: z.array(
       z.object({
         studentId: z.uuid(),
+        /** Key of the child's izin in GET /leave-requests (student.enrollmentId). */
+        enrollmentId: z.uuid(),
         name: z.string(),
         className: z.string(),
         today: z.object({ date: z.iso.date(), status: AttendanceStatus.nullable(), arrivedAt: z.iso.datetime().nullable() }),
