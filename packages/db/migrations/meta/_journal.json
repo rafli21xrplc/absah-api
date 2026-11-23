@@ -190,6 +190,20 @@
       "when": 1794830939083,
       "tag": "0026_attendance_marks_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794831288005,
+      "tag": "0027_leave_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794831288568,
+      "tag": "0028_leave_requests_rls",
+      "breakpoints": true
     }
   ]
 }

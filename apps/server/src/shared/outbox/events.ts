@@ -27,6 +27,14 @@ export const EVENTS = {
   'attendance.absent_marked': z.object({ sessionId: z.uuid(), enrollmentId: z.uuid() }),
   /** All sessions of a school date are locked and daily_attendance is final (one event per day). */
   'attendance.session_locked': z.object({ schoolDate: z.iso.date(), sessions: z.int(), missed: z.int() }),
+  /** A parent asked for izin; notify tells the wali kelas (3.2). */
+  'leave.requested': z.object({ leaveRequestId: z.uuid() }),
+  /** Izin approved: attendance marks the sessions S/I (also ones created later), notify tells the parents. */
+  'leave.approved': z.object({ leaveRequestId: z.uuid() }),
+  /** Izin rejected: notify tells the parents (3.2). */
+  'leave.rejected': z.object({ leaveRequestId: z.uuid() }),
+  /** An approved izin was cancelled: attendance removes its marks, the next source shows again. */
+  'leave.cancelled': z.object({ leaveRequestId: z.uuid() }),
 } as const;
 
 export type EventType = keyof typeof EVENTS;

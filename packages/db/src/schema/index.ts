@@ -6,6 +6,7 @@ export * from './capabilities';
 export * from './idempotency';
 export * from './imports';
 export * from './invitations';
+export * from './leave';
 export * from './memberships';
 export * from './outbox';
 export * from './platform';
