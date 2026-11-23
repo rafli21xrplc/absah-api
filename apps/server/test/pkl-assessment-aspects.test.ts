@@ -19,7 +19,7 @@ const list = async (agent: Agent, s = school) => ((await agent.get('/api/v1/pkl/
 
 beforeAll(async () => {
   [school, sma] = [await t.school('smk', 'SMK Aspek Penilaian'), await t.school('sma', 'SMA Tanpa PKL')];
-  for (const [label, role] of [['humas', 'humas_pkl'], ['kepsek', 'kepsek'], ['industri', 'pembimbing_industri'], ['guru', 'guru']] as const) {
+  for (const [label, role] of [['humas', 'humas_pkl'], ['kepsek', 'kepsek'], ['industri', 'pembimbing_industri'], ['uks', 'petugas_uks']] as const) {
     const u = await t.staff(`Aspek ${label}`);
     await t.member(school, u.id, role);
     agents[label] = t.agent();
@@ -60,10 +60,10 @@ describe('PKL assessment aspects (PKL-04)', () => {
     expect((await list(A('humas'))).length).toBe(4); // nothing changed
   });
 
-  it('only managers write; a guru cannot even read; a school without PKL has no such route', async () => {
+  it('only managers write; staff outside PKL cannot read; a school without PKL has no such route', async () => {
     await put(A('kepsek'), [{ name: 'Rapi', weight: 1 }]).expect(403);
     await put(A('industri'), [{ name: 'Rapi', weight: 1 }]).expect(403);
-    await A('guru').get('/api/v1/pkl/assessment-aspects').set('X-School-Id', school).expect(403);
+    await A('uks').get('/api/v1/pkl/assessment-aspects').set('X-School-Id', school).expect(403);
     const outsider = await t.staff('Kepsek SMA');
     await t.member(sma, outsider.id, 'kepsek');
     const agent = t.agent();

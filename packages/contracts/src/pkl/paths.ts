@@ -11,7 +11,7 @@ import {
   ReviewPklJournalRequest,
   WritePklJournalRequest,
 } from './journals';
-import { PklAssessmentAspectList, SavePklAspectsRequest } from './assessment';
+import { PklAssessmentAspectList, PklAssessmentForm, PklAssessmentList, SavePklAspectsRequest, SavePklAssessmentRequest } from './assessment';
 import { DecidePklDayRequest, PklDayDecision, PklReviewList, PklSessionIdParam } from './reviews';
 import { ConfirmPklCheckinsRequest, DisputePklCheckinRequest, PklCheckinIdParam, PklSupervisionDay, PklSupervisionQuery } from './supervision';
 import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
@@ -50,6 +50,31 @@ export const PKL_PATHS: PklPath[] = [
     description: 'An item with an id edits that aspect, one without adds one, an existing aspect left out is retired; assessments already given keep their own copy.',
     request: { body: SavePklAspectsRequest },
     ok: PklAssessmentAspectList,
+    label: 'Saved',
+    write: true,
+  },
+  {
+    method: 'get',
+    path: '/pkl/assessments',
+    summary: 'DUDI assessments: a pembimbing industri their students, a guru pembimbing theirs, managers and kepsek all (PKL-04)',
+    ok: PklAssessmentList,
+    label: 'Assessments',
+  },
+  {
+    method: 'get',
+    path: '/pkl/placements/{placementId}/assessment',
+    summary: "One placement's assessment with the aspects the form asks for now (404 outside the caller's students)",
+    request: { params: PklPlacementIdParam },
+    ok: PklAssessmentForm,
+    label: 'Form',
+  },
+  {
+    method: 'put',
+    path: '/pkl/placements/{placementId}/assessment',
+    summary: 'Give or correct the assessment: one score 0-100 per current aspect (pembimbing industri of the placement)',
+    description: '409 window_not_open before 14 days ahead of the end, window_closed 30 days after it, no_aspects until the school set aspects, placement_cancelled. Every current aspect needs a score; the weighted average is kept.',
+    request: { params: PklPlacementIdParam, body: SavePklAssessmentRequest },
+    ok: PklAssessmentForm,
     label: 'Saved',
     write: true,
   },

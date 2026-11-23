@@ -1078,3 +1078,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Drizzle-kit gotcha: 0101 (enum value) has no snapshot, so the next `db:generate` repeats its ALTER TYPE; delete that line from the
   generated file (the new snapshot then includes it), as 0102 did.
 
+## Penilaian DUDI: pengisian (PKL-04; modules/pkl application/assessments.ts)
+- GET /pkl/assessments (list), GET + PUT /pkl/placements/{id}/assessment. The pembimbing industri of the placement fills ONE score
+  (0-100) per CURRENT aspect; weighted average to one decimal (domain/assessment-rules.ts weightedScore), saved with a copy of each
+  aspect's name and weight. Open from PKL_ASSESSMENT_OPEN_BEFORE_DAYS (14) before the placement ends to _AFTER_DAYS (30) after;
+  409 reasons: window_not_open, window_closed, no_aspects, placement_cancelled. Giving it again corrects it inside the window.
+- Visibility = placements filtered like the placement list: managers and kepsek all, pembimbing_industri their industryMentorId,
+  anyone else (a guru pembimbing is just a teacher named school mentor) only schoolMentorId = them. A placement outside the
+  caller's students is 404, never 403. canReadPklAssessment therefore includes plain `guru`; writing is canSuperviseAtDudi only.
+- Cancelled placements are not listed. The Excel/PDF results are prompt 6.2c.
+
