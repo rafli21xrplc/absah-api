@@ -700,6 +700,16 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   decimal (never rounded up to look compliant). Bills: unpaid installments of OPEN bills due on or before the first exam
   day (fee_type_ids, empty = all); reasons carry the count, never the amount. Wali kelas: own rombels only
   (classes.homeroom_teacher_id), another rombel's classId = 404; wakasek/kepsek/admin all.
+- Ruang ujian (UJN-03, migrations 0095-0096): exam_rooms (period, name unique per period, capacity, supervisor_id) and
+  exam_seats (one room per student per period; seat_no unique per room; composite FK keeps a seat's period = its
+  room's period). Rooms/seats may be deleted (a mistake), never truncated; only name/capacity/supervisor and a seat's
+  room/number update. API: GET/POST /exam/periods/{id}/rooms (list has `unseated`), PATCH/DELETE /exam/rooms/{id},
+  GET/POST /exam/rooms/{id}/students ({classId} or {enrollmentIds}; someone in another room of the period MOVES; lowest
+  free numbers; 409 room_full changes nothing), DELETE /exam/rooms/{id}/students/{enrollmentId}. Pure
+  domain/seating.ts planSeating. Seat list: wakasek/kepsek/admin or the room's own pengawas (any staff member; a
+  parent/student cannot be one). Reading `user` names: the app role cannot read the `user` table, use the
+  school_member_directory view (as report/recap-repo memberNames). Drizzle drops the table qualifier in single-table
+  selects: qualify correlated subqueries by hand (a count came out 0 until we did).
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

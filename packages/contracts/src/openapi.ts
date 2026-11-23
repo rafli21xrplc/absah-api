@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { CreateExamRoomRequest, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest } from './exam/rooms';
 import { EligibilityList, EligibilityQuery } from './exam/eligibility';
 import { CreateExamPeriodRequest, ExamPeriod, ExamPeriodIdParam, ExamPeriodList, ExamPeriodsQuery, UpdateExamPeriodRequest } from './exam/periods';
 import { BillingRecap, BillingRecapQuery } from './student-billing/recap';
@@ -1631,6 +1632,84 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: ExamPeriodIdParam, query: EligibilityQuery },
     responses: { 200: json(EligibilityList, 'Eligibility'), ...errors(400, 401, 403, 404) },
+  });
+  const roomNote = `${examNote} Rooms (UJN-03): wakasek and admin arrange; kepsek reads; a room's own pengawas reads that room's seat list.`;
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/periods/{periodId}/rooms`,
+    tags: ['exam'],
+    summary: 'Rooms of an exam period with how many sit in each (UJN-03)',
+    description: `${roomNote} unseated = active students of the academic year with no room yet.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ExamPeriodIdParam },
+    responses: { 200: json(ExamRoomList, 'Rooms'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exam/periods/{periodId}/rooms`,
+    tags: ['exam'],
+    summary: 'Add a room to an exam period (UJN-03)',
+    description: `${roomNote} supervisorId must be an active staff member of the school. 409 name_taken, period_closed.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamPeriodIdParam, body: { content: { 'application/json': { schema: CreateExamRoomRequest } } } },
+    responses: { 201: json(ExamRoom, 'Created'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}`,
+    tags: ['exam'],
+    summary: 'Rename a room, change its capacity or pengawas (UJN-03)',
+    description: `${roomNote} 409 name_taken, or room_full when the new capacity is below the students already seated.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamRoomIdParam, body: { content: { 'application/json': { schema: UpdateExamRoomRequest } } } },
+    responses: { 200: json(ExamRoom, 'Updated'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'delete',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}`,
+    tags: ['exam'],
+    summary: 'Remove a room and its seating (UJN-03)',
+    description: roomNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamRoomIdParam },
+    responses: { 204: { description: 'Removed' }, ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}/students`,
+    tags: ['exam'],
+    summary: 'The seat list of a room (UJN-03)',
+    description: `${roomNote} Wakasek, kepsek, admin, or the room's own pengawas; anyone else 403.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ExamRoomIdParam },
+    responses: { 200: json(RoomRoster, 'Roster'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}/students`,
+    tags: ['exam'],
+    summary: 'Seat a whole rombel or named students in a room (UJN-03)',
+    description: `${roomNote} Body: {classId} or {enrollmentIds}. Students already in another room of the period are moved; numbers are the lowest free ones in order of student name. 409 room_full (nothing changes) or period_closed; 400 for students who are not active in the period's academic year.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamRoomIdParam, body: { content: { 'application/json': { schema: SeatStudentsRequest } } } },
+    responses: { 200: json(SeatStudentsResult, 'Seated'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'delete',
+    path: `${API_BASE_PATH}/exam/rooms/{roomId}/students/{enrollmentId}`,
+    tags: ['exam'],
+    summary: 'Take a student out of a room (UJN-03)',
+    description: roomNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ExamRoomSeatParam },
+    responses: { 204: { description: 'Removed' }, ...errors(401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

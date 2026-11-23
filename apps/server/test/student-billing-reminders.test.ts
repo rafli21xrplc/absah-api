@@ -111,7 +111,8 @@ describe('the parents’ WhatsApp (TGH-04)', () => {
     expect(sender.messages.map((m) => m.to).sort()).toEqual(['+6281200000101', '+6281200000102']);
     const text = sender.messages[0]?.text ?? '';
     expect(text).toMatch(/^SD Tagihan Pengingat: ada tagihan Ani yang jatuh tempo .+\. Detail dan cara bayar: https:\/\/absah\.test\//);
-    expect(text).not.toMatch(/150|rupiah|Rp|SPP/i);
+    // The link may carry random characters ("150", "rp"...): look for the amount and the fee type in the words around it.
+    expect(text.replace(/https?:\/\/\S+/, '')).not.toMatch(/150|rupiah|Rp|SPP/i);
   });
 
   it('sends nothing for an installment paid or voided since the reminder was queued', async () => {
