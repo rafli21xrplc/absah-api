@@ -2,6 +2,7 @@ import type { Logger } from 'pino';
 import { readCapabilityRows, resolveFromRows } from '../../../shared/capability';
 import { withPlatform, withTenant } from '../../../shared/db';
 import { emit } from '../../../shared/outbox';
+import { applyGateArrivals } from '../application/gate-marks';
 import { applyLeavesToDate } from '../application/leave-marks';
 import { schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { GENERATE_AT, isLockDue, planSessions, reminderDueAt } from '../domain/session-plan';
@@ -76,6 +77,7 @@ export function generateForSchool(school: JobSchool, date: string, now: Date, op
     const plan = planSessions(mode, { classes: await classesOfYear(tx, yearId), slots: mode === 'per_period' ? await slotsOfDay(tx, yearId, isoWeekday(date)) : [] });
     const created = await insertSessions(tx, school.id, date, plan);
     await applyLeavesToDate(tx, school.id, date);
+    await applyGateArrivals(tx, school.id, school.timezone, { schoolDate: date });
     await markDay(tx, school.id, date, { generatedAt: now });
     return { schoolDate: date, created };
   });

@@ -254,6 +254,15 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Cards (application/cards.ts): holder from card.holder (student: students.user_id; parent:
   guardians.user_id). POST /cards/devices binds the caller's phone (previous phone revoked) and
   returns 7 days of device keys; GET /cards/devices/{id}/keys refreshes them while still bound.
+- Scans (application/scans.ts): GET /kiosk/day (day keys today+tomorrow, lateAfter, bound cards
+  with first name + rombel only); POST /kiosk/scans (<= 200 per batch, one transaction). Per scan:
+  stored answer for a known (kiosk, client_event_id) -> verifyCardToken at scannedAt (more than
+  5 min ahead = expired) -> card -> active device -> active enrollment -> first accepted arrival
+  of the day (unique index decides races) else duplicate. Accepted arrivals call attendance
+  applyGateArrivals (source gate: daily H or T after schoolStartTime = first jam pelajaran else
+  07.00; lessons H before, T during, none after); generateForSchool re-applies arrivals of the day.
+- Load: test/kiosk-load.test.ts (900 scans, 3 kiosks, resent batches, CI) and
+  load/kiosk-scans.k6.js with `gate:load-fixture --school <id>` (dev/staging only).
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

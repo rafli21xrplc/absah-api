@@ -14,3 +14,4 @@ export { sessionsRouter } from './http/sessions';
 export { correctionsRouter } from './http/corrections';
 export { findSchool } from './infrastructure/session-repo';
 export { attendanceConsumers } from './application/consumers';
+export { applyGateArrivals, schoolStartTime } from './application/gate-marks';

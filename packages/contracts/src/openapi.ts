@@ -69,6 +69,7 @@ import {
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
+import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
 import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
   CreateLeaveAttachmentRequest,
@@ -728,6 +729,26 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: gateParams,
     request: { params: DeviceIdParam },
     responses: { 200: json(CardDeviceKeys, 'Device keys'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/kiosk/day`,
+    tags: ['kiosk'],
+    summary: 'Morning download for offline work: day keys (today, tomorrow), late time, bound cards',
+    security: [{ kiosk: [] }],
+    responses: { 200: json(KioskDay, 'Day'), ...errors(401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/kiosk/scans`,
+    tags: ['kiosk'],
+    summary: 'Queued scans, exactly once per clientEventId (a resent batch gets the stored answers)',
+    description:
+      'Results per scan: accepted (first arrival of the day, on_time or late; marks attendance with source gate), duplicate, or rejected with a reason (malformed, expired, bad_signature, unknown_card, wrong_device, not_enrolled).',
+    security: [{ kiosk: [] }],
+    parameters: [{ ...idempotencyHeader, required: true }],
+    request: { body: { content: { 'application/json': { schema: KioskScanBatch } } } },
+    responses: { 200: json(KioskScanResults, 'Results'), ...errors(400, 401, 404) },
   });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',

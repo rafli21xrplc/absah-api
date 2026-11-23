@@ -1,8 +1,9 @@
-import { KioskHeartbeatRequest, KioskHeartbeatResponse, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
+import { KioskDay, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskScanBatch, KioskScanResults, PairKioskRequest, PairKioskResponse } from '@absah/contracts';
 import { Router, type RequestHandler } from 'express';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { heartbeat, pairingSchool, pairKiosk } from '../application/kiosks';
+import { kioskDay, recordScans } from '../application/scans';
 import { getKiosk, kioskContext, kioskIdempotencyScope } from './kiosk-auth';
 
 /** Calls made by kiosk devices (no user session). */
@@ -25,6 +26,14 @@ export function kioskRouter(): Router {
 
   router.post('/kiosk/heartbeat', kioskContext(), idempotent(kioskIdempotencyScope), async (req, res) => {
     sendContract(res, KioskHeartbeatResponse, await heartbeat(getKiosk(req), KioskHeartbeatRequest.parse(req.body)));
+  });
+
+  router.get('/kiosk/day', kioskContext(), async (req, res) => {
+    sendContract(res, KioskDay, await kioskDay(getKiosk(req)));
+  });
+
+  router.post('/kiosk/scans', kioskContext(), idempotent(kioskIdempotencyScope), async (req, res) => {
+    sendContract(res, KioskScanResults, await recordScans(getKiosk(req), KioskScanBatch.parse(req.body)));
   });
 
   return router;
