@@ -651,6 +651,17 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   404 for another teacher's). Reason encrypted, never audited. Events teacher.leave_requested -> push to the wakasek
   (kepsek and admin when the school has none; never the requester) and teacher.leave_decided -> push to the teacher
   (generic text, url /izin-guru). Approved leave is what GRU-03 reads to find sessions without a teacher.
+- Guru pengganti (GRU-03, teacher/{application,infrastructure,http}/substitution*.ts). GET /substitutions?date= (wakasek,
+  piket, kepsek, admin; lessons and daily sessions of the day whose teacher is on approved izin = needed, or that already
+  have a substitute = assigned; computed each time, so a session without one stays on the list), GET
+  /substitutions/candidates?sessionId= (free = no slot or held session at that period / no daily session that date, not
+  on izin, not the absent teacher; ranked by checked in, same subject, fewest this month, name), POST /substitutions
+  {sessionId, substituteId} (wakasek, piket, admin). Assignment: advisory lock per school date, FOR UPDATE on the
+  session, only an open one (409 session_closed), 409 not_needed / already_assigned / not_a_teacher / is_absent_teacher
+  / on_leave / busy; moves attendance_sessions.teacher_id and inserts session_substitutions (the original teacher is the
+  first row's from_teacher_id). Event teacher.substitute_assigned -> push to the substitute (url /sesi/{id}). Only the
+  sessions the school generated for the day appear (generation runs from the morning); future days are empty by design.
+  Substitute roles: guru, wali kelas, piket, wakasek. Do not Promise.all queries inside one tx (pg deprecation).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,
