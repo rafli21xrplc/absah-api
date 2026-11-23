@@ -60,3 +60,12 @@ function scoped<T>(db: Db, appRole: string, schoolId: string, userId: string, fn
     return fn(tx);
   });
 }
+
+/**
+ * Runs fn as the login role, WITHOUT RLS scoping. Only for platform tables and cross-school
+ * maintenance: outbox relay, webhook inbox, expiry and retention jobs. Never for request handling
+ * of tenant data. Every call site must say why it needs this.
+ */
+export function withPlatform<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return db.transaction(fn);
+}

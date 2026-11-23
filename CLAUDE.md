@@ -45,11 +45,37 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - New tables get SELECT/INSERT/UPDATE/DELETE for absah_app via default privileges (migration 0001).
   Tables in a new schema (e.g. tppk) need explicit GRANTs in their migration.
 - RLS policies live in SQL migrations (drizzle-kit generate --custom). db:check-rls verifies them.
+- New policies use nullif(current_setting('app.school_id', true), '')::uuid so an unset value matches nothing.
+- withUser(userId, fn) is the ONLY exception to "always withTenant": cross-school reads for one user
+  before a school is chosen (memberships and their schools for /me/context). RLS limits it to the
+  user's own memberships. Do not use it for anything else.
+- withPlatform(fn) runs as the login role with no RLS scoping. Only for platform tables and
+  cross-school maintenance jobs (idempotency cleanup, outbox relay, webhook inbox). Never in request
+  handling of tenant data; every call site says why.
+- absah_app has no access to Better Auth tables (user, session, account, verification, two_factor,
+  rate_limit). Names of a school's members come from the view school_member_directory.
+
+## Auth and request context (apps/server/src/modules/platform)
+- Better Auth at /api/auth/* (mounted before express.json). No public sign-up: accounts are created
+  with createStaffUser / createPhoneUser (invitations in prompt 1.5). Staff: email + password.
+  Parents and industry supervisors: WhatsApp OTP, only for phone numbers already on an account (E.164 +62).
+- Phone-only users get a placeholder email <digits>@phone.absah.invalid; never show or mail it.
+- resolveContext(auth, { school: 'required' | 'optional' }) fills req.ctx; X-School-Id must match an
+  ACTIVE membership (else 403, same answer for unknown schools). Admin/operator without TOTP get
+  403 TWO_FACTOR_REQUIRED once a school is selected.
+- Authorization lives in use cases: authorize(actor, policy) with policies in <module>/domain/policies.ts
+  built from shared/policy.ts (pure; domain/ may import it). Routes only call getActor(req).
+- Better Auth's internalAdapter.createUser drops plugin fields (phoneNumber); set them with updateUser.
 
 ## Non-negotiable rules
 1. Every tenant table has school_id uuid not null, an index starting with school_id, and an RLS policy.
    Never add BYPASSRLS, never query outside withTenant(ctx, fn). Run db:check-rls after migrations.
 2. Every write endpoint accepts Idempotency-Key. Kiosk, PKL check-in and payment endpoints require it.
+   Mount idempotent() (shared/idempotency.ts) after resolveContext({ school: 'required' }). It stores
+   responses < 500 for 24 h (encrypted), replays them with Idempotent-Replayed: true, 422 on a reused
+   key with another body, 409 while the first is running; a 5xx frees the key. If the process dies
+   between commit and storing the response, a retry can run again after 60 s: keep use cases
+   naturally idempotent too (state checks, unique constraints).
 3. Never call WhatsApp, payment or email from a request handler. Write an outbox event in the same
    transaction; the worker performs the side effect.
 4. Never branch on school level (no if level === 'sd'). Read capabilities from req.ctx.caps and
@@ -59,9 +85,24 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 6. Validate every request and response with the Zod contract from packages/contracts (sendContract).
 7. No any, no ts-ignore, no disabled tests to make CI green. If blocked, stop and explain.
 8. Dates: timestamptz in UTC; school_date computed in the school timezone (default Asia/Jakarta).
-9. Personal data: no names, phone numbers or NISN in logs (shared/logger.ts REDACT_PATHS). Sensitive
-   text columns (TPPK, BK, UKS notes, pickup phone) are encrypted with the crypto helper in shared/crypto.
+9. Personal data: no names, phone numbers or NISN in logs (shared/logger.ts REDACT_PATHS + serializeErr,
+   which drops SQL parameters and quoted values from DB errors). Sensitive text columns (TPPK, BK, UKS
+   notes, pickup phone, NIK) use encryptedText(name, '<table>.<column>') from @absah/db.
 10. The tppk schema is readable only by TPPK members; support access never includes it.
+
+## Encryption and audit (PLT-04, PLT-05)
+- encryptedText columns read as SensitiveText: it prints "[redacted]" in JSON/logs; call .reveal() only
+  where the plaintext is really needed (e.g. building a response the caller may see). Write with
+  sensitive(value). The context string is the AAD: never rename it once data exists.
+- Keys: ENCRYPTION_KEYS "<id>:<base64 32B>,..." + ENCRYPTION_ACTIVE_KEY_ID. To rotate: add a new key,
+  make it active, re-encrypt rows with rotate() (job, later), then remove the old key.
+- Values matched but never read back (IP, tracking codes) use hashValue() (HMAC with HASH_KEY).
+- Every state-changing use case calls audit(tx, auditContext(req, actor), 'entity.verb', {type, id},
+  {before, after}) inside the same withTenant transaction. Diffs are sanitised (sensitive keys and
+  SensitiveText redacted, size capped); still pass only the fields that changed.
+- audit_logs is append-only (no UPDATE/DELETE for absah_app) and readable only by active admins.
+  Never use .returning() on it. Anonymous TPPK flows pass { omitIp: true }.
+- Test phone numbers/emails must be unique per run (testPhone(), uuid emails) so reruns never collide.
 
 ## Testing expectations
 - Domain rules: Vitest unit tests next to the code.

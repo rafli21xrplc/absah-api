@@ -10,6 +10,7 @@ export const ErrorCode = z.enum([
   'CONFLICT',
   'CAPABILITY_DISABLED',
   'IDEMPOTENCY_KEY_REUSED',
+  'IDEMPOTENCY_IN_PROGRESS',
   'RATE_LIMITED',
   'INTERNAL',
 ]).meta({ id: 'ErrorCode' });
@@ -30,3 +31,12 @@ export const CursorQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
 });
 export type CursorQuery = z.infer<typeof CursorQuery>;
+
+/**
+ * Idempotency-Key header for mutating requests (PLT-13). Generate one per user action (UUID v4
+ * or v7) and reuse it when retrying that same action. Keys are kept 24 hours.
+ */
+export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
+export const IdempotencyKey = z.string().regex(/^[A-Za-z0-9_\-:.]{8,128}$/, 'Idempotency-Key tidak valid.');
+/** Set to "true" on a response replayed from the idempotency store. */
+export const IDEMPOTENT_REPLAYED_HEADER = 'Idempotent-Replayed';

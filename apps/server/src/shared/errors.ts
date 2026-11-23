@@ -25,6 +25,19 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class UnauthenticatedError extends AppError {
+  constructor(message = 'Silakan masuk terlebih dahulu.') {
+    super('UNAUTHENTICATED', 401, message);
+  }
+}
+
+/** Admin and operator must enable TOTP before acting in a school (PLT-01). */
+export class TwoFactorRequiredError extends AppError {
+  constructor() {
+    super('TWO_FACTOR_REQUIRED', 403, 'Aktifkan verifikasi dua langkah untuk melanjutkan.');
+  }
+}
+
 export class ForbiddenError extends AppError {
   constructor(message = 'Anda tidak memiliki akses.') {
     super('FORBIDDEN', 403, message);
@@ -35,5 +48,25 @@ export class ForbiddenError extends AppError {
 export class CapabilityDisabledError extends AppError {
   constructor(key: string) {
     super('CAPABILITY_DISABLED', 404, 'Fitur ini tidak aktif untuk sekolah Anda.', { capability: key });
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super('CONFLICT', 409, message, details);
+  }
+}
+
+/** Same Idempotency-Key, different request (PLT-13). */
+export class IdempotencyKeyReusedError extends AppError {
+  constructor() {
+    super('IDEMPOTENCY_KEY_REUSED', 422, 'Idempotency-Key sudah dipakai untuk permintaan lain.');
+  }
+}
+
+/** The first request with this Idempotency-Key has not finished yet (PLT-13). */
+export class IdempotencyInProgressError extends AppError {
+  constructor() {
+    super('IDEMPOTENCY_IN_PROGRESS', 409, 'Permintaan yang sama masih diproses. Coba lagi sebentar.');
   }
 }

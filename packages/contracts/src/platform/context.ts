@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Role } from './roles';
+import { MembershipStatus, Role } from './roles';
 
 /**
  * School levels. Mirrors LEVELS in @absah/capabilities; contracts must not depend on another
@@ -53,10 +53,20 @@ export const SchoolMember = z
     name: z.string(),
     email: z.string().nullable(),
     role: Role,
-    status: z.enum(['active', 'invited', 'suspended']),
+    status: MembershipStatus,
     academicYearId: z.uuid().nullable(),
   })
   .meta({ id: 'SchoolMember' });
+export type SchoolMember = z.infer<typeof SchoolMember>;
+
+export const MembershipIdParam = z.object({ membershipId: z.uuid() });
+
+/** PATCH /api/v1/school/members/{membershipId}: activate or suspend a membership (admin only). */
+export const UpdateMembershipStatusRequest = z
+  .object({ status: z.enum(['active', 'suspended']) })
+  .strict()
+  .meta({ id: 'UpdateMembershipStatusRequest' });
+export type UpdateMembershipStatusRequest = z.infer<typeof UpdateMembershipStatusRequest>;
 
 export const SchoolMembersResponse = z
   .object({ items: z.array(SchoolMember) })

@@ -2,14 +2,18 @@ import { ErrorBody, HealthResponse } from '@absah/contracts';
 import express from 'express';
 import { pino } from 'pino';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { AppError } from '../src/shared/errors';
 import { errorHandler } from '../src/shared/http';
 import { requestId } from '../src/shared/request-id';
+import { buildTestApp } from './harness';
 
 const logger = pino({ level: 'silent' });
-const app = createApp({ logger, version: '1.2.3' });
+const t = buildTestApp();
+const app = createApp({ logger, version: '1.2.3', auth: t.auth, ipHeaders: ['cf-connecting-ip'] });
+
+afterAll(() => t.cleanup());
 
 describe('GET /api/v1/health', () => {
   it('returns the health contract and a request id', async () => {
