@@ -103,6 +103,7 @@ import { CreateKioskPickupPhotoRequest, KioskUnlistedPickup, KioskUnlistedPickup
 import { CreateVisitorPhotoRequest, CreateVisitorPhotoResponse, CreateVisitorRequest, Visitor, VisitorPhotoLink, VisitorHostList, VisitorIdParam, VisitorList, VisitorsQuery } from './gate/visitors';
 import { NotificationOverview } from './notify/notifications';
 import { NotificationPreferences, UpdateNotificationPreferencesRequest } from './notify/preferences';
+import { PushConfig, PushStatus, PushSubscribeRequest, PushUnsubscribeRequest } from './push/subscriptions';
 import { StudentContacts, StudentIdParam, UpdateStudentContactsRequest } from './academic/contacts';
 import { ActionLinkCardRequest, ActionLinkContext, ActionLinkLeave, ActionLinkLeaveRequest, PortalAttendance, PortalAttendanceQuery } from './portal/links';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
@@ -1392,6 +1393,35 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: UpdateNotificationPreferencesRequest } } } },
     responses: { 200: json(NotificationPreferences, 'Preferences'), ...errors(400, 401, 403, 404, 422) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/push/config`,
+    tags: ['push'],
+    summary: 'The public VAPID key a browser subscribes with (NTF-06); publicKey null = push is off on this server',
+    security: [{ session: [] }],
+    responses: { 200: json(PushConfig, 'Config'), ...errors(401) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/push/subscriptions`,
+    tags: ['push'],
+    summary: 'Staff: this browser receives Web Push for the active school (NTF-06)',
+    description: 'The same endpoint again refreshes its keys. At most 10 devices per member and school; the oldest are dropped. 404 when push is off, 403 for parents, siswa and industry supervisors.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: PushSubscribeRequest } } } },
+    responses: { 200: json(PushStatus, 'Devices'), ...errors(400, 401, 403, 404, 422) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/push/subscriptions/remove`,
+    tags: ['push'],
+    summary: 'Staff: this browser stops receiving Web Push for the active school',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: PushUnsubscribeRequest } } } },
+    responses: { 200: json(PushStatus, 'Devices'), ...errors(400, 401, 403, 404, 422) },
   });
   registry.registerPath({
     method: 'get',

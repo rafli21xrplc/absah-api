@@ -378,6 +378,18 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   queueMessages is the one place that applies them: a muted type creates no row (dedup key stays free), and
   "no late messages" ends that guardian's window at 19.00 school time (windowFor, NOTIFICATION_LATE_CUTOFF_MINUTES),
   so a later message waits for 06.00 like the quiet hours. Recipients without a guardianId (PIC MBG) are unaffected.
+- Web Push for staff (NTF-06, migrations 0075-0076; 5.7d): off unless VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and
+  VAPID_SUBJECT are all set (`npx web-push generate-vapid-keys`; the private key only in env). GET /push/config
+  answers { publicKey | null }. PUT /push/subscriptions { endpoint, keys } and POST /push/subscriptions/remove
+  (school staff only: not parents, siswa or pembimbing_industri; idempotent, audited WITHOUT the endpoint) keep
+  push_subscriptions per (school, user, endpoint_hash): endpoint, p256dh and auth are encryptedText because the
+  endpoint is a credential. At most PUSH_MAX_PER_USER (10) per member and school, oldest dropped. A member enables
+  it once per school. RLS is stricter than usual: inside a request a member sees only their own rows, consumers
+  (user null) read per school. Sending: shared/push PushSender (FakePushSender in tests, WebPushSender = web-push
+  3.6.7, pinned on purpose; 4.0.0 was 2 weeks old) and notify's pushToUser(tx, sender, userId, message): drops
+  devices answering 404/410, succeeds when one device accepted, throws a retryable PushError only when none did.
+  A PushMessage shows on a lock screen: never a name or any personal data, only "Ada tamu menunggu di gerbang"
+  style text plus a path; `tag` collapses repeats. Consumers using it arrive in 5.7e.
 - Exception to rule 3: the login OTP is sent inline from Better Auth's sendOTP (user waiting, no
   school for a tenant outbox, route rate limited). Everything else goes through the worker.
 
