@@ -3,6 +3,7 @@ import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../../shared/errors';
+import { emit } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
 import { canManageMemberships } from '../domain/policies';
 import { findSchoolMember, lockMembership, setMembershipStatus } from '../infrastructure/membership-repo';
@@ -30,6 +31,12 @@ export async function updateMembershipStatus(
       await audit(tx, auditCtx, 'membership.status_changed', { type: 'membership', id: membershipId }, {
         before: { status: current.status },
         after: { status: input.status },
+      });
+      await emit(tx, 'membership.status_changed', {
+        membershipId,
+        userId: current.userId,
+        from: current.status,
+        to: input.status,
       });
     }
 
