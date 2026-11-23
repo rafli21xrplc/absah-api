@@ -123,7 +123,7 @@ import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStuden
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
 import { PklAssessmentExportQuery } from './pkl/assessment';
-import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, InviteTracerRequest, InviteTracerResult, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
+import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, InviteTracerRequest, InviteTracerResult, TracerClassList, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
 import {
@@ -1938,6 +1938,7 @@ function buildRegistry(): OpenAPIRegistry {
     { method: 'post', path: '/tracer/alumni/from-class', summary: 'Copy the active students of a rombel into the alumni list (those already there are skipped)', request: { body: { content: { 'application/json': { schema: AlumniFromClassRequest } } } }, ok: AlumniFromClassResult, label: 'Result', write: true },
     { method: 'put', path: '/tracer/alumni/{alumnusId}/response', summary: 'Enter or replace the answer of an alumnus (source bkk)', request: { params: TracerAlumnusIdParam, body: { content: { 'application/json': { schema: SaveTracerResponseRequest } } } }, ok: TracerAlumnus, label: 'Alumnus', write: true },
     { method: 'post', path: '/tracer/invitations', summary: 'Send the WhatsApp link to alumni (listed, or a whole angkatan); only those with a number, and those who answered only with resend', request: { body: { content: { 'application/json': { schema: InviteTracerRequest } } } }, ok: InviteTracerResult, label: 'Counts', write: true, status: 202 },
+    { method: 'get', path: '/tracer/classes', summary: 'Rombel of the active year to copy an angkatan from (managers only)', ok: TracerClassList, label: 'Classes' },
     { method: 'get', path: '/tracer/recap', summary: 'BMW recap per angkatan and jurusan', ok: TracerRecap, label: 'Recap' },
   ];
   for (const p of tracerPaths) {

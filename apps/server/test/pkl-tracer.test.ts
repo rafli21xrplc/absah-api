@@ -49,6 +49,13 @@ describe('Tracer study (PKL-05)', () => {
     expect(await recap(A('humas'))).toEqual({ rows: [], totals: { total: 0, answered: 0, counts: { bekerja: 0, melanjutkan: 0, wirausaha: 0, belum: 0 }, bmwPercent: null } });
   });
 
+  it('lists the rombel to copy from, for the BKK only (the registry stays closed to them)', async () => {
+    const res = (await get(A('humas'), '/classes').expect(200)).body as { items: { name: string; grade: number; stream: string | null; activeStudents: number }[] };
+    expect(res.items).toEqual([expect.objectContaining({ name: 'XII TKJ 1', grade: 12, stream: 'ipa', activeStudents: 2 })]);
+    await get(A('kepsek'), '/classes').expect(403);
+    await get(A('guru'), '/classes').expect(403);
+  });
+
   it('copies the active students of a rombel (jurusan from the rombel) and skips those already there', async () => {
     const first = (await w(A('humas'), 'post', '/alumni/from-class', { classId, graduationYear: 2026 }).expect(200)).body as AlumniFromClassResult;
     expect(first).toEqual({ added: 2, skipped: 0 });

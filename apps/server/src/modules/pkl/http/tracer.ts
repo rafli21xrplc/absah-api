@@ -6,6 +6,7 @@ import {
   InviteTracerResult,
   SaveTracerResponseRequest,
   TracerAlumniList,
+  TracerClassList,
   TracerAlumniQuery,
   TracerAlumnus,
   TracerAlumnusIdParam,
@@ -18,7 +19,7 @@ import { getActor } from '../../../shared/context';
 import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
-import { alumniFromClass, createAlumnus, exportTracer, inviteAlumni, listAlumni, recap, saveResponse } from '../application/tracer';
+import { alumniFromClass, createAlumnus, exportTracer, inviteAlumni, listAlumni, listTracerClasses, recap, saveResponse } from '../application/tracer';
 import { todayOf } from './clock';
 
 /** Tracer study (PKL-05), behind pkl.tracer. */
@@ -45,6 +46,9 @@ export function pklTracerRouter(auth: Auth): Router {
   router.post('/tracer/invitations', ...tracer, idempotent(), async (req, res) => {
     const actor = getActor(req);
     sendContract(res, InviteTracerResult, await inviteAlumni(actor, auditContext(req, actor), InviteTracerRequest.parse(req.body)), 202);
+  });
+  router.get('/tracer/classes', ...tracer, async (req, res) => {
+    sendContract(res, TracerClassList, await listTracerClasses(getActor(req)));
   });
   router.get('/tracer/recap', ...tracer, async (req, res) => {
     sendContract(res, TracerRecap, await recap(getActor(req)));

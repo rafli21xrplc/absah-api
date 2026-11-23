@@ -103,3 +103,15 @@ export async function schoolProfile(tx: Tx, schoolId: string) {
   const [row] = await tx.select({ id: s.id, name: s.name, level: s.level, isMadrasah: s.isMadrasah, timezone: s.timezone }).from(s).where(eq(s.id, schoolId));
   return row;
 }
+
+/** Rombel of the active year with their active students, for the "copy from rombel" picker. */
+export function tracerClasses(tx: Tx) {
+  const e = schema.enrollments;
+  return tx
+    .select({ id: schema.classes.id, name: schema.classes.name, grade: schema.classes.grade, stream: schema.classes.stream, activeStudents: sql<number>`count(${e.id}) filter (where ${e.status} = 'active')::int` })
+    .from(schema.classes)
+    .innerJoin(schema.academicYears, and(eq(schema.academicYears.id, schema.classes.academicYearId), eq(schema.academicYears.isActive, true)))
+    .leftJoin(e, eq(e.classId, schema.classes.id))
+    .groupBy(schema.classes.id)
+    .orderBy(desc(schema.classes.grade), asc(schema.classes.name), asc(schema.classes.id));
+}
