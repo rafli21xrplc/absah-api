@@ -637,6 +637,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   and cancellation columns change, never deleted. session_substitutions: insert-only history; the session's own
   teacher_id moves to the substitute. "Needs a substitute" is NOT stored: it is a session whose teacher has approved
   leave covering the date, so it cannot drift. Test: test/teacher-schema.test.ts (RLS, grants, constraints).
+- Teacher check-in (GRU-01, module teacher; teacher/{domain,application,infrastructure,http}). GET /teacher-attendance/today,
+  POST /teacher-attendance/check-in (201 first, 200 same record when sent again, 409 not_school_day) and /check-out
+  (409 not_checked_in; the latest check-out wins), for TEACHER_CHECKIN_ROLES (guru, wali kelas, wakasek, piket, guru BK,
+  guru tahfidz; kepsek/admin 403). late = after schoolStartTime of that weekday (attendance module export: first
+  jam pelajaran, 07.00 default), the start minute is on time. School day by schoolDayOf. Tests pin only `Date`
+  (vi.useFakeTimers({ toFake: ['Date'] })) so supertest keeps working; 2026-11-23 is a Monday, 06.50 WIB = 22 Nov 23:50Z.
+  Kiosk teacher cards are NOT built (source 'kiosk' exists in the enum for them).
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

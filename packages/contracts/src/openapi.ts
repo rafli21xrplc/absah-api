@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
+import { TeacherAttendance, TeacherToday } from './teacher/attendance';
 import {
   CompleteFollowupRequest,
   CreatePointThresholdRequest,
@@ -1355,6 +1356,38 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: CounselingNoteIdParam },
     responses: { 200: json(CounselingNote, 'Done'), ...errors(400, 401, 403, 404, 409) },
+  });
+  const teacherNote =
+    'Behind teacher.attendance (404 CAPABILITY_DISABLED otherwise). Staff who teach (guru, wali kelas, wakasek, piket, guru BK, guru tahfidz) check themselves in; other roles get 403.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teacher-attendance/today`,
+    tags: ['teacher'],
+    summary: "The caller's own attendance today, and the school start it is compared with (GRU-01)",
+    description: teacherNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(TeacherToday, 'Today'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/teacher-attendance/check-in`,
+    tags: ['teacher'],
+    summary: 'Check in for the school day (GRU-01)',
+    description: `${teacherNote} 201 on the first check-in of the day, 200 with the same record when sent again. 409 not_school_day on a holiday. late is decided once, against the school start of that weekday.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    responses: { 200: json(TeacherAttendance, 'Already checked in'), 201: json(TeacherAttendance, 'Checked in'), ...errors(401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/teacher-attendance/check-out`,
+    tags: ['teacher'],
+    summary: 'Check out at the end of the day (GRU-01)',
+    description: `${teacherNote} 409 not_checked_in without a check-in today; the latest check-out wins.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    responses: { 200: json(TeacherAttendance, 'Checked out'), ...errors(401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });
