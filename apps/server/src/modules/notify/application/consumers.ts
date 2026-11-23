@@ -22,6 +22,7 @@ import {
   sentHomeVisit,
   sessionDate,
   staffNames,
+  thresholdTask,
   tppkContacts,
 } from '../infrastructure/notify-repo';
 import { deliverConsumer } from './deliver';
@@ -162,6 +163,33 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
         recipients: guardians,
         dedupKey: (r) => `sent_home:${event.payload.uksVisitId}:${r.guardianId}`,
         params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? ''), time: clockLabel(schoolMinutes(school.timezone, visit.visitedAt)) },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  /**
+   * KSW-03: when a pelanggaran takes the total across a tier that asks for it, the parents hear that there is
+   * something to talk about with the school. First name only: never the points, the rule or what happened.
+   */
+  const disciplineThreshold = defineConsumer({
+    name: 'notify_ksw_threshold_reached',
+    event: 'ksw.threshold_reached',
+    async handle(tx, event) {
+      const task = await thresholdTask(tx, event.payload.taskId);
+      if (!task?.notifyParents) return;
+      const [school, guardians] = await Promise.all([schoolOf(tx, event.schoolId), guardiansOf(tx, task.enrollmentId)]);
+      if (!school || guardians.length === 0) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'student_discipline_threshold',
+        enrollmentId: task.enrollmentId,
+        recipients: guardians,
+        dedupKey: (r) => `threshold:${event.payload.taskId}:${r.guardianId}`,
+        params: { school: school.name, first_name: firstName(guardians[0]?.studentName ?? '') },
         appUrl: deps.appUrl,
         now: deps.now?.(),
       });
@@ -367,5 +395,5 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, deliverConsumer(deps.sender)];
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, disciplineThreshold, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, deliverConsumer(deps.sender)];
 }

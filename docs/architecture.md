@@ -350,6 +350,8 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | KSW | `POST /point-entries`, `POST /point-entries/evidence` | `student.points` | admin, wakasek, wali kelas, guru |
 | KSW | `POST /point-entries/{id}/reverse` | `student.points` | admin, wakasek |
 | KSW | `GET /students/{enrollmentId}/points`, `GET /point-entries/{id}/evidence` | `student.points` | admin, kepsek, wakasek, wali kelas kelasnya |
+| KSW | `GET\|POST /point-thresholds`, `PUT /point-thresholds/{id}` | `student.points` | baca: admin, kepsek, wakasek, wali kelas, guru BK; tulis: admin, wakasek |
+| KSW | `GET /followup-tasks`, `POST /followup-tasks/{id}/complete` | `student.points` | baca: admin, kepsek, wakasek, guru BK, wali kelas kelasnya; tutup: admin, wakasek, guru BK, wali kelas kelasnya |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |

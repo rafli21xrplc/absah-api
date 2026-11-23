@@ -3,6 +3,19 @@
 import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  CompleteFollowupRequest,
+  CreatePointThresholdRequest,
+  FollowupTask,
+  FollowupTaskIdParam,
+  FollowupTaskList,
+  FollowupTasksQuery,
+  PointThreshold,
+  PointThresholdIdParam,
+  PointThresholdList,
+  PointThresholdsQuery,
+  UpdatePointThresholdRequest,
+} from './student-affairs/followup';
+import {
   CreatePointEntryRequest,
   CreatePointEvidenceRequest,
   CreatePointEvidenceResponse,
@@ -1213,6 +1226,62 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: PointStudentParam },
     responses: { 200: json(StudentPoints, 'Totals and entries'), ...errors(400, 401, 403, 404) },
+  });
+  const tierNote = `${pointNote} Tiers sit on the net pelanggaran points of a student's year; crossing one makes a follow-up task (once per student per tier) and, when the tier asks for it, a generic WhatsApp to the parents. Tiers are switched off, never deleted.`;
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/point-thresholds`,
+    tags: ['student-affairs'],
+    summary: 'Point thresholds (KSW-03): active ones, all=true adds switched-off ones for admin and wakasek',
+    description: `${tierNote} Read: admin, kepsek, wakasek, wali kelas, guru BK.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: PointThresholdsQuery },
+    responses: { 200: json(PointThresholdList, 'Tiers'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/point-thresholds`,
+    tags: ['student-affairs'],
+    summary: 'Create a point threshold (admin, wakasek)',
+    description: `${tierNote} 409 when a tier with those points exists.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreatePointThresholdRequest } } } },
+    responses: { 201: json(PointThreshold, 'Created'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/point-thresholds/{thresholdId}`,
+    tags: ['student-affairs'],
+    summary: 'Edit or switch off a point threshold (admin, wakasek)',
+    description: `${tierNote} A change applies to entries recorded afterwards; existing tasks keep their copy.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: PointThresholdIdParam, body: { content: { 'application/json': { schema: UpdatePointThresholdRequest } } } },
+    responses: { 200: json(PointThreshold, 'Updated'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/followup-tasks`,
+    tags: ['student-affairs'],
+    summary: 'Follow-up tasks (KSW-03): admin, kepsek, wakasek and guru BK see all; a wali kelas the tasks of their class',
+    description: `${tierNote} The completion note is encrypted.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: FollowupTasksQuery },
+    responses: { 200: json(FollowupTaskList, 'Tasks'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/followup-tasks/{taskId}/complete`,
+    tags: ['student-affairs'],
+    summary: 'Close a follow-up task (admin, wakasek, guru BK, the wali kelas of the class)',
+    description: `${tierNote} 409 already_done.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: FollowupTaskIdParam, body: { content: { 'application/json': { schema: CompleteFollowupRequest } } } },
+    responses: { 200: json(FollowupTask, 'Closed'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

@@ -19,7 +19,9 @@ import type { Actor } from '../../../shared/policy';
 import { addDays } from '../../../shared/school-date';
 import { storageKey, type ObjectStorage } from '../../../shared/storage';
 import { canReadStudentPoints, canRecordPoints, canReversePoints, canSeeAllPoints } from '../domain/policies';
+import { lockStudentPoints } from '../infrastructure/followup-repo';
 import { entriesOf, findEnrollment, findEntry, insertEntry, totalsOf, type EntryRow } from '../infrastructure/point-entry-repo';
+import { raiseThresholdTasks } from './followups';
 import { findRule } from '../infrastructure/point-rule-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
@@ -55,6 +57,12 @@ async function readableStudent(tx: Tx, actor: Actor, enrollmentId: string) {
   return student;
 }
 
+/** The student's net pelanggaran points so far as a positive number, after taking the per-student lock. */
+async function violationTotalLocked(tx: Tx, enrollmentId: string): Promise<number> {
+  await lockStudentPoints(tx, enrollmentId);
+  return -(await totalsOf(tx, enrollmentId)).violationPoints;
+}
+
 /** POST /point-entries/evidence: presigned PUT under schools/{id}/ksw/{uuid}. */
 export async function createPointEvidence(actor: Actor, storage: ObjectStorage, input: CreatePointEvidenceRequest): Promise<CreatePointEvidenceResponse> {
   authorize(actor, canRecordPoints);
@@ -85,6 +93,8 @@ export async function recordPointEntry(actor: Actor, auditCtx: AuditContext, sto
     if (!rule) throw new NotFoundError('Aturan tidak ditemukan.');
     if (!rule.active) throw new ConflictError('Aturan ini sudah dinonaktifkan.', { reason: 'rule_inactive' });
     const id = uuidv7();
+    // Only a pelanggaran can cross a tier; the lock makes the "before" total include any entry recorded at the same moment.
+    const before = rule.kind === 'violation' ? await violationTotalLocked(tx, input.enrollmentId) : 0;
     await insertEntry(tx, {
       id,
       schoolId: actor.schoolId,
@@ -101,6 +111,7 @@ export async function recordPointEntry(actor: Actor, auditCtx: AuditContext, sto
       reversesEntryId: null,
       recordedBy: actor.userId,
     });
+    if (rule.kind === 'violation') await raiseThresholdTasks(tx, actor.schoolId, input.enrollmentId, before, -rule.points);
     await audit(tx, auditCtx, 'ksw.point_recorded', { type: 'point_entry', id }, { after: { enrollmentId: input.enrollmentId, ruleId: rule.id, kind: rule.kind, points: rule.points, date, evidence: evidenceKey !== null } });
     const row = await findEntry(tx, id);
     if (!row) throw new Error('point entry vanished');

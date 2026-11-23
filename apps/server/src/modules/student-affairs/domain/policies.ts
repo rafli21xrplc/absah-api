@@ -19,3 +19,11 @@ export const canRecordPoints = anyRole('admin', 'wakasek', 'wali_kelas', 'guru')
 export const canReversePoints = anyRole('admin', 'wakasek');
 export const canSeeAllPoints = anyRole('admin', 'kepsek', 'wakasek');
 export const canReadStudentPoints = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas');
+
+/** Thresholds and follow-up tasks (KSW-03): the discipline team sets tiers; tasks go to the wali kelas, BK and leaders. */
+export const canManageThresholds = anyRole('admin', 'wakasek');
+export const canReadThresholds = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru_bk');
+export const canSeeAllFollowups = anyRole('admin', 'kepsek', 'wakasek', 'guru_bk');
+export const canReadFollowups = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru_bk');
+/** The kepsek reads tasks but does not close them. */
+export const canFollowUp = anyRole('admin', 'wakasek', 'wali_kelas', 'guru_bk');

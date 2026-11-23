@@ -51,6 +51,8 @@ export const EVENTS = {
   'gate.unlisted_pickup': z.object({ pickupEventId: z.uuid() }),
   /** UKS sent a student home (KSW-08): attendance marks the rest of the day S (source uks), notify tells the parents. */
   'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
+  /** A pelanggaran took a student across a point threshold (KSW-03): a follow-up task was made; notify tells the parents when the tier asks for it. */
+  'ksw.threshold_reached': z.object({ taskId: z.uuid() }),
   /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
   'tppk.report_received': z.object({ reportId: z.uuid() }),
   /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */

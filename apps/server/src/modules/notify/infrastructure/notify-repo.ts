@@ -43,6 +43,17 @@ export async function sentHomeVisit(tx: Tx, uksVisitId: string) {
   return row?.outcome === 'dipulangkan' ? row : null;
 }
 
+/** The student of a follow-up task and whether its tier asks for the parents to be told (KSW-03). */
+export async function thresholdTask(tx: Tx, taskId: string) {
+  const f = schema.followupTasks;
+  const [row] = await tx
+    .select({ enrollmentId: f.enrollmentId, notifyParents: schema.pointThresholds.notifyParents })
+    .from(f)
+    .innerJoin(schema.pointThresholds, eq(schema.pointThresholds.id, f.thresholdId))
+    .where(eq(f.id, taskId));
+  return row;
+}
+
 /** A released check-out (GRB-10): who picked the student up and when. */
 export async function releasedPickup(tx: Tx, pickupEventId: string) {
   const pe = schema.pickupEvents;

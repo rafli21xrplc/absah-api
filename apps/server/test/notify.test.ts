@@ -203,4 +203,37 @@ describe('notify (NTF)', () => {
     expect(text).toContain('SD Notifikasi: Ani dipulangkan dari UKS pukul 10.35 karena kurang sehat');
     expect(text).not.toMatch(/Demam|LESTARI/);
   });
+
+  it('tells the parents a discipline tier was reached when the tier asks for it: first name only, no points', async () => {
+    await withTenant({ schoolId: school, userId: null }, (tx) => tx.delete(schema.notifications));
+    const task = async (notifyParents: boolean, minPoints: number) => {
+      const thresholdId = uuidv7();
+      const id = uuidv7();
+      await withTenant({ schoolId: school, userId: null }, async (tx) => {
+        await tx.insert(schema.pointThresholds).values({ id: thresholdId, schoolId: school, minPoints, label: 'Panggilan orang tua', action: 'Panggil orang tua', notifyParents });
+        await tx.insert(schema.followupTasks).values({ id, schoolId: school, enrollmentId: enrollment, thresholdId, label: 'Panggilan orang tua', action: 'Panggil orang tua', minPoints, totalPoints: minPoints + 3 });
+      });
+      return id;
+    };
+    const quiet = await task(false, 71);
+    await run('notify_ksw_threshold_reached', envelope('ksw.threshold_reached', { taskId: quiet }));
+    expect(await notificationRows()).toEqual([]); // a tier without notifyParents tells no one
+
+    const loud = await task(true, 72);
+    const event = envelope('ksw.threshold_reached', { taskId: loud });
+    expect(await run('notify_ksw_threshold_reached', event)).toBe('handled');
+    expect(await run('notify_ksw_threshold_reached', event)).toBe('duplicate');
+    await run('notify_ksw_threshold_reached', envelope('ksw.threshold_reached', { taskId: loud })); // another event id: same dedup key
+
+    const rows = await notificationRows();
+    expect(rows.map((r) => [r.templateCode, r.status])).toEqual([
+      ['student_discipline_threshold', 'queued'],
+      ['student_discipline_threshold', 'queued'],
+    ]);
+    sender.messages.length = 0;
+    for (const e of await queuedEvents(rows.map((r) => r.id))) await run('notify_send', e);
+    const text = sender.messages[0]?.text ?? '';
+    expect(text).toContain('SD Notifikasi: ada catatan kesiswaan Ani yang perlu dibicarakan dengan sekolah');
+    expect(text).not.toMatch(/\b7[0-9]\b|poin|Panggil/i);
+  });
 });

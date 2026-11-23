@@ -1,4 +1,4 @@
-import { POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
+import { FOLLOWUP_STATUSES, POINT_KINDS, UKS_OUTCOMES } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { boolean, check, date, foreignKey, index, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
@@ -9,6 +9,7 @@ import { schools } from './platform';
 
 export const uksOutcome = pgEnum('uks_outcome', UKS_OUTCOMES);
 export const pointKind = pgEnum('point_kind', POINT_KINDS);
+export const followupStatus = pgEnum('followup_status', FOLLOWUP_STATUSES);
 
 /**
  * Kesiswaan (KSW). UKS visits (KSW-08): insert-only, because a dipulangkan visit has already
@@ -98,5 +99,59 @@ export const pointEntries = pgTable(
       sql`${t.reversesEntryId} is not null or (${t.kind} = 'violation' and ${t.points} < 0) or (${t.kind} = 'achievement' and ${t.points} > 0)`,
     ),
     check('point_entries_evidence_check', sql`(${t.evidenceKey} is null) = (${t.evidenceType} is null)`),
+  ],
+);
+
+/** Point thresholds (KSW-03): tiers on the net pelanggaran points of a year. Switched off, never deleted: tasks cite them. */
+export const pointThresholds = pgTable(
+  'point_thresholds',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    minPoints: smallint('min_points').notNull(),
+    label: text('label').notNull(),
+    action: text('action').notNull(),
+    notifyParents: boolean('notify_parents').notNull().default(true),
+    active: boolean('active').notNull().default(true),
+    createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('point_thresholds_school_id_min_points_key').on(t.schoolId, t.minPoints),
+    check('point_thresholds_min_points_check', sql`${t.minPoints} between 1 and 1000`),
+  ],
+);
+
+/**
+ * Follow-up tasks (KSW-03): one per tier per enrollment (so per student per year), made when a
+ * pelanggaran takes the total across the tier. Label, action and points are copied from the tier.
+ * Only the status moves, open to done, once.
+ */
+export const followupTasks = pgTable(
+  'followup_tasks',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => enrollments.id, { onDelete: 'cascade' }),
+    thresholdId: uuid('threshold_id')
+      .notNull()
+      .references(() => pointThresholds.id, { onDelete: 'restrict' }),
+    label: text('label').notNull(),
+    action: text('action').notNull(),
+    minPoints: smallint('min_points').notNull(),
+    totalPoints: smallint('total_points').notNull(),
+    status: followupStatus('status').notNull().default('open'),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    completedBy: uuid('completed_by').references(() => user.id, { onDelete: 'set null' }),
+    note: encryptedText('note', 'followup_tasks.note'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('followup_tasks_enrollment_id_threshold_id_key').on(t.enrollmentId, t.thresholdId),
+    index('followup_tasks_school_id_status_idx').on(t.schoolId, t.status, t.createdAt),
+    check('followup_tasks_done_check', sql`(${t.status} = 'done') = (${t.completedAt} is not null)`),
   ],
 );
