@@ -1,5 +1,7 @@
 import { EXPORT_FORMATS, EXPORT_STATUSES, EXPORT_TARGETS } from '@absah/contracts';
-import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { date, index, integer, pgEnum, pgTable, text, time, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { encryptedText } from '../crypto';
 import { classes, semesters } from './academic';
 import { user } from './auth';
 import { createdAt, id, schoolId } from './_shared';
@@ -38,5 +40,58 @@ export const exportJobs = pgTable(
   (t) => [
     index('export_jobs_school_id_requested_by_idx').on(t.schoolId, t.requestedBy, t.createdAt),
     index('export_jobs_school_id_status_idx').on(t.schoolId, t.status, t.finishedAt),
+  ],
+);
+
+/**
+ * Jumlah hadir MBG settings (RKP-08), one row per school. The PIC (meal coordinator) is not an
+ * Absah account: name and WhatsApp number only.
+ */
+export const mbgSettings = pgTable(
+  'mbg_settings',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    cutoffTime: time('cutoff_time').notNull().default('08:30'),
+    picName: text('pic_name'),
+    picPhone: encryptedText('pic_phone', 'mbg_settings.pic_phone'),
+    updatedBy: uuid('updated_by').references(() => user.id, { onDelete: 'set null' }),
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [unique('mbg_settings_school_id_key').on(t.schoolId)],
+);
+
+/**
+ * Present students per rombel per school date (RKP-08). Rows are never changed (the app role has no
+ * UPDATE or DELETE): the row stored at the cutoff is what the PIC received; a correction is a new
+ * row whose supersedes_id points at the row it replaces. The current number of a rombel is the row
+ * no other row supersedes. forecast_h3 belongs to RKP-09 (prompt 5.3).
+ */
+export const mbgDailyCounts = pgTable(
+  'mbg_daily_counts',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    classId: uuid('class_id')
+      .notNull()
+      .references(() => classes.id, { onDelete: 'cascade' }),
+    schoolDate: date('school_date').notNull(),
+    enrolled: integer('enrolled').notNull(),
+    presentAtCutoff: integer('present_at_cutoff').notNull(),
+    /** Students without attendance at counting time (session not filled yet). */
+    unrecorded: integer('unrecorded').notNull(),
+    forecastH3: integer('forecast_h3'),
+    /** When the count was handed to the PIC message (same transaction); null without a PIC number. */
+    sentAt: at('sent_at'),
+    supersedesId: uuid('supersedes_id').references((): AnyPgColumn => mbgDailyCounts.id, { onDelete: 'cascade' }),
+    /** null: the cutoff job; otherwise who asked for the correction. */
+    createdBy: uuid('created_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('mbg_daily_counts_school_id_school_date_idx').on(t.schoolId, t.schoolDate, t.classId),
+    // One cutoff row per rombel and day, and every row is superseded at most once (a chain).
+    uniqueIndex('mbg_daily_counts_cutoff_key').on(t.schoolId, t.classId, t.schoolDate).where(sql`${t.supersedesId} is null`),
+    uniqueIndex('mbg_daily_counts_supersedes_key').on(t.schoolId, t.supersedesId).where(sql`${t.supersedesId} is not null`),
   ],
 );
