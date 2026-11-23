@@ -584,7 +584,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   guru; today up to 30 days back; student must be active, rule active else 409 rule_inactive), POST
   /point-entries/{id}/reverse (admin, wakasek; 409 already_reversed|is_reversal), GET /students/{enrollmentId}/points
   and GET /point-entries/{id}/evidence (admin, kepsek, wakasek, the class's wali kelas; other wali kelas get 404,
-  guru and others 403). Net totals come from plain sums because a reversal carries the kind it cancels. In a
+  guru and others 403). GET /point-entries/students?q= (same recorders) searches active students by name because the
+  registry is closed to teachers. Net totals come from plain sums because a reversal carries the kind it cancels. In a
   single-table drizzle select, ${table.col} inside a correlated subquery renders as a bare column and binds to the
   inner table: qualify it by hand (see isReversed in point-entry-repo.ts).
 - Point thresholds and follow-up tasks (KSW-03, behind student.points; migrations 0081-0083, schema point_thresholds
