@@ -22,3 +22,4 @@ export * from './notify';
 export * from './portal';
 export * from './report';
 export * from './subscription';
+export * from './student-billing';
