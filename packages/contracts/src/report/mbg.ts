@@ -18,12 +18,15 @@ export const MbgSettings = z
   .meta({ id: 'MbgSettings' });
 export type MbgSettings = z.infer<typeof MbgSettings>;
 
-/** PUT /api/v1/mbg/settings. Without a PIC number the counts are kept but not sent. */
+/**
+ * PUT /api/v1/mbg/settings. picPhone left out keeps the stored number (the API never returns it in
+ * full); null removes it. Without a PIC number the counts are kept but not sent.
+ */
 export const UpdateMbgSettingsRequest = z
   .object({
     cutoffTime: LessonTime,
     picName: z.string().trim().min(1).max(100).nullable(),
-    picPhone: PhoneNumberId.nullable(),
+    picPhone: PhoneNumberId.nullable().optional(),
   })
   .strict()
   .meta({ id: 'UpdateMbgSettingsRequest' });

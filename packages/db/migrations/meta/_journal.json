@@ -274,6 +274,13 @@
       "when": 1794880424749,
       "tag": "0038_mbg_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794880716036,
+      "tag": "0039_mbg_templates",
+      "breakpoints": true
     }
   ]
 }

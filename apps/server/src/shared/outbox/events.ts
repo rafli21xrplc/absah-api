@@ -37,6 +37,8 @@ export const EVENTS = {
   'leave.cancelled': z.object({ leaveRequestId: z.uuid() }),
   /** A rekap export was asked for; report builds the file in the worker (RKP-02, RKP-03). */
   'export.requested': z.object({ exportJobId: z.uuid() }),
+  /** MBG numbers of a school date were stored (cutoff, or a correction); notify sends them to the PIC (RKP-08). */
+  'mbg.count_ready': z.object({ schoolDate: z.iso.date(), correction: z.boolean() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;

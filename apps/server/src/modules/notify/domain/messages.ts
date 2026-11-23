@@ -52,3 +52,13 @@ export function releaseTime(now: Date, minutes: number): Date {
 }
 
 export { maskPhone } from '@absah/contracts';
+
+/**
+ * The per-rombel part of the MBG message, one line (WhatsApp template parameters cannot hold line
+ * breaks): "VII A 28, VII B 25 (3 belum diisi)". Unrecorded students are named so the PIC knows the
+ * number may still rise.
+ */
+export function mbgClassesLine(rows: readonly { name: string; present: number; unrecorded: number }[]): string {
+  if (rows.length === 0) return '-';
+  return rows.map((r) => (r.unrecorded > 0 ? `${r.name} ${r.present} (${r.unrecorded} belum diisi)` : `${r.name} ${r.present}`)).join(', ');
+}

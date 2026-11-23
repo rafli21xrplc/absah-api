@@ -29,12 +29,13 @@ export async function updateMbgSettings(actor: Actor, auditCtx: AuditContext, in
   authorize(actor, canManageMbg);
   await withTenant(tenant(actor), async (tx) => {
     const before = await mbgSettingsOf(tx);
-    await saveMbgSettings(tx, actor.schoolId, { ...input, updatedBy: actor.userId }, now);
     const phoneBefore = before?.picPhone?.reveal() ?? null;
+    const picPhone = input.picPhone === undefined ? phoneBefore : input.picPhone;
+    await saveMbgSettings(tx, actor.schoolId, { cutoffTime: input.cutoffTime, picName: input.picName, picPhone, updatedBy: actor.userId }, now);
     // The number itself never goes to the audit log; only that it changed.
     await audit(tx, auditCtx, 'mbg.settings_updated', { type: 'mbg_settings', id: actor.schoolId }, {
       before: before ? { cutoffTime: clockLabel(before.cutoffTime), picName: before.picName, picPhoneSet: phoneBefore !== null } : null,
-      after: { cutoffTime: input.cutoffTime, picName: input.picName, picPhoneSet: input.picPhone !== null, picPhoneChanged: phoneBefore !== input.picPhone },
+      after: { cutoffTime: input.cutoffTime, picName: input.picName, picPhoneSet: picPhone !== null, picPhoneChanged: phoneBefore !== picPhone },
     });
   });
   return getMbgSettings(actor);

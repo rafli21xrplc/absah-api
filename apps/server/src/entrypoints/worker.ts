@@ -8,7 +8,7 @@ import {
   idempotencyCleanupHandler,
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
-import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, reportConsumers } from '../modules/report';
+import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, MBG_CUTOFF_CRON, MBG_CUTOFF_QUEUE, mbgCutoffHandler, reportConsumers } from '../modules/report';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
 import { initCrypto } from '../shared/crypto';
@@ -55,6 +55,11 @@ for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
   await boss.work(queue, handler);
   await boss.schedule(queue, ATTENDANCE_JOB_CRON, null, { tz: 'UTC' });
 }
+
+// MBG counts at each school's cutoff time (same per-school clock as the attendance jobs).
+await boss.createQueue(MBG_CUTOFF_QUEUE);
+await boss.work(MBG_CUTOFF_QUEUE, mbgCutoffHandler(logger));
+await boss.schedule(MBG_CUTOFF_QUEUE, MBG_CUTOFF_CRON, null, { tz: 'UTC' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);

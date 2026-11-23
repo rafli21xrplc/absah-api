@@ -7,6 +7,7 @@ import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
 import { getMbgSettings, mbgDaily, updateMbgSettings } from '../application/mbg';
+import { recountMbg } from '../application/mbg-cutoff';
 
 /** Jumlah hadir MBG (RKP-08), only for schools that receive MBG (mbg.enabled). */
 export function mbgRouter(auth: Auth): Router {
@@ -16,6 +17,11 @@ export function mbgRouter(auth: Auth): Router {
   router.get('/mbg/daily', ...school, async (req, res) => {
     const { date } = MbgDailyQuery.parse(req.query);
     sendContract(res, MbgDaily, await mbgDaily(getActor(req), date));
+  });
+
+  router.post('/mbg/daily/recount', ...school, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, MbgDaily, await recountMbg(actor, auditContext(req, actor)));
   });
 
   router.get('/mbg/settings', ...school, async (req, res) => {

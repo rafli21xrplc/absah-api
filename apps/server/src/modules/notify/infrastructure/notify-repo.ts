@@ -35,6 +35,24 @@ export async function leaveOf(tx: Tx, leaveRequestId: string) {
   return row;
 }
 
+/** The PIC MBG's WhatsApp number (RKP-08), if the school set one. */
+export async function mbgPicPhone(tx: Tx): Promise<string | null> {
+  const [row] = await tx.select({ phone: schema.mbgSettings.picPhone }).from(schema.mbgSettings);
+  return row?.phone?.reveal() ?? null;
+}
+
+/** Current MBG numbers of a date per rombel: rows no correction supersedes. */
+export function mbgCurrentCounts(tx: Tx, date: string) {
+  const m = schema.mbgDailyCounts;
+  const c = schema.classes;
+  return tx
+    .select({ name: c.name, present: m.presentAtCutoff, unrecorded: m.unrecorded })
+    .from(m)
+    .innerJoin(c, eq(c.id, m.classId))
+    .where(and(eq(m.schoolDate, date), sql`not exists (select 1 from mbg_daily_counts newer where newer.supersedes_id = ${m.id})`))
+    .orderBy(asc(c.grade), asc(c.name));
+}
+
 export type NewNotification = typeof n.$inferInsert;
 
 /** Inserts the rows not seen before (dedup_key); returns the new ids with their release time. */
