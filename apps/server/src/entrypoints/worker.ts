@@ -8,7 +8,19 @@ import {
   idempotencyCleanupHandler,
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
-import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, MBG_CUTOFF_CRON, MBG_CUTOFF_QUEUE, mbgCutoffHandler, reportConsumers } from '../modules/report';
+import { PICKUP_PHOTOS_QUEUE, pickupPhotosHandler, VISITOR_PHOTOS_QUEUE, visitorPhotosHandler } from '../modules/gate';
+import {
+  EXPORT_RETENTION_QUEUE,
+  exportRetentionHandler,
+  MBG_CUTOFF_CRON,
+  MBG_CUTOFF_QUEUE,
+  MBG_FORECAST_CRON,
+  MBG_FORECAST_QUEUE,
+  mbgCutoffHandler,
+  mbgForecastHandler,
+  reportConsumers,
+} from '../modules/report';
+import { LOCK_HABITS_CRON, LOCK_HABITS_QUEUE, lockHabitsHandler } from '../modules/activity';
 import {
   APPLY_PAYMENTS_CRON,
   APPLY_PAYMENTS_QUEUE,
@@ -58,6 +70,12 @@ await boss.schedule(IMPORT_RETENTION_QUEUE, '45 2 * * *', null, { tz: 'Asia/Jaka
 await boss.createQueue(EXPORT_RETENTION_QUEUE);
 await boss.work(EXPORT_RETENTION_QUEUE, exportRetentionHandler(storage, logger));
 await boss.schedule(EXPORT_RETENTION_QUEUE, '50 2 * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(VISITOR_PHOTOS_QUEUE);
+await boss.work(VISITOR_PHOTOS_QUEUE, visitorPhotosHandler(storage, logger));
+await boss.schedule(VISITOR_PHOTOS_QUEUE, '55 2 * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(PICKUP_PHOTOS_QUEUE);
+await boss.work(PICKUP_PHOTOS_QUEUE, pickupPhotosHandler(storage, logger));
+await boss.schedule(PICKUP_PHOTOS_QUEUE, '50 2 * * *', null, { tz: 'Asia/Jakarta' });
 // Workspace invoices: 07.00 WIB on the 1st (days 2-7 only catch up).
 await boss.createQueue(ISSUE_INVOICES_QUEUE);
 await boss.work(ISSUE_INVOICES_QUEUE, issueInvoicesHandler(logger));
@@ -74,6 +92,12 @@ for (const [queue, handler] of Object.entries(attendanceJobHandlers(logger))) {
 await boss.createQueue(MBG_CUTOFF_QUEUE);
 await boss.work(MBG_CUTOFF_QUEUE, mbgCutoffHandler(logger));
 await boss.schedule(MBG_CUTOFF_QUEUE, MBG_CUTOFF_CRON, null, { tz: 'UTC' });
+await boss.createQueue(MBG_FORECAST_QUEUE);
+await boss.work(MBG_FORECAST_QUEUE, mbgForecastHandler(logger));
+await boss.schedule(MBG_FORECAST_QUEUE, MBG_FORECAST_CRON, null, { tz: 'UTC' });
+await boss.createQueue(LOCK_HABITS_QUEUE);
+await boss.work(LOCK_HABITS_QUEUE, lockHabitsHandler(logger));
+await boss.schedule(LOCK_HABITS_QUEUE, LOCK_HABITS_CRON, null, { tz: 'Asia/Jakarta' });
 
 // Quiet-hour messages are released every minute.
 await boss.createQueue(NOTIFY_RELEASE_QUEUE);

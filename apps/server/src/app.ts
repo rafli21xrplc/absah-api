@@ -4,16 +4,19 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
-import { correctionsRouter, sessionsRouter } from './modules/attendance';
-import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
-import { linksRouter, portalRouter } from './modules/portal';
+import { correctionsRouter, journalRouter, sessionsRouter } from './modules/attendance';
+import { gateRouter, kioskCors, kioskRouter, pickupRouter } from './modules/gate';
+import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
+import { activitiesRouter, habitsRouter, memorizationRouter } from './modules/activity';
+import { tppkRouter, uksRouter } from './modules/student-affairs';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
 import { clientIp } from './shared/client-ip';
+import { maskPath } from './shared/logger';
 import { errorHandler, notFoundHandler } from './shared/http';
 import { serializeErr } from './shared/logger';
 import { requestId } from './shared/request-id';
@@ -52,13 +55,14 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
       customProps: (req) => ({ requestId: (req as express.Request).requestId }),
       // Only method + path: query strings and bodies can contain personal data.
       serializers: {
-        req: (req: { method: string; url: string }) => ({ method: req.method, path: req.url.split('?')[0] }),
+        req: (req: { method: string; url: string }) => ({ method: req.method, path: maskPath(req.url.split('?')[0] ?? '') }),
         res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
         err: serializeErr,
       },
     }),
   );
   app.use('/api/v1/kiosk', kioskCors(kioskOrigins));
+  app.use('/api/v1/storage/fs', kioskCors(kioskOrigins));
   // Better Auth reads the raw body itself, so it is mounted before express.json().
   app.all('/api/auth/{*splat}', toNodeHandler(auth));
   // Dev/test stand-in for R2 presigned uploads; also reads the raw body, so before express.json().
@@ -71,7 +75,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   const openapi = generateOpenApiDocument(version);
   const v1 = express.Router();
   v1.use(healthRouter(version));
-  v1.use(linksRouter());
+  v1.use(linksRouter(storage));
   v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
   v1.use(importsRouter(auth, storage));
@@ -80,12 +84,20 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(scheduleRouter(auth));
   v1.use(learningGroupsRouter(auth));
   v1.use(sessionsRouter(auth));
+  v1.use(journalRouter(auth));
   v1.use(correctionsRouter(auth));
   v1.use(leaveRouter(auth, storage));
-  v1.use(gateRouter(auth));
-  v1.use(kioskRouter());
+  v1.use(uksRouter(auth));
+  v1.use(tppkRouter(auth));
+  v1.use(activitiesRouter(auth));
+  v1.use(habitsRouter(auth));
+  v1.use(memorizationRouter(auth));
+  v1.use(gateRouter(auth, storage));
+  v1.use(pickupRouter(auth, storage));
+  v1.use(kioskRouter(storage));
   v1.use(notificationsRouter(auth));
   v1.use(portalRouter(auth));
+  v1.use(liaisonRouter(auth));
   v1.use(reportsRouter(auth));
   v1.use(exportsRouter(auth, storage));
   v1.use(mbgRouter(auth));

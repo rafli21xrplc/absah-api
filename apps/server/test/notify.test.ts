@@ -126,8 +126,10 @@ describe('notify (NTF)', () => {
     expect(held.every((r) => r.releasedAt === null)).toBe(true);
     expect(await queuedEvents(held.map((r) => r.id))).toHaveLength(0);
 
-    expect(await releaseDueNotifications(new Date(night.getTime() + 60 * 60_000))).toBe(0);
-    expect(await releaseDueNotifications(new Date(night.getTime() + 8 * 60 * 60_000))).toBe(2); // 06.30 WIB
+    // The release runs over every school, so other test files' held rows may be released too.
+    await releaseDueNotifications(new Date(night.getTime() + 60 * 60_000));
+    expect(await queuedEvents(held.map((r) => r.id))).toHaveLength(0);
+    expect(await releaseDueNotifications(new Date(night.getTime() + 8 * 60 * 60_000))).toBeGreaterThanOrEqual(2); // 06.30 WIB
     const events = await queuedEvents(held.map((r) => r.id));
     expect(events).toHaveLength(2);
     for (const e of events) await run('notify_send', e);
@@ -169,5 +171,36 @@ describe('notify (NTF)', () => {
       ['failed', 'template_not_approved'],
       ['failed', 'template_not_approved'],
     ]);
+  });
+  it('tells the parents when UKS sent the student home: first name and time, never the complaint', async () => {
+    await withTenant({ schoolId: school, userId: null }, (tx) => tx.delete(schema.notifications));
+    const visit = async (outcome: 'dipulangkan' | 'istirahat') => {
+      const id = uuidv7();
+      await withTenant({ schoolId: school, userId: null }, (tx) =>
+        tx.insert(schema.uksVisits).values({ id, schoolId: school, enrollmentId: enrollment, schoolDate: today, visitedAt: new Date(`${today}T03:35:00Z`), complaint: sensitive('Demam tinggi 39 derajat'), outcome }),
+      );
+      return id;
+    };
+    const resting = await visit('istirahat');
+    await run('notify_uks_sent_home', envelope('uks.sent_home', { uksVisitId: resting }));
+    expect(await notificationRows()).toEqual([]); // only dipulangkan is told
+
+    const home = await visit('dipulangkan');
+    const event = envelope('uks.sent_home', { uksVisitId: home });
+    expect(await run('notify_uks_sent_home', event)).toBe('handled');
+    expect(await run('notify_uks_sent_home', event)).toBe('duplicate');
+    await run('notify_uks_sent_home', envelope('uks.sent_home', { uksVisitId: home })); // another event id: same dedup key
+
+    const rows = await notificationRows();
+    expect(rows.map((r) => [r.templateCode, r.status])).toEqual([
+      ['student_sent_home', 'queued'],
+      ['student_sent_home', 'queued'],
+    ]);
+    sender.messages.length = 0;
+    for (const e of await queuedEvents(rows.map((r) => r.id))) await run('notify_send', e);
+    expect(sender.messages.map((m) => m.to).sort()).toEqual(['+6281200000001', '+6281200000002']);
+    const text = sender.messages[0]?.text ?? '';
+    expect(text).toContain('SD Notifikasi: Ani dipulangkan dari UKS pukul 10.35 karena kurang sehat');
+    expect(text).not.toMatch(/Demam|LESTARI/);
   });
 });

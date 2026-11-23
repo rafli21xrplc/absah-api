@@ -12,7 +12,7 @@ export type ImportStatus = z.infer<typeof ImportStatus>;
 export const IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 export const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-/** POST /api/v1/imports/dapodik (admin, operator). */
+/** POST /api/v1/imports/dapodik or /imports/emis (admin, operator; per data.source). */
 export const CreateImportRequest = z
   .object({
     fileName: z.string().trim().min(1).max(200),

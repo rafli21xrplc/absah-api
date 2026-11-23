@@ -39,8 +39,24 @@ export const EVENTS = {
   'export.requested': z.object({ exportJobId: z.uuid() }),
   /** MBG numbers of a school date were stored (cutoff, or a correction); notify sends them to the PIC (RKP-08). */
   'mbg.count_ready': z.object({ schoolDate: z.iso.date(), correction: z.boolean() }),
+  /** The H-3 forecast of a school date was stored (13.00, three days before); notify sends it to the PIC (RKP-09). */
+  'mbg.forecast_ready': z.object({ schoolDate: z.iso.date() }),
   /** An admin asked to pay an invoice; subscription opens the VA/QRIS at the gateway in the worker (BIL). */
   'payment.requested': z.object({ paymentId: z.uuid() }),
+  /** A guest signed in at the kiosk for a staff member (GRB-11); the push to them arrives with NTF-06 (5.7). */
+  'gate.visitor_arrived': z.object({ visitorId: z.uuid(), hostUserId: z.uuid() }),
+  /** A student left with a penjemput (GRB-10): notify tells the parents who and when. */
+  'gate.checked_out': z.object({ pickupEventId: z.uuid() }),
+  /** The kiosk holds a student for an unlisted penjemput (GRB-10): notify asks the parents through the action link. */
+  'gate.unlisted_pickup': z.object({ pickupEventId: z.uuid() }),
+  /** UKS sent a student home (KSW-08): attendance marks the rest of the day S (source uks), notify tells the parents. */
+  'uks.sent_home': z.object({ uksVisitId: z.uuid() }),
+  /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
+  'tppk.report_received': z.object({ reportId: z.uuid() }),
+  /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */
+  'tppk.members_changed': z.object({ added: z.array(z.uuid()), removed: z.array(z.uuid()) }),
+  /** A buku penghubung message was posted (ORT-07): notify tells the other side, held outside service hours. */
+  'liaison.message_posted': z.object({ messageId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;

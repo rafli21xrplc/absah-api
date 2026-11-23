@@ -87,9 +87,9 @@ export async function resolveRecords(tx: Tx, schoolId: string, pairs: Pair[]): P
   return changes;
 }
 
-export async function sessionDates(tx: Tx, sessionIds: string[]): Promise<Map<string, string>> {
+export async function sessionDates(tx: Tx, sessionIds: string[]): Promise<Map<string, { schoolDate: string; mode: string }>> {
   if (sessionIds.length === 0) return new Map();
   const s = schema.attendanceSessions;
-  const rows = await tx.select({ id: s.id, schoolDate: s.schoolDate }).from(s).where(inArray(s.id, sessionIds));
-  return new Map(rows.map((x) => [x.id, x.schoolDate]));
+  const rows = await tx.select({ id: s.id, schoolDate: s.schoolDate, mode: s.mode }).from(s).where(inArray(s.id, sessionIds));
+  return new Map(rows.map((x) => [x.id, { schoolDate: x.schoolDate, mode: x.mode }]));
 }

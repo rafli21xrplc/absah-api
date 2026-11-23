@@ -295,6 +295,195 @@
       "when": 1794882200138,
       "tag": "0041_billing_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794901330492,
+      "tag": "0042_visitors",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794901331115,
+      "tag": "0043_visitors_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794902233097,
+      "tag": "0044_uks",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794902233733,
+      "tag": "0045_uks_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794903057047,
+      "tag": "0046_uks_template",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794920454553,
+      "tag": "0047_tppk",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794920490889,
+      "tag": "0048_tppk_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1794921409919,
+      "tag": "0049_tppk_notify",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794924333173,
+      "tag": "0050_activities",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1794924333862,
+      "tag": "0051_activities_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794924698894,
+      "tag": "0052_activity_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794925064368,
+      "tag": "0053_liaison",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794925065065,
+      "tag": "0054_liaison_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794925877197,
+      "tag": "0055_liaison_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794925877916,
+      "tag": "0056_liaison_notify",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1794926185795,
+      "tag": "0057_mbg_forecasts",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794926186530,
+      "tag": "0058_mbg_forecasts_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794929265129,
+      "tag": "0059_pickup_guardians",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794929265848,
+      "tag": "0060_pickup_guardians_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794929694841,
+      "tag": "0061_pickup_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794929695561,
+      "tag": "0062_pickup_events_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794930168332,
+      "tag": "0063_unlisted_pickup_template",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794931836305,
+      "tag": "0064_habit_entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1794931837033,
+      "tag": "0065_habit_entries_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794959738420,
+      "tag": "0066_export_jobs_stream",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794960390793,
+      "tag": "0067_memorization_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794960391553,
+      "tag": "0068_memorization_logs_rls",
+      "breakpoints": true
     }
   ]
 }

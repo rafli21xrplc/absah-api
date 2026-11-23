@@ -13,7 +13,8 @@ export interface LoadFixture {
   kioskToken: string;
   timezone: string;
   schoolDate: string;
-  cards: { cardId: string; deviceId: string; deviceKey: string }[];
+  /** studentId lets e2e pick a known student's card; k6 ignores it. */
+  cards: { cardId: string; deviceId: string; deviceKey: string; studentId: string }[];
 }
 
 /**
@@ -43,7 +44,7 @@ export function createLoadFixture(schoolId: string): Promise<LoadFixture> {
       const deviceId = uuidv7();
       await tx.insert(schema.cards).values({ id: cardId, schoolId, studentId, activeDeviceId: deviceId });
       await tx.insert(schema.cardDevices).values({ id: deviceId, schoolId, cardId, holder: 'student', label: 'load test' });
-      cards.push({ cardId, deviceId, deviceKey: toBase64Url(await deviceDayKey(dayKey, deviceId)) });
+      cards.push({ cardId, deviceId, deviceKey: toBase64Url(await deviceDayKey(dayKey, deviceId)), studentId });
     }
     return { kioskToken: `${schoolId}.${kioskId}.${secret}`, timezone: school.timezone, schoolDate: today, cards };
   });

@@ -51,6 +51,16 @@ export async function withUser<T>(
   return scoped(db, appRole, '', userId, fn);
 }
 
+/**
+ * Runs fn as the app role with no school and no user: every tenant policy matches nothing. Only
+ * SECURITY DEFINER functions that return a narrow answer (tppk.report_status) are useful here.
+ */
+export function withAnonymous<T>(db: Db, fn: (tx: Tx) => Promise<T>, options: { appRole?: string } = {}): Promise<T> {
+  const appRole = options.appRole ?? DEFAULT_APP_ROLE;
+  if (!ROLE_RE.test(appRole)) throw new Error('withAnonymous: invalid app role name');
+  return scoped(db, appRole, '', '', fn);
+}
+
 function scoped<T>(db: Db, appRole: string, schoolId: string, userId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select

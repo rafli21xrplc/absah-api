@@ -97,3 +97,48 @@ export type NewMbgCount = typeof m.$inferInsert;
 export async function insertCounts(tx: Tx, rows: NewMbgCount[]): Promise<void> {
   if (rows.length) await tx.insert(m).values(rows);
 }
+
+/**
+ * Prakiraan per rombel of the active year for a target date (RKP-09): students enrolled that day,
+ * of them on approved izin, and (not on izin) in an active off-campus activity meeting that day:
+ * on its weekday, or every day of its date range when it has no weekdays (kemah).
+ */
+export async function forecastInputs(tx: Tx, date: string) {
+  const res = await tx.execute<{ class_id: string; name: string; enrolled: number; on_leave: number; off_campus: number }>(sql`
+    select c.id as class_id, c.name,
+           count(s.id)::int as enrolled,
+           count(s.id) filter (where s.on_leave)::int as on_leave,
+           count(s.id) filter (where s.off_campus and not s.on_leave)::int as off_campus
+      from classes c
+      join academic_years y on y.id = c.academic_year_id and y.is_active
+      left join lateral (
+        select e.id,
+               exists (select 1 from leave_requests l where l.enrollment_id = e.id and l.status = 'approved'
+                          and ${date}::date between l.starts_on and l.ends_on) as on_leave,
+               exists (select 1 from activity_members am join activities a on a.id = am.activity_id
+                        where am.enrollment_id = e.id and a.active and a.location = 'luar_sekolah'
+                          and (a.starts_on is null or a.starts_on <= ${date}::date)
+                          and (a.ends_on is null or a.ends_on >= ${date}::date)
+                          and (extract(isodow from ${date}::date)::smallint = any(a.days)
+                            or (cardinality(a.days) = 0 and a.starts_on is not null and a.ends_on is not null))) as off_campus
+          from enrollments e
+         where e.class_id = c.id and e.starts_on <= ${date}::date and (e.ends_on is null or e.ends_on >= ${date}::date)
+      ) s on true
+     group by c.id, c.name, c.grade
+     order by c.grade, c.name`);
+  return res.rows.map((r) => ({ classId: r.class_id, name: r.name, enrolled: r.enrolled, onLeave: r.on_leave, offCampus: r.off_campus }));
+}
+
+export async function insertForecasts(tx: Tx, rows: (typeof schema.mbgForecasts.$inferInsert)[]): Promise<void> {
+  if (rows.length) await tx.insert(schema.mbgForecasts).values(rows);
+}
+
+export function forecastsOf(tx: Tx, date: string) {
+  const f = schema.mbgForecasts;
+  return tx
+    .select({ classId: f.classId, name: c.name, enrolled: f.enrolled, onLeave: f.onLeave, offCampus: f.offCampus, forecast: f.forecast, createdAt: f.createdAt, sentAt: f.sentAt })
+    .from(f)
+    .innerJoin(c, eq(c.id, f.classId))
+    .where(eq(f.schoolDate, date))
+    .orderBy(asc(c.grade), asc(c.name));
+}

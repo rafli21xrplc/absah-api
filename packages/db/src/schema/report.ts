@@ -2,7 +2,7 @@ import { EXPORT_FORMATS, EXPORT_STATUSES, EXPORT_TARGETS } from '@absah/contract
 import { sql } from 'drizzle-orm';
 import { date, index, integer, pgEnum, pgTable, text, time, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
-import { classes, semesters } from './academic';
+import { classes, classStream, semesters } from './academic';
 import { user } from './auth';
 import { createdAt, id, schoolId } from './_shared';
 import { schools } from './platform';
@@ -29,6 +29,8 @@ export const exportJobs = pgTable(
       .references(() => semesters.id, { onDelete: 'cascade' }),
     /** null: every rombel of the semester's year. */
     classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }),
+    /** AKD-11: only rombel of this jurusan (whole-year exports only). */
+    stream: classStream('stream'),
     status: exportStatus('status').notNull().default('queued'),
     fileKey: text('file_key').notNull(),
     fileName: text('file_name'),
@@ -65,7 +67,7 @@ export const mbgSettings = pgTable(
  * Present students per rombel per school date (RKP-08). Rows are never changed (the app role has no
  * UPDATE or DELETE): the row stored at the cutoff is what the PIC received; a correction is a new
  * row whose supersedes_id points at the row it replaces. The current number of a rombel is the row
- * no other row supersedes. forecast_h3 belongs to RKP-09 (prompt 5.3).
+ * no other row supersedes. The H-3 forecast (RKP-09) lives in mbg_forecasts.
  */
 export const mbgDailyCounts = pgTable(
   'mbg_daily_counts',
@@ -80,7 +82,6 @@ export const mbgDailyCounts = pgTable(
     presentAtCutoff: integer('present_at_cutoff').notNull(),
     /** Students without attendance at counting time (session not filled yet). */
     unrecorded: integer('unrecorded').notNull(),
-    forecastH3: integer('forecast_h3'),
     /** When the count was handed to the PIC message (same transaction); null without a PIC number. */
     sentAt: at('sent_at'),
     supersedesId: uuid('supersedes_id').references((): AnyPgColumn => mbgDailyCounts.id, { onDelete: 'cascade' }),
@@ -94,4 +95,29 @@ export const mbgDailyCounts = pgTable(
     uniqueIndex('mbg_daily_counts_cutoff_key').on(t.schoolId, t.classId, t.schoolDate).where(sql`${t.supersedesId} is null`),
     uniqueIndex('mbg_daily_counts_supersedes_key').on(t.schoolId, t.supersedesId).where(sql`${t.supersedesId} is not null`),
   ],
+);
+
+/**
+ * Prakiraan MBG H-3 (RKP-09) per rombel and target school date, computed once at 13.00 three
+ * calendar days before: active students - approved izin - members of an off-campus activity that
+ * day (a student in both counts once, as izin). Insert-only like mbg_daily_counts.
+ */
+export const mbgForecasts = pgTable(
+  'mbg_forecasts',
+  {
+    id: id(),
+    schoolId: schoolId().references(() => schools.id, { onDelete: 'cascade' }),
+    classId: uuid('class_id')
+      .notNull()
+      .references(() => classes.id, { onDelete: 'cascade' }),
+    schoolDate: date('school_date').notNull(),
+    enrolled: integer('enrolled').notNull(),
+    onLeave: integer('on_leave').notNull(),
+    offCampus: integer('off_campus').notNull(),
+    forecast: integer('forecast').notNull(),
+    /** When it was handed to the PIC message (same transaction); null without a PIC number. */
+    sentAt: at('sent_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [unique('mbg_forecasts_class_date_key').on(t.schoolId, t.classId, t.schoolDate)],
 );

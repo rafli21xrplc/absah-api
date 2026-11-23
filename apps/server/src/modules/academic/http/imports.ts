@@ -19,6 +19,12 @@ export function importsRouter(auth: Auth, storage: ObjectStorage): Router {
     sendContract(res, CreateImportResponse, await createStudentImport(getActor(req), storage, 'dapodik', input), 201);
   });
 
+  // AKD-09: madrasah export from EMIS; same preview and commit as Dapodik.
+  router.post('/imports/emis', school, requireCapValue('data.source', 'emis'), idempotent(), async (req, res) => {
+    const input = CreateImportRequest.parse(req.body);
+    sendContract(res, CreateImportResponse, await createStudentImport(getActor(req), storage, 'emis', input), 201);
+  });
+
   router.post('/imports/:importId/parse', school, async (req, res) => {
     const { importId } = ImportIdParam.parse(req.params);
     sendContract(res, StudentImportResponse, await requestImportParse(getActor(req), importId));

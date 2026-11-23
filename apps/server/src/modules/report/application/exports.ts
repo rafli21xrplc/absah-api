@@ -2,6 +2,7 @@ import { EXPORT_RETENTION_DAYS, type CreateExportRequest, type ExportDownload, t
 import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
+import { readReleaseFlags } from '../../../shared/capability';
 import { withPlatform, withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../../shared/errors';
 import { defineConsumer, emit, type Consumer } from '../../../shared/outbox';
@@ -36,6 +37,7 @@ function view(row: ExportJobRow): ExportJob {
     format: row.format,
     semester: { id: row.semesterId, academicYear: row.academicYear, number: row.semesterNumber },
     class: row.classId && row.className ? { id: row.classId, name: row.className } : null,
+    stream: row.stream,
     status: row.status,
     fileName: row.fileName,
     error: row.error,
@@ -53,6 +55,10 @@ export function requestExport(actor: Actor, auditCtx: AuditContext, target: Expo
   if (!all && !input.classId) throw new ForbiddenError('Ekspor semua rombel untuk pimpinan sekolah dan operator.');
   if (!exporterFor(target)) throw new ConflictError(`Ekspor untuk ${target.toUpperCase()} belum tersedia.`, { reason: 'target_unavailable' });
   return withTenant(tenant(actor), async (tx) => {
+    // RKP-07: RDM columns are not validated with a madrasah yet; the Absah team opens it per school.
+    if (target === 'rdm' && !(await readReleaseFlags(tx))['rdm-export-beta']) {
+      throw new ConflictError('Ekspor RDM masih uji coba dan belum dibuka untuk madrasah ini. Hubungi tim Absah.', { reason: 'release_flag_off' });
+    }
     const semester = await findSemester(tx, input.semesterId);
     if (!semester) throw new NotFoundError('Semester tidak ditemukan.');
     if (input.classId) {
@@ -67,10 +73,11 @@ export function requestExport(actor: Actor, auditCtx: AuditContext, target: Expo
       format: input.format,
       semesterId: semester.id,
       classId: input.classId ?? null,
+      stream: input.stream ?? null,
       fileKey: storageKey(actor.schoolId, 'exports', id),
       requestedBy: actor.userId,
     });
-    await audit(tx, auditCtx, 'export.requested', { type: 'export_job', id }, { after: { target, format: input.format, semesterId: semester.id, classId: input.classId ?? null } });
+    await audit(tx, auditCtx, 'export.requested', { type: 'export_job', id }, { after: { target, format: input.format, semesterId: semester.id, classId: input.classId ?? null, stream: input.stream ?? null } });
     await emit(tx, 'export.requested', { exportJobId: id });
     const row = await findJob(tx, id);
     if (!row) throw new Error('export job vanished');
@@ -110,9 +117,9 @@ async function semesterRecap(tx: Tx, schoolId: string, job: ExportJobRow): Promi
   const students = job.classId ? await studentsOfClass(tx, job.classId, semester.startsOn, semester.endsOn) : undefined;
   const rows = await enrollmentDays(tx, semester.academicYearId, semester.startsOn, semester.endsOn, students);
   const byClass = semesterStudentsByClass(rows.map((r) => ({ ...r, counts: { H: r.H, T: r.T, S: r.S, I: r.I, A: r.A } })));
-  const classes = await classesOfYear(tx, semester.academicYearId, job.classId);
+  const classes = await classesOfYear(tx, semester.academicYearId, job.classId, job.stream);
   return {
-    className: job.className,
+    className: job.className ?? (job.stream ? `jurusan ${job.stream.toUpperCase()}` : null),
     recap: {
       school: { name: school.name, npsn: school.npsn },
       semester: { academicYear: semester.academicYear, number: semester.number, startsOn: semester.startsOn, endsOn: semester.endsOn },

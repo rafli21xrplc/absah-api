@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { SemesterRecap } from '../../../domain/semester-recap';
 import { ERAPOR_COLUMNS } from './columns';
 import { eraporExporter } from './index';
-import { tanggal } from './pdf';
+import { tanggal } from '../common/recap-pdf';
 
 const recap: SemesterRecap = {
   school: { name: 'SMA Uji', npsn: '99999999' },

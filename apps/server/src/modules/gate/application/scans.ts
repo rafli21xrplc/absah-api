@@ -4,6 +4,8 @@ import { withTenant } from '../../../shared/db';
 import { addDays, schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { applyGateArrivals, schoolStartTime } from '../../attendance';
 import { firstName } from '../../../shared/names';
+import type { ObjectStorage } from '../../../shared/storage';
+import { kioskPickupRoster } from './checkouts';
 import { dayKeys, schoolSecret } from '../infrastructure/gate-secret-repo';
 import { cardForScan, insertScan, kioskRoster, knownScans, type ScanRow } from '../infrastructure/scan-repo';
 import type { KioskCaller } from './kiosks';
@@ -12,7 +14,8 @@ import type { KioskCaller } from './kiosks';
 const MAX_CLOCK_AHEAD_MS = 5 * 60_000;
 const minutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
 
-export function kioskDay(kiosk: KioskCaller): Promise<KioskDay> {
+/** Today's offline kit; with gate.pickup also the approved penjemput per card (GRB-10). */
+export function kioskDay(kiosk: KioskCaller, storage: ObjectStorage): Promise<KioskDay> {
   return withTenant({ schoolId: kiosk.schoolId, userId: null }, async (tx) => {
     const today = schoolDate(kiosk.timezone);
     const keys = await dayKeys(tx, kiosk.schoolId, [today, addDays(today, 1)]);
@@ -23,6 +26,7 @@ export function kioskDay(kiosk: KioskCaller): Promise<KioskDay> {
       lateAfter: await schoolStartTime(tx, today),
       keys: [...keys].map(([d, key]) => ({ schoolDate: d, key: toBase64Url(key) })),
       cards,
+      pickup: kiosk.caps['gate.pickup'] ? await kioskPickupRoster(tx, storage, today) : null,
     };
   });
 }

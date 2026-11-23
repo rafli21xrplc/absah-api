@@ -145,6 +145,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   infrastructure/importers/<source>; importerFor(source) picks one. Parsers read only the columns
   Absah needs. Matching is pure (domain/student-matching.ts): NISN, then NIK hash, then name +
   birth date; blanks never erase stored values; students missing from the file are "calon keluar".
+- EMIS (AKD-09): POST /imports/emis (requireCapValue data.source emis, madrasah preset) with the same
+  parse/preview/commit; EmisImporter (infrastructure/importers/emis) reads one header row. Both importers
+  share importers/student-sheet.ts (firstSheet, readStudentRows). EMIS columns are TODO(pilot)
+  (packages/db/fixtures/emis/README.md, emisFixture('data-siswa.xlsx'), fixtures:emis).
 - Import flow: POST /imports/dapodik (presigned PUT, key from the actor's school) -> browser PUTs
   the file -> POST /imports/{id}/parse emits student_import.uploaded -> consumer
   academic_parse_student_import (worker) parses and stores the preview -> GET /imports/{id}.
@@ -220,6 +224,18 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sessions, so izin approved earlier fill sessions created later. Locked sessions are included
   (a sick note arriving the next day is normal); backdating is capped at 7 days by the leave module.
 
+- Jam siswa (AKD-10, application/student-hours.ts): GET /classes/{classId}/student-hours?date (default today)
+  for the rombel's wali kelas and canSeeAllSessions; others 404. Sessions = the rombel's own plus those of
+  learning groups with any of its active students (listSessions forClass), activities excluded; per
+  student only the sessions they belong to, with the record status and daily_attendance. Group session
+  records count in the student's own rombel rekap (daily_attendance is per enrollment).
+- Jurnal mengajar (PRS-09, application/journal.ts): POST /sessions/{id}/submit takes an optional `topic`
+  (max 200, trimmed; omitted keeps it, empty clears it; per_period sessions only, else 400). It is also on
+  SessionSummary.topic. GET /teaching-journal?month=YYYY-MM[&teacherId] lists per_period sessions of the
+  month (topic null = not written yet) with totals; a guru sees only their own, admin/kepsek/wakasek any
+  teacher or all (canReadAllJournals). GET /teaching-journal/export.xlsx is one teacher-month built
+  synchronously (small), teacherId required for managers.
+
 ## Leave (IZN, modules/leave, packages/db/src/schema/leave.ts)
 - leave_requests (enrollment, kind sakit|izin, starts_on..ends_on inclusive, reason encryptedText,
   attachment_key/type, status pending|approved|rejected|cancelled, requested/decided/cancelled by+at).
@@ -268,6 +284,55 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   izin flagged S/I so piket does not chase them; reads leave_requests directly).
 - Load: test/kiosk-load.test.ts (900 scans, 3 kiosks, resent batches, CI) and
   load/kiosk-scans.k6.js with `gate:load-fixture --school <id>` (dev/staging only).
+
+- Buku tamu (GRB-11, behind gate.visitors; application/visitors.ts, table visitors): the kiosk calls
+  GET /kiosk/visitor-hosts (active staff, id + name) and POST /kiosk/visitors { clientEventId, name,
+  organization?, purpose, hostUserId? }; unique (school, client_event_id) makes a resend return the stored
+  visit. Naming a host emits gate.visitor_arrived { visitorId, hostUserId } (no consumer until the staff
+  push of NTF-06, prompt 5.7). Piket/admin/operator/wakasek PATCH /visitors/{id}/leave (idempotent, audited
+  gate.visitor_left; a second call changes nothing); GET /visitors?date&status=inside|all also for kepsek.
+  Photo: POST /kiosk/visitor-photos (JPEG <= 2 MB, presigned PUT under schools/{id}/visitors/{uuid}; the key
+  comes from the kiosk's school) -> photoId in POST /kiosk/visitors (400 photoId when not uploaded);
+  GET /visitors/{id}/photo gives a 5-minute link and is audited (gate.visitor_photo_viewed). Job
+  gate.visitor_photos (02:55) removes the file and sets photo_removed_at 30 days after left_at, or after
+  arrived_at when nobody signed the guest out. The R2 bucket CORS must allow PUT from KIOSK_ORIGINS; in dev/tests the filesystem stand-in
+  (/api/v1/storage/fs) gets the same kioskCors middleware (GET, POST, PUT).
+- Penjemput resmi (GRB-09, behind gate.pickup; http/pickup.ts, application/pickup-guardians.ts, table
+  pickup_guardians, migrations 0059-0060): name, relation (pickup_relation enum), phone encryptedText
+  (masked in responses, never audited), photo_key (required, schools/{id}/pickup/{uuid}), valid_until,
+  status pending|approved|rejected|inactive, decided_by/at, ended_at, photo_removed_at. Who: the
+  student's parent (guardians.user_id), their wali kelas (homeroom of the active rombel) or admin;
+  anyone else 404. A parent's entry is pending, a wali kelas/admin entry approved at once; at most 6
+  pending+approved per student (409 too_many). POST /pickup-guardians/{id}/approve|reject (wali kelas,
+  admin; pending only) and /deactivate (also the parent); repeating is a no-op, other moves 409;
+  audited gate.pickup_guardian_<status>. GET /pickup-guardians?status (admin: all, others: own rombel as
+  wali kelas). Piket also reads a student's list and opens photos; GET /pickup-guardians/{id}/photo is
+  for wali kelas, piket, admin (5-minute link, audited gate.pickup_photo_viewed). Job gate.pickup_photos
+  (02:50) removes photos 30 days after ended_at.
+- Check-out (GRB-10; application/checkouts.ts, table pickup_events, migrations 0061-0062): GET /kiosk/day
+  carries pickup (null without gate.pickup): approved, still-valid penjemput per cardId with 5-minute
+  photo links the kiosk downloads at once. POST /kiosk/checkouts (gate.pickup) { checkouts: [{
+  clientEventId, token, pickupGuardianId, checkedOutAt }] }: card checked like a scan (verifyCardAt),
+  then the penjemput must belong to the student, have been approved (decided_at; status approved or
+  inactive: deactivated after the morning sync still counts) and be valid that date, else
+  not_authorized (not stored). Unique (school, client_event_id) + partial unique released per
+  enrollment per day: a second release is duplicate. Each release emits gate.checked_out; consumer
+  notify_checked_out sends student_picked_up (pending approval) with pickup_name and time. pickup_name
+  is the name at the time.
+- Unlisted penjemput (GRB-10; application/unlisted-pickups.ts, online only): POST /kiosk/pickup-photos
+  (presigned PUT) then POST /kiosk/unlisted-pickups { clientEventId, token, name, photoId, requestedAt }
+  -> pickup_events status held with unlisted_photo_key (400 unreadable card / photo not uploaded; 409
+  already_released), emits gate.unlisted_pickup -> notify_unlisted_pickup sends unlisted_pickup
+  (pending approval) with each parent's action link. The kiosk polls GET /kiosk/unlisted-pickups/{id}.
+  decideHeldPickup (shared): allow -> released + checked_out_at + gate.checked_out (parents then get
+  student_picked_up); deny -> denied; same decision again no-op; otherwise 409 decided / expired (past
+  school date) / already_released. Deciders: the parent through POST /links/pickups/{id} { decision }
+  (not the link's one write; GET /links/pickups/{id}/photo lets them see who is at the gate, audited),
+  or the student's wali kelas / admin via POST /pickups/{id}/allow|deny. GET /pickups?date: gate
+  viewers (canSeeGateToday) all, anyone else their own rombel as wali kelas; held first.
+  GET /pickups/{id}/photo: wali kelas, piket, admin (audited gate.unlisted_photo_viewed). The link
+  context carries today's unlisted requests (pickups). Job gate.pickup_photos also expires held rows
+  of past school dates (each school's timezone) and removes unlisted photos 30 days after the request.
 
 ## Notifications (NTF, modules/notify, packages/db/src/schema/notify.ts)
 - message_templates: platform rows (code, language, body with {{name}} placeholders, params order,
@@ -367,7 +432,9 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Card: gate.linkCardKeys keeps the link's own device (holder parent, user_id null); a card active
   on another phone answers 409 bound_elsewhere unless `replace`.
 - Context shows the first name only (links get forwarded); no reason, no phone, no full name.
-- e2e reads a link with the dev CLI `notify:last-link --school <id>` (refuses production).
+- e2e reads a link with the dev CLI `notify:last-link --school <id>` (refuses production) and a login
+  code with `auth:last-otp --phone <E.164>` (platform lastPhoneOtp reads Better Auth's verification
+  row through withPlatform; refuses production).
 
 ## Portal logins and contacts (ORT-02)
 - PUT /students/{id}/contacts (admin, operator, the student's wali kelas; others 404): guardian
@@ -376,10 +443,123 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   students.user_id and sets an active `siswa` membership (platform.setPortalMembership; no
   invitation, the OTP is the proof). null suspends it. A number owned by another account → 409
   phone_taken. Audit records which numbers changed, never the numbers; responses mask them.
-- Parent logins (orang_tua with guardians.user_id) come with the parent portal (prompt 5.7); the
-  portal endpoints already serve them.
+- Parent logins: guardians[].portal on the same PUT (phone optional = unchanged). portal true needs
+  a number (400 otherwise) and links guardians.user_id to the account that OWNS the number
+  (platform.guardianLogin: reused, so siblings and other schools share one login) plus an active
+  orang_tua membership; a student's own login is refused (409 phone_student). portal false or a
+  null number unlinks; the membership is suspended only when no other guardian row of the school
+  still uses that account. Audit after.guardianPortal [{guardianId, portal on|off}].
 - GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
   the last 30 days of daily_attendance with counts.
+
+## Activity (KEG, modules/activity, packages/db/src/schema/activity.ts)
+- activities (per academic year: name unique, kind ekskul|upacara|ibadah|lainnya, location
+  sekolah|luar_sekolah, days smallint[] ISO weekdays, optional starts_on/ends_on, active),
+  activity_coaches (pembina = any active staff, not the membership role), activity_members (active
+  enrollments of that year). Migrations 0050-0051; attendance_sessions.activity_id now has an FK
+  (on delete restrict: deactivate activities, never delete them).
+- KEG-03: kind ibadah (sholat berjamaah) needs religious.worship (madrasah preset); POST/PATCH with
+  kind ibadah answer 404 CAPABILITY_DISABLED otherwise (checkKind in http/activities.ts).
+- GET /activities (admin, operator, wakasek, kepsek: all; others: the ones they coach), POST and PATCH
+  (admin, wakasek; coaches replaced as a whole), GET /activities/{id}, GET|PUT .../members (managers or
+  coaches; others 404), GET /activities/students?q= (managers or anyone coaching something).
+- Activity sessions use the attendance engine (mode/owner_type 'activity', activity_id set, teacher_id
+  null; one per activity per day, unique index 0052). prs.generate-sessions plans them per weekday and
+  date range, also on a not_school_day (Sabtu ekskul) but never on a holiday. A coach opens one with
+  POST /activities/{id}/sessions (today or a past unlocked date) and fills it with POST
+  /sessions/{id}/submit (mayFillSession: coachIds). Izin and UKS marks cover them; recomputeDaily and
+  the rombel rekap skip them, and an alpa there emits no attendance.absent_marked (changeMarks).
+  GET /activities/{id}/recap?from&to counts per member from these sessions only.
+- Jurnal 7 KAIH (KEG-02; http/habits.ts, application/habits.ts, table habit_entries, migrations
+  0064-0065): behind habits.kaih parent|student (custom kaihOn guard; 'off' is 404). One row per
+  (enrollment, date, habit enum habit_code) with value boolean, filled_by, filled_by_role
+  orang_tua|siswa, locked_at. PUT /habits/{studentId}/{date} { habits: partial map }: mode parent ->
+  only the student's parent (guardians.user_id), mode student -> only the student (students.user_id);
+  anyone else who may read gets 409 not_filler. Dates: today and HABIT_EDIT_DAYS (2) back; future 400,
+  older or a locked row 409 locked; upsert never touches a locked row. GET /habits/{studentId}?from&to
+  (default 7 days, max 31; readers: student, parents, wali kelas, admin/operator/wakasek/kepsek; others
+  404). GET /classes/{classId}/habits?weekStart (Monday of that week): daysFilled and ticks per habit
+  per active student (wali kelas of the rombel or the leaders). Job keg.lock-habits (00.30 WIB) sets
+  locked_at on entries older than 2 days in each school's own date. Every calendar day counts
+  (weekends and holidays too).
+
+- Setoran hafalan (KEG-03; http/memorization.ts, application/memorization.ts, table memorization_logs,
+  migrations 0067-0068, behind requireCap('religious.memorization')): per student (not enrollment, hafalan
+  carries over years): school_date, surah 1-114, juz?, ayat_from..ayat_to (checked against SURAH_AYAT in
+  contracts), score 0-100?, note, listener_id = the recorder. Role guru_tahfidz (enum value in 0067).
+  POST /memorization-logs (guru_tahfidz, admin; others 403; idempotent, audited memorization.recorded;
+  today by default, future 400; 409 not_active without an active enrollment). GET /memorization-logs?studentId
+  (student, parents, wali kelas, leaders, writers; others 404; canWrite for writers). GET
+  /memorization-logs/students?q= (writers). Listener name from school_member_directory.
+
+## Buku penghubung (ORT-07, modules/portal, packages/db/src/schema/portal.ts)
+- communication_threads (one per student, all years), communication_messages (body encrypted,
+  sender_role orang_tua|wali_kelas|guru, retracted_at), communication_reads (read cursor per user).
+  Migrations 0053-0054, capability portal.liaison (default true).
+- Participants are not stored: guardians of the student (orang_tua role), wali kelas of the active
+  enrollment's rombel, teachers of its lessons (rombel or learning group). Others 404. The admin
+  reads every thread incl. retracted text (audited liaison.thread_viewed) and cannot write.
+- Retract only by the sender within LIAISON_RETRACT_MINUTES (15); afterwards permanent (409).
+  Each message emits liaison.message_posted.
+- GET /liaison/students?q= (2+ letters): students the user teaches this year, to start a thread.
+- notify_liaison_message: a parent's message goes to the wali kelas (view homeroom_contacts, phone
+  only), a staff message to guardians WITH a portal account (guardians.user_id) and a phone; never
+  the text, no action link (params.url to /penghubung or /portal/penghubung). Service hours
+  (liaison_settings, default 06.00-18.00, GET|PUT /liaison/settings admin, migrations 0055-0056)
+  hold notifications via queueMessages({ window }); releaseTime clamps any window inside the quiet
+  hours. Dedup: one per recipient per thread per release hour. Template liaison_message pending.
+- Retention (2 tahun ajaran) is not implemented yet.
+
+## Student affairs (KSW, modules/student-affairs, packages/db/src/schema/student-affairs.ts)
+- UKS (KSW-08, behind student.uks, role petugas_uks only: even admin does not read the notes):
+  uks_visits (enrollment, school_date, visited_at, complaint + action encryptedText, outcome
+  kembali_kelas|istirahat|dipulangkan, recorded_by) is insert-only for absah_app. GET /uks/students?q=
+  (active, name contains, max 20), POST /uks/visits (idempotent, audited uks.visit_recorded with the
+  outcome only, never the notes), GET /uks/visits?date=. Outcome dipulangkan emits uks.sent_home
+  { uksVisitId } in the same transaction. Attendance consumer attendance_apply_uks_sent_home
+  (application/uks-marks.ts, syncUksMarks) re-reads the visit and writes S with source uks and
+  source_ref = the visit in the student's class/group sessions of that date: daily sessions always,
+  lessons only while their end time is after the visit on the school clock (visited_at at time zone);
+  izin and corrections still outrank it, the teacher cannot overwrite it. generateForSchool also calls
+  applyUksToDate, so sessions created later that day get the visits already recorded. Notify consumer
+  notify_uks_sent_home (dipulangkan only) queues template student_sent_home (migration 0046, pending
+  approval) per guardian with a phone: school, first name, time on the school clock (clockLabel) and the
+  action link; dedup key sent_home:<visit>:<guardian>. Never the complaint or any note.
+- TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
+  "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
+  'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,
+  kepsek, jobs (user null) and support read 0 rows. Reports: INSERT allowed to any context, WITHOUT
+  RETURNING (the reporter cannot read it back; non-member UPDATE touches 0 rows). case_events are
+  insert-only; nothing is deletable by absah_app. tppk.report_status(code_hash) is SECURITY DEFINER and
+  returns only the status for the tracking page. GET /tppk/members (any staff), PUT /tppk/members (admin,
+  replaces the team, members must be active staff, belowMinimum under TPPK_MIN_MEMBERS = 3, audited,
+  emits tppk.members_changed {added, removed} so the team sees every change).
+  Pitfall: in sql`(select ... from school_member_directory d where d.user_id = ${col})` a column
+  named user_id renders bare and binds to the view's own column; qualify it by hand.
+- TPPK public flow (no login; application/tppk-reports.ts): GET /tppk/channel/{schoolId} (school name,
+  same 404 for unknown or student.tppk off), POST /tppk/reports (201 {trackingCode, status}), GET
+  /tppk/reports/track/{code} (status only, via withAnonymous + tppk.report_status). Tracking code: 10
+  Crockford base32 chars (normalizeTrackingCode: upper case, no dashes, O->0, I/L->1), stored as
+  hashValue('tppk-tracking:' + code), shown once. Malformed and unknown codes do the same lookup and
+  get the same 404. Anonymous: the session is not even read, audit tppk.report_filed has no actor and
+  omitIp. No Idempotency-Key on the public POST (the stored answer would hold the code); a lost answer
+  means the reporter may file twice. Emits tppk.report_received {reportId} (consumer in 5.2d).
+- shared/rate-limit.ts memoryRateLimit: per process, key = hashValue(name + clientIp), never stored or
+  logged (report 5/h, track 30/10 min, channel 60/h). Cloudflare rules on /api/v1/tppk/* stay the first
+  line. maskPath (shared/logger.ts) replaces the code in logged request paths; test/tppk-report.test.ts
+  captures the log and checks no IP, chronology or code (buildTestApp({ logger })).
+- TPPK cases (application/tppk-cases.ts, members only via asMember: isMember check -> 403, RLS
+  underneath): GET /tppk/reports[?status], GET /tppk/reports/{id} (chronology; reporter null when
+  anonymous), GET|POST /tppk/cases, GET /tppk/cases/{id} (report + events), POST .../events (catatan |
+  langkah, open cases only), POST .../close and .../reopen (each an event too). Report status follows:
+  case opened -> ditangani, closed -> selesai, reopened -> ditangani. One case per report (409).
+  Every read and write audits tppk.<verb> with ids, counts and statuses only.
+- TPPK notifications (migration 0049): view tppk.member_contacts (security_barrier, owned by the
+  migration role because absah_app cannot read "user") gives user_id, name, phone of the current
+  school's TPPK members only. Notify consumers notify_tppk_report_received (template
+  tppk_report_received: school + link to /tppk, nothing about the report) and notify_tppk_team_changed
+  (tppk_team_changed: added/removed names to the CURRENT team). Both templates pending approval.
+  Members without a phone get nothing until staff push (NTF-06); TppkMember.canBeNotified shows it.
 
 ## Report (RKP, modules/report)
 - Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,
@@ -387,11 +567,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   enrollment; a student who changed rombel shows in each with the days there). One day = rekap harian,
   semester dates = rekap semester. Managers (admin, operator, kepsek, wakasek) see every rombel, a wali
   kelas (classes.homeroom_teacher_id) their own; presentRate = (H + T) / days.
+- Jurusan (AKD-11): ClassRecapList items carry stream; GET /reports/attendance/classes?stream=ipa|ips|bahasa|
+  keagamaan keeps one jurusan (a wali kelas is still refused without a rombel, then filtered). POST /exports
+  takes stream (whole-year exports only; with classId 400), stored in export_jobs.stream (0066); the file
+  has only that jurusan's rombel and is named ...-jurusan-IPA.xlsx.
 - GET /reports/session-compliance (RKP-04, wakasek/kepsek/admin): class and daily sessions per teacher
   and day: filled (submitted/locked), filledLate (submitted after reminded_at), missed, open.
 - Exports (export_jobs): POST /exports { format xlsx|pdf, semesterId, classId? } (idempotent, 202,
   audited, emits export.requested; whole school = managers only; target from report.target, no exporter
-  = 409 target_unavailable) -> consumer report_build_export builds the file in a savepoint, writes it to
+  = 409 target_unavailable; rdm without its release flag = 409 release_flag_off) -> consumer report_build_export builds the file in a savepoint, writes it to
   schools/{id}/exports/{job id}, status done (or failed on the last of 3 tries) -> GET /exports/{id}
   /download (presigned attachment, requester only). Job report.export_retention (02:50) removes files
   after 7 days (status expired).
@@ -401,6 +585,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   pdf = archive with H/T/S/I/A and signature blocks (kepala sekolah from the directory, wali kelas).
 - e-Rapor columns (exporters/erapor/columns.ts) are NOT confirmed: TODO(pilot), see
   packages/db/fixtures/erapor/README.md. Do not drop the TODO before a real import succeeded.
+- RDM (RKP-07, report.target rdm): exporters/rdm (RDM_COLUMNS TODO(pilot), PDF signed "Kepala Madrasah");
+  both targets build with exporters/common (recapWorkbook(recap, columns), recapPdf(recap, labels)).
+  Release flag rdm-export-beta must be on for the school (platform_flags, owner role; readReleaseFlags in
+  shared/capability.ts), else POST /exports answers 409 release_flag_off. See packages/db/fixtures/rdm/README.md.
+- Release flags (packages/capabilities release.ts RELEASE_FLAGS): built-but-unvalidated features, off by
+  default, set by the Absah team in platform_flags (value true; school row beats global). Not capabilities:
+  killSwitches skips them. Remove a flag once the feature is released.
+  Ops CLI: `pnpm --filter @absah/server release:flag --flag <name> (--school <id> | --all) [--off]`
+  (platform setReleaseFlag, withPlatform upsert on (key, school_id)); e2e uses it too.
 
 ## MBG (RKP-08, modules/report, behind requireCap('mbg.enabled'))
 - mbg_settings (one row per school: cutoff_time default 08.30, pic_name, pic_phone encryptedText; the PIC
@@ -420,6 +613,14 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - notify_mbg_count sends template mbg_count / mbg_count_corrected to the PIC (no guardian, no action
   link; queueMessages recipients without guardianId get none): total present + "1A 28, 1B 25 (3 belum
   diisi)" on one line (template params cannot hold line breaks). Templates added in migration 0039.
+- Prakiraan H-3 (RKP-09): job rkp.mbg-forecast (every 5 min, each school from 13.00 local) stores
+  mbg_forecasts for today + 3 calendar days when that is a school day (attendance schoolDayOf), once
+  per date: per rombel enrolled - approved izin - members of an active luar_sekolah activity meeting
+  that day (izin wins when both). Insert-only (0057-0058; forecast_h3 dropped from
+  mbg_daily_counts). Emits mbg.forecast_ready; notify_mbg_forecast sends template mbg_forecast
+  (pending) to the PIC. GET /mbg/forecast?date= (default today + 3): computed | pending.
+- An activity without weekdays but with both dates (kemah) meets every day of its range: sessions
+  (planActivitySessions) and the forecast use the same rule.
 
 ## Pilot data (prompt 4.4, packages/db/seed)
 - pilotPlan() (seed/pilot-plan.ts) is pure and deterministic (seed 20270111): "SMA Absah Uji 1" (NPSN
@@ -433,6 +634,21 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   operator, guru001...) and runs it once (a second run prints the existing school). It refuses unless
   WHATSAPP_PROVIDER=fake: the guardian numbers are invented and must never receive messages.
 - Parallel run of X-1 (11-22 Jan 2027) on staging: `attendance:generate --school <id> --date 2027-01-11 --force`.
+
+## ETL from the old project-attendance app (packages/db/etl)
+- `pnpm --filter @absah/db etl:project-attendance --dump <file.sql> --school <id> --out <dir> [--apply]`.
+  Reads a local mysqldump (readDump: CREATE TABLE column order + INSERT rows, no MySQL server), maps
+  it (mapProjectAttendance, pure) and writes gagal.csv, undang-ulang.csv, siswa.csv. Dry-run unless --apply.
+- Mapping: rombel = type_class.category (grade, roman or digits) + class_room.name; stream from the name;
+  students not graduated with NISN padded back to 10 digits (bigint in the old schema), enrollment from
+  the open student_class_histories row (never before the year start); teachers -> re-invite list with
+  NIP, WhatsApp number and wali kelas of (old passwords are never read). Attendance history, payments
+  and schedules stay in the old system. Failures: tingkat_tidak_dikenal, rombel_ganda, nisn_tidak_valid,
+  nisn_ganda, rombel_tidak_ditemukan, nama_kosong.
+- applyEtl: one tenant transaction under the student import lock, into the active academic year (none ->
+  stop), rombel matched by name, students whose NISN already exists skipped, so reruns add nothing.
+- Fixture: fixtures/project-attendance/dump.sql (synthetic). The output CSVs hold personal data: write
+  them outside the repo and delete them after go-live.
 
 ## Workspace billing (BIL, modules/subscription, packages/db/src/schema/subscription.ts)
 - Pure rules in domain/invoice.ts computeInvoice(enrollments, exemptDays, month): Rp10.000 per active
