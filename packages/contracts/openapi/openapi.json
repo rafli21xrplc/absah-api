@@ -6744,6 +6744,9 @@
               "string",
               "null"
             ]
+          },
+          "payment": {
+            "$ref": "#/components/schemas/StudentPayment"
           }
         },
         "required": [
@@ -6751,7 +6754,103 @@
           "number",
           "amount",
           "dueOn",
-          "paidAt"
+          "paidAt",
+          "payment"
+        ]
+      },
+      "StudentPayment": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "installmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "vaBank": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vaNumber": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "qrString": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paidAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "installmentId",
+          "method",
+          "status",
+          "amount",
+          "vaBank",
+          "vaNumber",
+          "qrString",
+          "expiresAt",
+          "paidAt",
+          "error",
+          "createdAt"
+        ]
+      },
+      "PaymentMethod": {
+        "type": "string",
+        "enum": [
+          "va",
+          "qris"
+        ]
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "requested",
+          "pending",
+          "paid",
+          "expired",
+          "failed"
         ]
       },
       "VoidBillRequest": {
@@ -6765,6 +6864,31 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "MyBillsList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentBill"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "RequestStudentPaymentRequest": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          }
+        },
+        "required": [
+          "method"
         ]
       },
       "ActivityList": {
@@ -11327,23 +11451,6 @@
           "paidAt",
           "error",
           "createdAt"
-        ]
-      },
-      "PaymentMethod": {
-        "type": "string",
-        "enum": [
-          "va",
-          "qris"
-        ]
-      },
-      "PaymentStatus": {
-        "type": "string",
-        "enum": [
-          "requested",
-          "pending",
-          "paid",
-          "expired",
-          "failed"
         ]
       },
       "CreatePaymentRequest": {
@@ -22929,6 +23036,190 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StudentBill"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/student-billing/mine": {
+      "get": {
+        "tags": [
+          "student-billing"
+        ],
+        "summary": "The bills of the caller's own children, or of the student themself, with the charge to pay (TGH-03)",
+        "description": "Tagihan siswa (TGH), behind student.billing. The bendahara and admin manage; kepsek and wakasek read. Money is whole rupiah; a bill is never deleted, only voided. For orang_tua and siswa only (403 for staff). Void bills are left out; each installment carries its latest payment attempt, if any (a pending one past its expiry reads as expired).",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bills",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyBillsList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/student-billing/installments/{installmentId}/payments": {
+      "post": {
+        "tags": [
+          "student-billing"
+        ],
+        "summary": "Ask for a VA or QRIS to pay one installment (TGH-03)",
+        "description": "Tagihan siswa (TGH), behind student.billing. The bendahara and admin manage; kepsek and wakasek read. Money is whole rupiah; a bill is never deleted, only voided. Stored as requested and answered 202; the worker opens the charge at the gateway, so poll /student-billing/mine. An open attempt of the same method is reused. 404 for an installment that is not the caller's child's; 409 already_paid, bill_void, payments_unavailable.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "installmentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestStudentPaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentPayment"
                 }
               }
             }

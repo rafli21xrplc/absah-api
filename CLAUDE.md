@@ -651,6 +651,16 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   overdue=true, limit <= 500, total counts all matches); `overdue` = open with an installment unpaid past its date
   on the school's clock. POST /bills/{id}/void: reason required, 409 already_void / has_payments (a paid bill is a
   refund, which is not built). Audit of an issue holds counts and target, never students.
+- Bayar tagihan siswa (TGH-03, student-billing/application/payments.ts): GET /student-billing/mine (orang_tua: the
+  children they guard via guardians.user_id; siswa: students.user_id; staff 403) lists bills (void left out) and each
+  installment carries its latest payment attempt (`payment`, a pending one past its expiry reads expired).
+  POST /student-billing/installments/{id}/payments {method va|qris} answers 202: stores `requested` and emits
+  `student_payment.requested`; the worker consumer `student_billing_open_payment` (registered with
+  studentBillingConsumers(provider)) calls PaymentProvider.createCharge with the payment id as reference (a retry gets
+  the same charge), retryable errors throw until the last attempt, then `failed` (the parent asks again). An open
+  attempt of the same method is reused; 404 for installments not of the caller's child, 409 already_paid / bill_void /
+  payments_unavailable (no gateway). The installment is locked FOR UPDATE so two taps do not open two charges. The
+  webhook side (5.10d) records the money; nothing marks an installment paid yet.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

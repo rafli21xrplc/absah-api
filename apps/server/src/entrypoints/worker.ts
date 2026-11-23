@@ -42,6 +42,7 @@ import {
   issueInvoicesHandler,
   subscriptionConsumers,
 } from '../modules/subscription';
+import { studentBillingConsumers } from '../modules/student-billing';
 import { createPaymentProvider } from '../shared/payments';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
@@ -150,6 +151,7 @@ const consumers: Consumer[] = [
   ...attendanceConsumers(),
   ...reportConsumers(storage),
   ...subscriptionConsumers(paymentProvider),
+  ...studentBillingConsumers(paymentProvider),
   ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
   ...(pushSender ? pushConsumers({ push: pushSender }) : []),
 ];

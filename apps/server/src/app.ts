@@ -98,7 +98,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(teacherAttendanceRouter(auth));
   v1.use(teacherLeaveRouter(auth));
   v1.use(substitutionsRouter(auth));
-  v1.use(studentBillingRouter(auth));
+  v1.use(studentBillingRouter(auth, paymentProvider));
   v1.use(tppkRouter(auth));
   v1.use(activitiesRouter(auth));
   v1.use(habitsRouter(auth));
