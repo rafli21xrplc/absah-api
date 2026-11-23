@@ -432,3 +432,10 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   update lines.
 - calendar_days.billing_exempt: only the Absah team (owner role) sets, clears or deletes exempt days;
   trigger calendar_days_guard_billing_exempt raises for absah_app. Ordinary holidays stay the school's.
+- Job bil.issue-invoices (07.00 WIB on days 1-7, tz Asia/Jakarta for every school): previous month,
+  issueInvoiceForSchool per school in withTenant (withPlatform only to list schools); unique (school,
+  month) + onConflictDoNothing make reruns no-ops; a month without billed student-days issues nothing.
+  Enrollments of any year overlapping the month count; due 14 days after issue.
+- GET /billing/invoices, GET /billing/invoices/{id} (lines with student name/NISN): admin and kepsek.
+- Ops: `pnpm --filter @absah/server billing:exempt --school <id> --from --to [--name] [--remove]`
+  (owner role) marks a long year-end break as exempt holidays; short breaks stay billed.
