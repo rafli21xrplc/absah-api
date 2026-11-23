@@ -1046,3 +1046,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   passes the school's capabilities, the application never reads them. The dashboard reaches the early warnings through the
   student-affairs index (listEarlyWarnings), never its tables.
 
+## Dasbor koleksi / yayasan (RKP-06; report application/collection-dashboard.ts)
+- GET /dashboard/collections, no X-School-Id: there is no yayasan role. A person "leads" a collection when they hold kepsek, wakasek
+  or (with two-step login) admin in at least one school whose collection_id is set. collection-repo.ts finds those seats under
+  withUser RLS (a person only sees schools they are a member of), then EVERY school is computed by principalDashboard inside its own
+  withTenant, with the school's own capabilities (loadCapabilities), exactly as on its own dashboard (the test compares them), and
+  domain combineSchools adds them: student-days and sessions are summed and rates recomputed from the sums (never averaged), the
+  trend adds days per date. Schools in the collection where the caller only teaches are not counted and not listed.
+- Collections are created by hand for now (no CLI or API): insert a `collections` row and set schools.collection_id.
+

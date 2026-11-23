@@ -21,7 +21,7 @@ export const PrincipalDashboard = z
         presentRate: z.number().min(0).max(1).nullable(),
       }),
       /** Oldest first; only dates that have rekap rows. */
-      trend: z.array(z.object({ date: z.iso.date(), presentRate: z.number().min(0).max(1).nullable(), days: z.int().nonnegative() })),
+      trend: z.array(z.object({ date: z.iso.date(), presentRate: z.number().min(0).max(1).nullable(), present: z.int().nonnegative(), days: z.int().nonnegative() })),
     }),
     /** Class and daily sessions of today. `open` are not due yet and do not lower fillRate. */
     sessions: z.object({ total: z.int(), filled: z.int(), missed: z.int(), open: z.int(), fillRate: z.number().min(0).max(1).nullable() }),
@@ -37,3 +37,42 @@ export const PrincipalDashboard = z
   })
   .meta({ id: 'PrincipalDashboard' });
 export type PrincipalDashboard = z.infer<typeof PrincipalDashboard>;
+
+/**
+ * Dasbor koleksi / yayasan (RKP-06): the schools of one collection where the caller leads (kepsek, wakasek, or an admin with
+ * two-step login), each computed inside its own tenant and then put together. Only schools the caller may read are in it.
+ */
+export const CollectionSchoolSummary = z.object({
+  schoolId: z.uuid(),
+  name: z.string(),
+  schoolDate: z.iso.date(),
+  attendance: z.object({ days: z.int().nonnegative(), present: z.int().nonnegative(), presentRate: z.number().min(0).max(1).nullable() }),
+  sessions: z.object({ total: z.int(), filled: z.int(), missed: z.int(), open: z.int(), fillRate: z.number().min(0).max(1).nullable() }),
+  /** Null when the school does not use early warnings. */
+  atRiskStudents: z.int().nonnegative().nullable(),
+  mbg: z.object({ enrolled: z.int(), present: z.int() }).nullable(),
+});
+export type CollectionSchoolSummary = z.infer<typeof CollectionSchoolSummary>;
+
+export const CollectionDashboard = z
+  .object({
+    id: z.uuid(),
+    name: z.string(),
+    /** Schools of the collection the caller is not allowed to read are not counted here and not listed. */
+    schools: z.array(CollectionSchoolSummary),
+    totals: z.object({
+      schools: z.int(),
+      attendance: z.object({ days: z.int().nonnegative(), present: z.int().nonnegative(), presentRate: z.number().min(0).max(1).nullable() }),
+      sessions: z.object({ total: z.int(), filled: z.int(), missed: z.int(), open: z.int(), fillRate: z.number().min(0).max(1).nullable() }),
+      /** Sum over the schools that use early warnings; null when none does. */
+      atRiskStudents: z.int().nonnegative().nullable(),
+      mbg: z.object({ enrolled: z.int(), present: z.int() }).nullable(),
+    }),
+    /** Student-days of all schools by school date, oldest first. */
+    trend: z.array(z.object({ date: z.iso.date(), present: z.int().nonnegative(), days: z.int().nonnegative(), presentRate: z.number().min(0).max(1).nullable() })),
+  })
+  .meta({ id: 'CollectionDashboard' });
+export type CollectionDashboard = z.infer<typeof CollectionDashboard>;
+
+export const CollectionDashboardList = z.object({ items: z.array(CollectionDashboard) }).meta({ id: 'CollectionDashboardList' });
+export type CollectionDashboardList = z.infer<typeof CollectionDashboardList>;
