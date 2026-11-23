@@ -315,6 +315,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Keys are always storageKey(schoolId, module, uuid) = schools/{school_id}/{module}/{uuid}; build
   them from the actor's school, never from client input.
 - Browsers upload directly to the presigned URL; handlers never stream file bodies.
+- write(key, body, type) is for files the worker makes (exports) only. presignDownload({ fileName })
+  answers Content-Disposition attachment (saved file) instead of inline.
 
 ## Outbox, consumers and inbox (PLT-13, apps/server/src/shared/outbox)
 - emit(tx, type, payload) inside the use case's withTenant transaction, next to audit(). The school
@@ -378,3 +380,24 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   portal endpoints already serve them.
 - GET /portal/attendance: siswa → own student (students.user_id), orang_tua → children; today plus
   the last 30 days of daily_attendance with counts.
+
+## Report (RKP, modules/report)
+- Rekap reads daily_attendance only (one status per enrollment per school date): GET /reports/semesters,
+  /reports/attendance/classes?from&to (per rombel), /reports/attendance/classes/{id}?from&to (per
+  enrollment; a student who changed rombel shows in each with the days there). One day = rekap harian,
+  semester dates = rekap semester. Managers (admin, operator, kepsek, wakasek) see every rombel, a wali
+  kelas (classes.homeroom_teacher_id) their own; presentRate = (H + T) / days.
+- GET /reports/session-compliance (RKP-04, wakasek/kepsek/admin): class and daily sessions per teacher
+  and day: filled (submitted/locked), filledLate (submitted after reminded_at), missed, open.
+- Exports (export_jobs): POST /exports { format xlsx|pdf, semesterId, classId? } (idempotent, 202,
+  audited, emits export.requested; whole school = managers only; target from report.target, no exporter
+  = 409 target_unavailable) -> consumer report_build_export builds the file in a savepoint, writes it to
+  schools/{id}/exports/{job id}, status done (or failed on the last of 3 tries) -> GET /exports/{id}
+  /download (presigned attachment, requester only). Job report.export_retention (02:50) removes files
+  after 7 days (status expired).
+- Exporters implement ReportExporter (domain/semester-recap.ts) in infrastructure/exporters/<target>;
+  exporterFor(target). The semester file counts a student's whole semester under the rombel of their
+  latest enrollment; students who left (moved/left) are omitted. xlsx = import sheet (one per rombel),
+  pdf = archive with H/T/S/I/A and signature blocks (kepala sekolah from the directory, wali kelas).
+- e-Rapor columns (exporters/erapor/columns.ts) are NOT confirmed: TODO(pilot), see
+  packages/db/fixtures/erapor/README.md. Do not drop the TODO before a real import succeeded.

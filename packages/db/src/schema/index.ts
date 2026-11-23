@@ -15,3 +15,4 @@ export * from './schedule';
 export * from './setup';
 export * from './notify';
 export * from './portal';
+export * from './report';

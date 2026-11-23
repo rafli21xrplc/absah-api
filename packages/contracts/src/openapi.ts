@@ -97,6 +97,7 @@ import {
 } from './platform/invitations';
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
+import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
 import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
 
 export const API_BASE_PATH = '/api/v1';
@@ -868,6 +869,45 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { query: ReportPeriodQuery },
     responses: { 200: json(SessionCompliance, 'Compliance'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/exports`,
+    tags: ['report'],
+    summary: 'Queue a semester rekap file for the school report system (xlsx) or the signed archive (pdf)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateExportRequest } } } },
+    responses: { 202: json(ExportJob, 'Queued'), ...errors(400, 401, 403, 404, 409, 422) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exports`,
+    tags: ['report'],
+    summary: "The caller's own exports, newest first",
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(ExportJobList, 'Exports'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exports/{exportId}`,
+    tags: ['report'],
+    summary: 'One export (poll until done or failed)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ExportIdParam },
+    responses: { 200: json(ExportJob, 'Export'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/exports/{exportId}/download`,
+    tags: ['report'],
+    summary: 'A 5-minute presigned URL that saves the finished file',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: ExportIdParam },
+    responses: { 200: json(ExportDownload, 'Download'), ...errors(401, 403, 404, 409) },
   });
   registry.registerComponent('securitySchemes', 'actionLink', {
     type: 'apiKey',
