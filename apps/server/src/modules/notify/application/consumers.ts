@@ -15,6 +15,7 @@ import {
   mbgForecastRows,
   mbgPicPhone,
   pklMentorNotice,
+  pklMissingNotice,
   portalGuardians,
   releasedPickup,
   schoolOf,
@@ -343,5 +344,28 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, deliverConsumer(deps.sender)];
+  /** PKL-02: a student who has not checked in by 10.00 gets one reminder on their own login number. */
+  const pklMissing = defineConsumer({
+    name: 'notify_pkl_checkin_missing',
+    event: 'pkl.checkin_missing',
+    async handle(tx, event) {
+      const [school, notice] = await Promise.all([schoolOf(tx, event.schoolId), pklMissingNotice(tx, event.payload.sessionId)]);
+      if (!school || !notice) return;
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'pkl_checkin_missing',
+        enrollmentId: null,
+        // The student signs in to check in, so no action link is minted.
+        recipients: [{ phone: notice.phone }],
+        dedupKey: () => `pkl_missing:${event.payload.sessionId}`,
+        params: { school: school.name, first_name: firstName(notice.studentName), partner: notice.partnerName, url: `${deps.appUrl}/portal/pkl` },
+        appUrl: deps.appUrl,
+        now: deps.now?.(),
+      });
+    },
+  });
+
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, deliverConsumer(deps.sender)];
 }
