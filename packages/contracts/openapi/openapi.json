@@ -3964,6 +3964,477 @@
           "items"
         ]
       },
+      "ReportSemesterList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "academicYear": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2
+                },
+                "startsOn": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "endsOn": {
+                  "type": "string",
+                  "format": "date"
+                }
+              },
+              "required": [
+                "id",
+                "academicYear",
+                "number",
+                "startsOn",
+                "endsOn"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ClassRecapList": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "counts": {
+                  "$ref": "#/components/schemas/AttendanceCounts"
+                },
+                "days": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "presentRate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "grade": {
+                  "type": "integer"
+                },
+                "homeroom": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
+                },
+                "students": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "counts",
+                "days",
+                "presentRate",
+                "id",
+                "name",
+                "grade",
+                "homeroom",
+                "students"
+              ]
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "items"
+        ]
+      },
+      "AttendanceCounts": {
+        "type": "object",
+        "properties": {
+          "H": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "S": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "I": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "A": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "T": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ClassRecapDetail": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "class": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "grade": {
+                "type": "integer"
+              },
+              "homeroom": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "grade",
+              "homeroom"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "counts": {
+                  "$ref": "#/components/schemas/AttendanceCounts"
+                },
+                "days": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "presentRate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "studentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "nisn": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "localId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "counts",
+                "days",
+                "presentRate",
+                "enrollmentId",
+                "studentId",
+                "name",
+                "nisn",
+                "localId",
+                "active"
+              ]
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "counts": {
+                "$ref": "#/components/schemas/AttendanceCounts"
+              },
+              "days": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "presentRate": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "counts",
+              "days",
+              "presentRate"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "class",
+          "items",
+          "totals"
+        ]
+      },
+      "SessionCompliance": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "sessions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "filled": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "filledLate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "missed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "open": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fillRate": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "sessions",
+              "filled",
+              "filledLate",
+              "missed",
+              "open",
+              "fillRate"
+            ]
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sessions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "filled": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "filledLate": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "missed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "open": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "fillRate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "teacher": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
+                }
+              },
+              "required": [
+                "sessions",
+                "filled",
+                "filledLate",
+                "missed",
+                "open",
+                "fillRate",
+                "teacher"
+              ]
+            }
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sessions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "filled": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "filledLate": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "missed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "open": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "fillRate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                }
+              },
+              "required": [
+                "sessions",
+                "filled",
+                "filledLate",
+                "missed",
+                "open",
+                "fillRate",
+                "date"
+              ]
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "totals",
+          "teachers",
+          "days"
+        ]
+      },
       "ActionLinkContext": {
         "type": "object",
         "properties": {
@@ -10084,6 +10555,337 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PortalAttendance"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/semesters": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Semesters of the active year (period picker for rekap and exports)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Semesters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportSemesterList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/attendance/classes": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Rekap S/I/A per rombel for a period (RKP-01); wali kelas see their own rombel",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rekap per rombel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassRecapList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/attendance/classes/{classId}": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Rekap S/I/A per student of one rombel for a period (RKP-01, RKP-02)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "classId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rekap per siswa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassRecapDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/session-compliance": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Session filling compliance per teacher and day (RKP-04, wakasek and kepsek)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compliance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionCompliance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }
