@@ -20,3 +20,9 @@ export const canReadPklAssessment = anyRole('admin', 'wakasek', 'humas_pkl', 'ke
 
 /** Exports the assessment results (PKL-04): everyone who reads them except the industry supervisors, who only see their own students. */
 export const canExportPklAssessment = anyRole('admin', 'wakasek', 'humas_pkl', 'kepsek', 'pembimbing_pkl', 'guru');
+
+/** Keeps the alumni list and enters tracer answers (PKL-05). The BKK has no role of its own: humas PKL, wakasek and admin do it. */
+export const canManageTracer = canManagePkl;
+
+/** Reads the alumni list and the BMW recap: the managers and kepsek. */
+export const canReadTracer = canSeeAllPkl;

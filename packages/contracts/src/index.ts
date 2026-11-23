@@ -71,3 +71,4 @@ export * from './pkl/supervision';
 export * from './pkl/reviews';
 export * from './pkl/journals';
 export * from './pkl/assessment';
+export * from './pkl/tracer';

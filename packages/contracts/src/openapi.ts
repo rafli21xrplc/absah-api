@@ -123,6 +123,7 @@ import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStuden
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
 import { PklAssessmentExportQuery } from './pkl/assessment';
+import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, TracerAlumniList, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
 import {
@@ -1929,6 +1930,37 @@ function buildRegistry(): OpenAPIRegistry {
       },
       ...errors(400, 401, 403, 404),
     },
+  });
+  const tracerNote = 'Tracer study (PKL-05, capability pkl.tracer). Managers (admin, wakasek, humas_pkl) keep the alumni list and enter answers; kepsek reads; others 403. Status BMW = bekerja, melanjutkan, wirausaha.';
+  const tracerPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok: z.ZodType; label: string; write?: boolean; status?: number }[] = [
+    { method: 'get', path: '/tracer/alumni', summary: 'Alumni with their answer, newest angkatan first', request: { query: TracerAlumniQuery }, ok: TracerAlumniList, label: 'Alumni' },
+    { method: 'post', path: '/tracer/alumni', summary: 'Add one alumnus by hand', request: { body: { content: { 'application/json': { schema: CreateTracerAlumnusRequest } } } }, ok: TracerAlumnus, label: 'Alumnus', write: true, status: 201 },
+    { method: 'post', path: '/tracer/alumni/from-class', summary: 'Copy the active students of a rombel into the alumni list (those already there are skipped)', request: { body: { content: { 'application/json': { schema: AlumniFromClassRequest } } } }, ok: AlumniFromClassResult, label: 'Result', write: true },
+    { method: 'put', path: '/tracer/alumni/{alumnusId}/response', summary: 'Enter or replace the answer of an alumnus (source bkk)', request: { params: TracerAlumnusIdParam, body: { content: { 'application/json': { schema: SaveTracerResponseRequest } } } }, ok: TracerAlumnus, label: 'Alumnus', write: true },
+    { method: 'get', path: '/tracer/recap', summary: 'BMW recap per angkatan and jurusan', ok: TracerRecap, label: 'Recap' },
+  ];
+  for (const p of tracerPaths) {
+    registry.registerPath({
+      method: p.method,
+      path: `${API_BASE_PATH}${p.path}`,
+      tags: ['pkl'],
+      summary: p.summary,
+      description: tracerNote,
+      security: [{ session: [] }],
+      parameters: p.write ? [{ ...schoolHeader, required: true }, idempotencyHeader] : [{ ...schoolHeader, required: true }],
+      request: p.request,
+      responses: { [p.status ?? 200]: json(p.ok, p.label), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
+    });
+  }
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tracer/export.xlsx`,
+    tags: ['pkl'],
+    summary: 'The tracer study as Excel: BMW recap and every alumnus with the answer',
+    description: tracerNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: { description: 'The file', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } }, ...errors(401, 403, 404) },
   });
   const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
   const liaisonPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [

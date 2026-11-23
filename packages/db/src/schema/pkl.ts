@@ -1,4 +1,4 @@
-import { PKL_CHECKIN_KINDS, PKL_CONFIRM_STATUSES, PKL_DEFAULT_RADIUS_M, PKL_JOURNAL_STATUSES, PKL_PLACEMENT_STATUSES, PKL_REVIEW_REASONS } from '@absah/contracts';
+import { TRACER_SOURCES, TRACER_STATUSES, PKL_CHECKIN_KINDS, PKL_CONFIRM_STATUSES, PKL_DEFAULT_RADIUS_M, PKL_JOURNAL_STATUSES, PKL_PLACEMENT_STATUSES, PKL_REVIEW_REASONS } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -19,7 +19,8 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { enrollments } from './academic';
+import { classStream, enrollments, students } from './academic';
+import { encryptedText } from '../crypto';
 import { createdAt, id, schoolId } from './_shared';
 import { user } from './auth';
 import { schools } from './platform';
@@ -29,6 +30,8 @@ export const pklCheckinKind = pgEnum('pkl_checkin_kind', PKL_CHECKIN_KINDS);
 export const pklConfirmStatus = pgEnum('pkl_confirm_status', PKL_CONFIRM_STATUSES);
 export const pklReviewReason = pgEnum('pkl_review_reason', PKL_REVIEW_REASONS);
 export const pklJournalStatus = pgEnum('pkl_journal_status', PKL_JOURNAL_STATUSES);
+export const tracerStatus = pgEnum('tracer_status', TRACER_STATUSES);
+export const tracerSource = pgEnum('tracer_source', TRACER_SOURCES);
 
 const schoolRef = () => schoolId().references(() => schools.id, { onDelete: 'cascade' });
 const userRef = (name: string) => uuid(name).references(() => user.id, { onDelete: 'set null' });
@@ -246,5 +249,51 @@ export const pklAssessmentScores = pgTable(
     index('pkl_assessment_scores_school_id_idx').on(t.schoolId),
     check('pkl_assessment_scores_score_check', sql`${t.score} between 0 and 100`),
   ],
+);
+
+/**
+ * Alumni of the school for the tracer study (PKL-05). Not a student row: a graduate is no longer in any rombel, and the BKK may
+ * add people who never were in Absah. student_id links the ones copied from a rombel. The WhatsApp number is encrypted.
+ */
+export const tracerAlumni = pgTable(
+  'tracer_alumni',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    name: text('name').notNull(),
+    nisn: text('nisn'),
+    graduationYear: smallint('graduation_year').notNull(),
+    stream: classStream('stream'),
+    studentId: uuid('student_id').references(() => students.id, { onDelete: 'set null' }),
+    phone: encryptedText('phone', 'tracer_alumni.phone'),
+    createdBy: userRef('created_by'),
+    createdAt: createdAt(),
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('tracer_alumni_school_id_student_id_key').on(t.schoolId, t.studentId).where(sql`${t.studentId} is not null`),
+    index('tracer_alumni_school_id_year_idx').on(t.schoolId, t.graduationYear),
+    check('tracer_alumni_year_check', sql`${t.graduationYear} between 1990 and 2100`),
+  ],
+);
+
+/** The answer of one alumnus (one row, replaced when answered again). organization and position are encrypted: where a person works is personal data. */
+export const tracerResponses = pgTable(
+  'tracer_responses',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    alumnusId: uuid('alumnus_id')
+      .notNull()
+      .references(() => tracerAlumni.id, { onDelete: 'cascade' }),
+    status: tracerStatus('status').notNull(),
+    organization: encryptedText('organization', 'tracer_responses.organization'),
+    position: encryptedText('position', 'tracer_responses.position'),
+    source: tracerSource('source').notNull(),
+    enteredBy: userRef('entered_by'),
+    answeredAt: at('answered_at').notNull().defaultNow(),
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [unique('tracer_responses_alumnus_id_key').on(t.alumnusId), index('tracer_responses_school_id_idx').on(t.schoolId)],
 );
 
