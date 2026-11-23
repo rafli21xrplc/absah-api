@@ -11,7 +11,7 @@ import { buildTestApp } from './harness';
 
 const logger = pino({ level: 'silent' });
 const t = buildTestApp();
-const app = createApp({ logger, version: '1.2.3', auth: t.auth, ipHeaders: ['cf-connecting-ip'], appUrl: 'http://localhost:3000' });
+const app = createApp({ logger, version: '1.2.3', auth: t.auth, ipHeaders: ['cf-connecting-ip'], appUrl: 'http://localhost:3000', storage: t.storage });
 
 afterAll(() => t.cleanup());
 
