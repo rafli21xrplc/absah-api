@@ -6,7 +6,7 @@ import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import { correctionsRouter, sessionsRouter } from './modules/attendance';
 import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
-import { linksRouter } from './modules/portal';
+import { linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
@@ -79,6 +79,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(gateRouter(auth));
   v1.use(kioskRouter());
   v1.use(notificationsRouter(auth));
+  v1.use(portalRouter(auth));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });

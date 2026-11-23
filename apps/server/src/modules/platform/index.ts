@@ -12,3 +12,4 @@ export {
   deleteExpiredIdempotencyKeys,
   idempotencyCleanupHandler,
 } from './jobs/idempotency-cleanup';
+export { ensurePhoneLogin, hasActiveMembership, loginPhoneOf, setPortalMembership } from './application/portal-access';

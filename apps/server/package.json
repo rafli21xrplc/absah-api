@@ -13,6 +13,7 @@
     "school:create": "tsx src/entrypoints/create-school.ts",
     "attendance:generate": "tsx src/entrypoints/generate-sessions.ts",
     "gate:load-fixture": "tsx src/entrypoints/gate-load-fixture.ts",
+    "notify:last-link": "tsx src/entrypoints/notify-last-link.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
