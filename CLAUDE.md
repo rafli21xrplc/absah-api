@@ -693,6 +693,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   EXAM_MANAGERS wakasek+admin write, EXAM_VIEWERS add kepsek and wali_kelas (own rombel, next slice). periodProblem
   (pure): end >= start, attendance_from <= start, fee types only with require_paid. Audit key `period` for the title.
   Who may sit is NEVER stored: computed live from attendance and bills (next slice), so it changes when a bill is paid.
+- Boleh ujian (UJN-02, application/eligibility.ts): GET /exam/periods/{id}/eligibility?classId=&show=ineligible|all.
+  Computed LIVE per call (nothing stored): pure domain/eligibility.ts `evaluateEligibility(rule, counts, unpaid)`.
+  Attendance % = (H+T [+S+I when excused_counts]) / days with a daily_attendance record, from attendance_from (default
+  the year's first day) to min(first exam day, today); no record at all = not held to the rule; percent is CUT to one
+  decimal (never rounded up to look compliant). Bills: unpaid installments of OPEN bills due on or before the first exam
+  day (fee_type_ids, empty = all); reasons carry the count, never the amount. Wali kelas: own rombels only
+  (classes.homeroom_teacher_id), another rombel's classId = 404; wakasek/kepsek/admin all.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once
