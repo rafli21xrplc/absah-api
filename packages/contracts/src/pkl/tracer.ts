@@ -120,3 +120,23 @@ export const TracerRecap = z
   })
   .meta({ id: 'TracerRecap' });
 export type TracerRecap = z.infer<typeof TracerRecap>;
+
+/** How long an alumnus may answer (and change the answer) through the WhatsApp link. */
+export const TRACER_LINK_DAYS = 30;
+/** The web page the link opens; the token follows in the #fragment. */
+export const TRACER_LINK_PATH = '/alumni';
+
+/**
+ * GET /api/v1/tracer/form (Authorization: Tracer <token>): what the alumni page shows. First name only: a link can be forwarded.
+ * `response` is the current answer, so opening the link again shows it and a change replaces it.
+ */
+export const TracerFormContext = z
+  .object({
+    schoolName: z.string(),
+    firstName: z.string(),
+    graduationYear: z.int(),
+    response: z.object({ status: TracerStatus, organization: z.string().nullable(), position: z.string().nullable(), answeredAt: z.iso.datetime({ offset: true }) }).nullable(),
+    expiresAt: z.iso.datetime({ offset: true }),
+  })
+  .meta({ id: 'TracerFormContext' });
+export type TracerFormContext = z.infer<typeof TracerFormContext>;

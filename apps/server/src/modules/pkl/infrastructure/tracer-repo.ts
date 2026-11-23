@@ -83,3 +83,21 @@ export async function alumniStudentIds(tx: Tx): Promise<Set<string>> {
   const rows = await tx.select({ id: al.studentId }).from(al).where(isNotNull(al.studentId));
   return new Set(rows.flatMap((r) => (r.id ? [r.id] : [])));
 }
+
+const tl = schema.tracerLinks;
+
+/** The link with this token hash, locked when the caller is about to write through it. */
+export async function findTracerLink(tx: Tx, tokenHash: string, lock: boolean) {
+  const query = tx.select().from(tl).where(eq(tl.tokenHash, tokenHash));
+  const [row] = lock ? await query.for('update') : await query;
+  return row;
+}
+
+export const markTracerLinkOpened = (tx: Tx, id: string, at: Date) => tx.update(tl).set({ lastOpenedAt: at }).where(eq(tl.id, id));
+
+/** What the capability resolver needs, and the name the page shows. */
+export async function schoolProfile(tx: Tx, schoolId: string) {
+  const s = schema.schools;
+  const [row] = await tx.select({ id: s.id, name: s.name, level: s.level, isMadrasah: s.isMadrasah, timezone: s.timezone }).from(s).where(eq(s.id, schoolId));
+  return row;
+}

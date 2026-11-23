@@ -297,3 +297,23 @@ export const tracerResponses = pgTable(
   (t) => [unique('tracer_responses_alumnus_id_key').on(t.alumnusId), index('tracer_responses_school_id_idx').on(t.schoolId)],
 );
 
+
+/**
+ * The link an alumnus gets over WhatsApp to answer the tracer study without an account (PKL-05). Only the HMAC of the secret is
+ * stored; it is valid for TRACER_LINK_DAYS and the alumnus may change the answer until then. The BKK's invitation may mint a new one.
+ */
+export const tracerLinks = pgTable(
+  'tracer_links',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    alumnusId: uuid('alumnus_id')
+      .notNull()
+      .references(() => tracerAlumni.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: at('expires_at').notNull(),
+    lastOpenedAt: at('last_opened_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('tracer_links_token_hash_key').on(t.tokenHash), index('tracer_links_school_id_alumnus_id_idx').on(t.schoolId, t.alumnusId)],
+);

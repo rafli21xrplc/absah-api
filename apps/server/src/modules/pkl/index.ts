@@ -7,6 +7,7 @@ export { pklReviewsRouter } from './http/reviews';
 export { pklJournalsRouter } from './http/journals';
 export { pklAssessmentsRouter } from './http/assessments';
 export { pklTracerRouter } from './http/tracer';
+export { pklTracerFormRouter } from './http/tracer-form';
 export { MISSING_CHECKIN_CRON, MISSING_CHECKIN_QUEUE, missingCheckinHandler } from './jobs/missing-checkin';
 export { remindMissingCheckins } from './application/reviews';
 export { AUTO_CONFIRM_CRON, AUTO_CONFIRM_QUEUE, autoConfirmHandler } from './jobs/auto-confirm';
