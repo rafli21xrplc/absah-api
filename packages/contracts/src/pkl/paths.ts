@@ -1,5 +1,16 @@
 import type { z } from 'zod';
 import { PklCheckin, PklCheckinBody, PklToday } from './checkins';
+import {
+  CreatePklAttachmentRequest,
+  CreatePklAttachmentResponse,
+  PklAttachmentLink,
+  PklJournal,
+  PklJournalIdParam,
+  PklJournalList,
+  PklJournalQuery,
+  ReviewPklJournalRequest,
+  WritePklJournalRequest,
+} from './journals';
 import { DecidePklDayRequest, PklDayDecision, PklReviewList, PklSessionIdParam } from './reviews';
 import { ConfirmPklCheckinsRequest, DisputePklCheckinRequest, PklCheckinIdParam, PklSupervisionDay, PklSupervisionQuery } from './supervision';
 import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
@@ -125,5 +136,51 @@ export const PKL_PATHS: PklPath[] = [
     ok: PklDayDecision,
     label: 'Decided',
     write: true,
+  },
+  {
+    method: 'get',
+    path: '/pkl/journals',
+    summary: 'Jurnal PKL: the student their own, a supervisor their placements, leaders all; newest first, default last 31 days',
+    request: { query: PklJournalQuery },
+    ok: PklJournalList,
+    label: 'Journals',
+  },
+  {
+    method: 'post',
+    path: '/pkl/journals/attachments',
+    summary: 'Presigned PUT for a journal photo or file (siswa)',
+    request: { body: CreatePklAttachmentRequest },
+    ok: CreatePklAttachmentResponse,
+    label: 'Upload',
+    write: true,
+    status: 201,
+  },
+  {
+    method: 'post',
+    path: '/pkl/journals',
+    summary: "Write or rewrite the journal of a date (default today, up to 7 days back) inside the running placement (siswa)",
+    description: 'attachment undefined keeps, null removes. 409 no_placement; 409 approved once approved; a rewrite goes back to submitted.',
+    request: { body: WritePklJournalRequest },
+    ok: PklJournal,
+    label: 'Journal',
+    write: true,
+  },
+  {
+    method: 'post',
+    path: '/pkl/journals/{journalId}/review',
+    summary: 'Approve a journal or ask for a revision (guru pembimbing, pembimbing industri of the placement, PKL managers)',
+    description: '409 not_submitted when already reviewed.',
+    request: { params: PklJournalIdParam, body: ReviewPklJournalRequest },
+    ok: PklJournal,
+    label: 'Journal',
+    write: true,
+  },
+  {
+    method: 'get',
+    path: '/pkl/journals/{journalId}/attachment',
+    summary: "5-minute link to the journal's attachment",
+    request: { params: PklJournalIdParam },
+    ok: PklAttachmentLink,
+    label: 'Link',
   },
 ];

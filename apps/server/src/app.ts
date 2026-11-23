@@ -10,7 +10,7 @@ import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { activitiesRouter, habitsRouter, memorizationRouter } from './modules/activity';
 import { tppkRouter, uksRouter } from './modules/student-affairs';
-import { pklCheckinsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
+import { pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
@@ -98,6 +98,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(pklCheckinsRouter(auth));
   v1.use(pklSupervisionRouter(auth));
   v1.use(pklReviewsRouter(auth));
+  v1.use(pklJournalsRouter(auth, storage));
   v1.use(gateRouter(auth, storage));
   v1.use(pickupRouter(auth, storage));
   v1.use(kioskRouter(storage));

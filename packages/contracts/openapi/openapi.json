@@ -6683,6 +6683,244 @@
         ],
         "additionalProperties": false
       },
+      "PklJournalList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PklJournal"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PklJournal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "placementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "className"
+            ]
+          },
+          "partnerName": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "activity": {
+            "type": "string"
+          },
+          "competency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "attachmentType": {
+            "$ref": "#/components/schemas/PklAttachmentType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PklJournalStatus"
+          },
+          "reviewNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "canReview": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "placementId",
+          "student",
+          "partnerName",
+          "date",
+          "activity",
+          "competency",
+          "attachmentType",
+          "status",
+          "reviewNote",
+          "reviewer",
+          "reviewedAt",
+          "canReview"
+        ]
+      },
+      "PklAttachmentType": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/pdf",
+          null
+        ]
+      },
+      "PklJournalStatus": {
+        "type": "string",
+        "enum": [
+          "submitted",
+          "approved",
+          "revision"
+        ]
+      },
+      "CreatePklAttachmentResponse": {
+        "type": "object",
+        "properties": {
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/PresignedUpload"
+          }
+        },
+        "required": [
+          "attachmentId",
+          "upload"
+        ]
+      },
+      "CreatePklAttachmentRequest": {
+        "type": "object",
+        "properties": {
+          "fileSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 5242880
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/PklAttachmentType"
+          }
+        },
+        "required": [
+          "fileSize",
+          "contentType"
+        ],
+        "additionalProperties": false
+      },
+      "WritePklJournalRequest": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "activity": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 2000
+          },
+          "competency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 300
+          },
+          "attachment": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "contentType": {
+                "$ref": "#/components/schemas/PklAttachmentType"
+              }
+            },
+            "required": [
+              "id",
+              "contentType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "activity"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewPklJournalRequest": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "revision"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "additionalProperties": false
+      },
+      "PklAttachmentLink": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ]
+      },
       "LiaisonThreadList": {
         "type": "object",
         "properties": {
@@ -20145,6 +20383,534 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pkl/journals": {
+      "get": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Jurnal PKL: the student their own, a supervisor their placements, leaders all; newest first, default last 31 days",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "placementId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/PklJournalStatus"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Journals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PklJournalList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Write or rewrite the journal of a date (default today, up to 7 days back) inside the running placement (siswa)",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads. attachment undefined keeps, null removes. 409 no_placement; 409 approved once approved; a rewrite goes back to submitted.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WritePklJournalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Journal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PklJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pkl/journals/attachments": {
+      "post": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Presigned PUT for a journal photo or file (siswa)",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePklAttachmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePklAttachmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pkl/journals/{journalId}/review": {
+      "post": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Approve a journal or ask for a revision (guru pembimbing, pembimbing industri of the placement, PKL managers)",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads. 409 not_submitted when already reviewed.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "One key per user action, reused on retry. Same key with a different body gives 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-:.]{8,128}$"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "journalId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPklJournalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Journal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PklJournal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pkl/journals/{journalId}/attachment": {
+      "get": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "5-minute link to the journal's attachment",
+        "description": "PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "journalId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PklAttachmentLink"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {
