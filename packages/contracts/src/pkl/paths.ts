@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { PklCheckin, PklCheckinBody, PklToday } from './checkins';
+import { ConfirmPklCheckinsRequest, DisputePklCheckinRequest, PklCheckinIdParam, PklSupervisionDay, PklSupervisionQuery } from './supervision';
 import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
 import { CreateDudiPartnerRequest, DudiPartner, DudiPartnerIdParam, DudiPartnerList, PklStaffList, PklStudentList, PklStudentQuery, UpdateDudiPartnerRequest } from './partners';
 
@@ -78,5 +79,33 @@ export const PKL_PATHS: PklPath[] = [
     label: 'Recorded',
     write: true,
     status: 201,
+  },
+  {
+    method: 'get',
+    path: '/pkl/supervision',
+    summary: "The industry supervisor's students on a date (default today): statuses only, never coordinates (pembimbing_industri)",
+    request: { query: PklSupervisionQuery },
+    ok: PklSupervisionDay,
+    label: 'Day',
+  },
+  {
+    method: 'post',
+    path: '/pkl/checkins/confirm',
+    summary: 'One click: confirm every pending check-in of their students that day, or the listed ones (pembimbing_industri)',
+    description: 'Writes H (T after opening time) with source pkl_confirm. Ids of another supervisor\'s students: 404, nothing written. Job pkl.auto-confirm confirms check-ins pending for 24 hours.',
+    request: { body: ConfirmPklCheckinsRequest },
+    ok: PklSupervisionDay,
+    label: 'Day',
+    write: true,
+  },
+  {
+    method: 'post',
+    path: '/pkl/checkins/{checkinId}/dispute',
+    summary: 'Dispute a pending check-in; the guru pembimbing decides (pembimbing_industri)',
+    description: '409 not_pending once confirmed or in review.',
+    request: { params: PklCheckinIdParam, body: DisputePklCheckinRequest },
+    ok: PklSupervisionDay,
+    label: 'Day',
+    write: true,
   },
 ];
