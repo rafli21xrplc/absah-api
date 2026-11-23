@@ -25,6 +25,7 @@ import { describeSettings, pinsForProfileChange, planOverride, type OverridePlan
 import { canManageSchoolSettings } from '../domain/policies';
 import {
   lockSchoolProfile,
+  readSetup,
   saveOverride,
   updateSchoolProfile as storeProfile,
   type StoredProfile,
@@ -37,7 +38,9 @@ async function load(tx: Tx, schoolId: string) {
   if (!profile) throw new NotFoundError('Sekolah tidak ditemukan.');
   const rows = await readCapabilityRows(tx);
   const today = schoolDate(profile.timezone);
-  return { profile, rows, today, tomorrow: addDays(today, 1) };
+  // Deferred capabilities only wait for tomorrow once the school runs (setup finished).
+  const setup = await readSetup(tx, schoolId);
+  return { profile, rows, today, tomorrow: setup?.completedAt ? addDays(today, 1) : null };
 }
 
 async function settings(tx: Tx, schoolId: string): Promise<SchoolCapabilitiesResponse> {

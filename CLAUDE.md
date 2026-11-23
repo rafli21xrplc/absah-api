@@ -118,7 +118,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   to the web. Guard routes with requireCap('<bool key>') after resolveContext({ school: 'required' }):
   disabled answers 404 CAPABILITY_DISABLED. Enum capabilities are read from req.ctx.caps in use cases.
 - school_capabilities: one row per (school, key). Deferred keys (DEFERRED_CAPABILITIES, today only
-  attendance.mode) keep previous_value until effective_from (tomorrow, school timezone); a null value
+  attendance.mode) keep previous_value until effective_from (tomorrow, school timezone) once the
+  school finished setup (before that no sessions exist, so changes apply at once); a null value
   means "back to the preset". Stored values the catalog rejects are ignored with a warning.
 - Settings endpoints (modules/academic, admin only, idempotent, audited): PATCH /school/profile
   (re-applies presets, keeps overrides, pins attendance.mode until tomorrow when the preset would
