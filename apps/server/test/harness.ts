@@ -50,6 +50,7 @@ export function buildTestApp() {
   return {
     app,
     auth,
+    config,
     messageSender,
     paymentProvider,
     storage,

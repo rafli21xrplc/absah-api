@@ -421,6 +421,19 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   link; queueMessages recipients without guardianId get none): total present + "1A 28, 1B 25 (3 belum
   diisi)" on one line (template params cannot hold line breaks). Templates added in migration 0039.
 
+## Pilot data (prompt 4.4, packages/db/seed)
+- pilotPlan() (seed/pilot-plan.ts) is pure and deterministic (seed 20270111): "SMA Absah Uji 1" (NPSN
+  99999911, Asia/Jakarta), year 2026/2027 with semester 2 from 2027-01-11, jam 1-9 Mon-Thu and 1-6 Fri,
+  36 rombel X-1..XII-12 (XI/XII 1-6 ipa, 7-12 ips) x 25 synthetic students (NISN 99<grade><n>), one
+  guardian each (+628119<n>, synthetic), 82 teachers placed greedily (one subject, <= 24 lessons, never
+  twice at a time; each rombel's wali kelas teaches it; guru001-002 also piket), and mapel pilihan for
+  XI/XII: two blocks of 4 lessons where every student is in one of 8 groups. Tests check all of it.
+- writePilot (seed/pilot.ts) inserts it in one tenant transaction; `PILOT_PASSWORD=... pnpm --filter
+  @absah/server pilot:seed` creates the staff accounts (<key>@pilot.absah.test: admin, kepsek, wakasek,
+  operator, guru001...) and runs it once (a second run prints the existing school). It refuses unless
+  WHATSAPP_PROVIDER=fake: the guardian numbers are invented and must never receive messages.
+- Parallel run of X-1 (11-22 Jan 2027) on staging: `attendance:generate --school <id> --date 2027-01-11 --force`.
+
 ## Workspace billing (BIL, modules/subscription, packages/db/src/schema/subscription.ts)
 - Pure rules in domain/invoice.ts computeInvoice(enrollments, exemptDays, month): Rp10.000 per active
   student per month, pro rata per calendar day (active days / days in month), a student counts once per
