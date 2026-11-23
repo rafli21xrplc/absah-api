@@ -114,6 +114,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - school_capabilities: one row per (school, key). Deferred keys (DEFERRED_CAPABILITIES, today only
   attendance.mode) keep previous_value until effective_from (tomorrow, school timezone); a null value
   means "back to the preset". Stored values the catalog rejects are ignored with a warning.
+- Settings endpoints (modules/academic, admin only, idempotent, audited): PATCH /school/profile
+  (re-applies presets, keeps overrides, pins attendance.mode until tomorrow when the preset would
+  switch it), GET|PUT /school/capabilities (PUT is partial; null = back to preset; keys under a
+  kill switch -> 409 CONFLICT).
 - platform_flags (kill switches) are set by the Absah team with the owner role, e.g.
   insert into platform_flags (id, key, value, school_id, reason) values (gen_random_uuid(),
   'pkl.enabled', 'false', null, 'incident #12'); a per-school row beats the global row. The app role

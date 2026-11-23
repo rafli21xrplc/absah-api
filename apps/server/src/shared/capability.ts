@@ -1,12 +1,15 @@
 import {
-  isCapabilityKey,
-  parseCapabilityValue,
+  effectiveOverrides,
+  killSwitches,
   resolveCapabilities,
   type BoolCapability,
   type CapabilityValues,
+  type FlagRow,
+  type InvalidCapabilityHandler,
   type Level,
+  type OverrideRow,
 } from '@absah/capabilities';
-import { schema } from '@absah/db';
+import { schema, type Tx } from '@absah/db';
 import type { RequestHandler } from 'express';
 import type { Logger } from 'pino';
 import { getCtx } from './context';
@@ -20,56 +23,9 @@ export interface SchoolProfile {
   timezone: string;
 }
 
-export interface OverrideRow {
-  key: string;
-  value: unknown;
-  previousValue: unknown;
-  effectiveFrom: string | null;
-}
-
-export interface FlagRow {
-  key: string;
-  value: unknown;
-  schoolId: string | null;
-}
-
-type Invalid = (key: string, source: 'override' | 'kill_switch') => void;
-
-/** The override in force on `today` per key (deferred rows keep previous_value until then). */
-export function effectiveOverrides(rows: OverrideRow[], today: string, onInvalid: Invalid = () => {}) {
-  const out: Partial<Record<keyof CapabilityValues, unknown>> = {};
-  for (const row of rows) {
-    const value = row.effectiveFrom === null || row.effectiveFrom <= today ? row.value : row.previousValue;
-    if (value === null || value === undefined) continue;
-    if (!isCapabilityKey(row.key) || !parseCapabilityValue(row.key, value).ok) {
-      onInvalid(row.key, 'override');
-      continue;
-    }
-    out[row.key] = value;
-  }
-  return out as Partial<CapabilityValues>;
-}
-
-/** Kill switches: global rows first, then the school's own rows win. */
-export function killSwitches(rows: FlagRow[], onInvalid: Invalid = () => {}) {
-  const out: Partial<Record<keyof CapabilityValues, unknown>> = {};
-  for (const row of [...rows].sort((a, b) => Number(a.schoolId !== null) - Number(b.schoolId !== null))) {
-    if (!isCapabilityKey(row.key) || !parseCapabilityValue(row.key, row.value).ok) {
-      onInvalid(row.key, 'kill_switch');
-      continue;
-    }
-    out[row.key] = row.value;
-  }
-  return out as Partial<CapabilityValues>;
-}
-
-/** Resolves the capabilities of the active school (once per request, from resolveContext). */
-export async function loadCapabilities(
-  ctx: { schoolId: string; userId: string | null },
-  profile: SchoolProfile,
-  logger?: Logger,
-): Promise<CapabilityValues> {
-  const { overrides, flags } = await withTenant(ctx, async (tx) => ({
+/** Override and kill-switch rows visible to the current withTenant transaction. */
+export async function readCapabilityRows(tx: Tx): Promise<{ overrides: OverrideRow[]; flags: FlagRow[] }> {
+  return {
     overrides: await tx
       .select({
         key: schema.schoolCapabilities.key,
@@ -81,15 +37,35 @@ export async function loadCapabilities(
     flags: await tx
       .select({ key: schema.platformFlags.key, value: schema.platformFlags.value, schoolId: schema.platformFlags.schoolId })
       .from(schema.platformFlags),
-  }));
-  // A stored key or value the catalog no longer accepts is ignored, never fatal.
-  const onInvalid: Invalid = (key, source) => logger?.warn({ key, source, schoolId: ctx.schoolId }, 'invalid capability ignored');
+  };
+}
+
+/** All five layers for one school on `today`. */
+export function resolveFromRows(
+  profile: Pick<SchoolProfile, 'level' | 'isMadrasah'>,
+  rows: { overrides: OverrideRow[]; flags: FlagRow[] },
+  today: string,
+  onInvalid?: InvalidCapabilityHandler,
+): CapabilityValues {
   return resolveCapabilities({
     level: profile.level,
     isMadrasah: profile.isMadrasah,
-    overrides: effectiveOverrides(overrides, schoolDate(profile.timezone), onInvalid),
-    killSwitches: killSwitches(flags, onInvalid),
+    overrides: effectiveOverrides(rows.overrides, today, onInvalid),
+    killSwitches: killSwitches(rows.flags, onInvalid),
   });
+}
+
+/** Resolves the capabilities of the active school (once per request, from resolveContext). */
+export async function loadCapabilities(
+  ctx: { schoolId: string; userId: string | null },
+  profile: SchoolProfile,
+  logger?: Logger,
+): Promise<CapabilityValues> {
+  const rows = await withTenant(ctx, readCapabilityRows);
+  // A stored key or value the catalog no longer accepts is ignored, never fatal.
+  const onInvalid: InvalidCapabilityHandler = (key, source) =>
+    logger?.warn({ key, source, schoolId: ctx.schoolId }, 'invalid capability ignored');
+  return resolveFromRows(profile, rows, schoolDate(profile.timezone), onInvalid);
 }
 
 /**
