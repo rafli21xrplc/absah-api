@@ -6,3 +6,4 @@ export * from './academic/school-settings';
 export * from './platform/invitations';
 export * from './academic/enums';
 export * from './academic/imports';
+export * from './academic/registry';
