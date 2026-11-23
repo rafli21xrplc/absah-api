@@ -25,7 +25,7 @@ const messageSender = new (class extends FakeMessageSender {
 })();
 const auth = createAuth({ db, config, messageSender });
 
-const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage: createObjectStorage(config) });
+const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage: createObjectStorage(config), kioskOrigins: config.KIOSK_ORIGINS });
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'http listening');
 });

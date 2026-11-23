@@ -1,4 +1,4 @@
-import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
+import { Arrival, BindCardDeviceRequest, CardDeviceKeys, GateToday, ManualArrivalRequest, DeviceIdParam, KioskDevice, KioskDeviceList, KioskIdParam, KioskPairing, MyCards } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import { auditContext } from '../../../shared/audit';
 import { requireCap } from '../../../shared/capability';
@@ -7,6 +7,7 @@ import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { schoolDate } from '../../../shared/school-date';
 import { resolveContext, type Auth } from '../../platform';
+import { gateToday, recordManualArrival } from '../application/arrivals';
 import { bindCardDevice, getDeviceKeys, getMyCards } from '../application/cards';
 import { createPairing, getKiosks, revoke } from '../application/kiosks';
 
@@ -16,7 +17,7 @@ function schoolClock(req: Request) {
   return { timezone, today: schoolDate(timezone), holder: ctx.caps['card.holder'] ?? 'student' };
 }
 
-/** Kiosk management (admin) and card binding (holders); everything behind gate.enabled. */
+/** Kiosk management (admin), card binding (holders) and piket (GRB-05/06); all behind gate.enabled. */
 export function gateRouter(auth: Auth): Router {
   const router = Router();
   const gate = [resolveContext(auth, { school: 'required' }), requireCap('gate.enabled')];
@@ -44,6 +45,14 @@ export function gateRouter(auth: Auth): Router {
   router.get('/cards/devices/:deviceId/keys', ...gate, async (req, res) => {
     const { timezone, today } = schoolClock(req);
     sendContract(res, CardDeviceKeys, await getDeviceKeys(getActor(req), timezone, today, DeviceIdParam.parse(req.params).deviceId));
+  });
+
+  router.post('/gate/arrivals', ...gate, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, Arrival, await recordManualArrival(actor, auditContext(req, actor), schoolClock(req).timezone, ManualArrivalRequest.parse(req.body)));
+  });
+  router.get('/gate/today', ...gate, async (req, res) => {
+    sendContract(res, GateToday, await gateToday(getActor(req), schoolClock(req).timezone));
   });
 
   return router;

@@ -69,6 +69,7 @@ import {
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
+import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
 import { KioskDay, KioskScanBatch, KioskScanResults } from './gate/scans';
 import { KioskDevice, KioskDeviceList, KioskHeartbeatRequest, KioskHeartbeatResponse, KioskIdParam, KioskPairing, PairKioskRequest, PairKioskResponse } from './gate/kiosks';
 import {
@@ -749,6 +750,27 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...idempotencyHeader, required: true }],
     request: { body: { content: { 'application/json': { schema: KioskScanBatch } } } },
     responses: { 200: json(KioskScanResults, 'Results'), ...errors(400, 401, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/gate/arrivals`,
+    tags: ['gate'],
+    summary: 'Piket enters an arrival without a card scan (reason required, today only)',
+    description: `${gateNote} 409 already_arrived when the student is already in.`,
+    security: [{ session: [] }],
+    parameters: [...gateParams, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: ManualArrivalRequest } } } },
+    responses: { 200: json(Arrival, 'Recorded'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/gate/today`,
+    tags: ['gate'],
+    summary: 'Late arrivals and students not in yet (piket, admin, operator, wakasek, kepsek)',
+    description: gateNote,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    responses: { 200: json(GateToday, 'Today'), ...errors(401, 403, 404) },
   });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',
