@@ -29,6 +29,7 @@ export * from './activity/habits';
 export * from './activity/memorization';
 export * from './student-affairs/tppk';
 export * from './student-affairs/uks';
+export * from './student-affairs/points';
 export * from './notify/enums';
 export * from './notify/notifications';
 export * from './notify/preferences';

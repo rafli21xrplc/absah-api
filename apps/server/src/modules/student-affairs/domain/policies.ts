@@ -9,3 +9,7 @@ export const canAppointTppk = anyRole('admin');
 
 /** Who is on the team is announced to the school, so any staff member may see it. */
 export const canSeeTppkTeam = anyRole(...STAFF_ROLES);
+
+/** Point rules (KSW-01): the discipline team sets them, teachers read them to record entries (KSW-02). */
+export const canManagePointRules = anyRole('admin', 'wakasek');
+export const canReadPointRules = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru');

@@ -562,6 +562,15 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   notify_uks_sent_home (dipulangkan only) queues template student_sent_home (migration 0046, pending
   approval) per guardian with a phone: school, first name, time on the school clock (clockLabel) and the
   action link; dedup key sent_home:<visit>:<guardian>. Never the complaint or any note.
+- Point rules (KSW-01, behind student.points; migrations 0077-0078, schema point_rules): one table per school.
+  kind violation|achievement, category, name, points (smallint, CHECK: violation -100..-1, achievement 1..100, so the
+  sign always agrees with the kind; the contract refines the same rule), active. Switched off, never deleted
+  (absah_app has no DELETE): entries (5.8b) will keep a copy of what they cited. Name unique per school ignoring
+  case (409). GET /point-rules (admin, kepsek, wakasek, wali kelas, guru; ?all=true adds switched-off rules for
+  admin and wakasek only), POST and PUT /point-rules/{id} (admin, wakasek; idempotent; the kind cannot change, new
+  points keep its sign). Audit ksw.point_rule_created|updated logs the title as `rule`, not `name`: the audit
+  sanitiser redacts every key called name. New role guru_bk (membership_role) and capabilities student.points and
+  student.counseling (default true) arrive here; the BK notes themselves come in 5.8e.
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role
   'tppk'); reports, cases and case_events have RLS "school AND app.user_id in tppk.members", so admin,

@@ -9,7 +9,7 @@ import { gateRouter, kioskCors, kioskRouter, pickupRouter } from './modules/gate
 import { liaisonRouter, linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { activitiesRouter, habitsRouter, memorizationRouter } from './modules/activity';
-import { tppkRouter, uksRouter } from './modules/student-affairs';
+import { pointsRouter, tppkRouter, uksRouter } from './modules/student-affairs';
 import { pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
@@ -91,6 +91,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(correctionsRouter(auth));
   v1.use(leaveRouter(auth, storage));
   v1.use(uksRouter(auth));
+  v1.use(pointsRouter(auth));
   v1.use(tppkRouter(auth));
   v1.use(activitiesRouter(auth));
   v1.use(habitsRouter(auth));
