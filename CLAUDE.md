@@ -389,7 +389,14 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   3.6.7, pinned on purpose; 4.0.0 was 2 weeks old) and notify's pushToUser(tx, sender, userId, message): drops
   devices answering 404/410, succeeds when one device accepted, throws a retryable PushError only when none did.
   A PushMessage shows on a lock screen: never a name or any personal data, only "Ada tamu menunggu di gerbang"
-  style text plus a path; `tag` collapses repeats. Consumers using it arrive in 5.7e.
+  style text plus a path; `tag` collapses repeats.
+- Push consumers (5.7e, application/push-consumers.ts, registered in the worker only when VAPID is set):
+  notify_push_visitor_arrived (gate.visitor_arrived -> the named host, "Ada tamu menunggu Anda di gerbang."),
+  notify_push_session_unfilled (attendance.session_unfilled -> teacherId, link /sesi/<id>), notify_push_leave_requested
+  (leave.requested -> wali kelas of the student's rombel, only while pending and not made by that wali kelas;
+  tag leave-approval so several requests are one notification, link /izin). Titles are the school name; no student
+  name, number or reason ever (a test checks). A member without a device gets nothing and no error. Other
+  "antrean persetujuan" (pickup guardians, corrections) have no event yet: add one when they need push.
 - Exception to rule 3: the login OTP is sent inline from Better Auth's sendOTP (user waiting, no
   school for a tenant outbox, route rate limited). Everything else goes through the worker.
 

@@ -279,3 +279,18 @@ export async function deletePushSubscriptions(tx: Tx, ids: string[]) {
 export async function deletePushByEndpoint(tx: Tx, userId: string, endpointHash: string) {
   await tx.delete(ps).where(and(eq(ps.userId, userId), eq(ps.endpointHash, endpointHash)));
 }
+
+/**
+ * NTF-06: who decides a new izin. The wali kelas of the student's active rombel, only while the request is
+ * still pending and not made by that wali kelas themselves (theirs is approved at once).
+ */
+export async function leaveApprover(tx: Tx, leaveRequestId: string): Promise<string | undefined> {
+  const l = schema.leaveRequests;
+  const [row] = await tx
+    .select({ homeroom: schema.classes.homeroomTeacherId, requestedBy: l.requestedBy, status: l.status })
+    .from(l)
+    .innerJoin(schema.enrollments, eq(schema.enrollments.id, l.enrollmentId))
+    .innerJoin(schema.classes, eq(schema.classes.id, schema.enrollments.classId))
+    .where(eq(l.id, leaveRequestId));
+  return row && row.status === 'pending' && row.homeroom && row.homeroom !== row.requestedBy ? row.homeroom : undefined;
+}

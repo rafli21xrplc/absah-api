@@ -8,4 +8,5 @@ export { whatsappWebhookRouter, validSignature, type WhatsappWebhookConfig } fro
 export { NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, webhookHandler } from './jobs/webhook-job';
 export { lastActionLink } from './application/dev-tools';
 export { pushToUser } from './application/push';
+export { pushConsumers } from './application/push-consumers';
 export { pushRouter } from './http/push';
