@@ -9907,7 +9907,8 @@
           "tppk_team_changed",
           "pkl_mentor_assigned",
           "pkl_checkin_missing",
-          "student_discipline_threshold"
+          "student_discipline_threshold",
+          "student_bill_due"
         ]
       },
       "StudentContacts": {

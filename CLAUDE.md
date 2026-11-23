@@ -670,6 +670,14 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   unpaid. Money for an already paid installment (VA + QRIS both paid) or a bill voided meanwhile is recorded paid with
   last_error `paid_twice` / `bill_void` and counts nothing (no refunds built). expired/failed events mark the attempt so
   the parent can ask again.
+- Pengingat jatuh tempo (TGH-04, job tgh.remind-due every 5 min UTC, application/reminders.ts): per school from 08.00
+  on its own clock and only with student.billing on, every unpaid installment of an open bill due today..+3 days
+  (REMIND_DAYS_BEFORE, a missed day catches up) and not reminded gets `student_bill.reminder_due` {installmentId};
+  bill_installments.reminded_at is set in the same tx (FOR UPDATE SKIP LOCKED), so repeats remind nobody twice. Notify
+  consumer notify_student_bill_due sends WhatsApp template `student_bill_due` (migration 0092, approval 'pending',
+  provider name absah_student_bill_due_v1: SUBMIT IT) to each guardian with a number: school, first name, due date,
+  link; never the amount or the fee (dedup key bill_due:<installment>:<guardian>); an installment paid or voided
+  since is skipped. Not in MUTABLE_TEMPLATE_CODES (a parent cannot switch it off yet).
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once
