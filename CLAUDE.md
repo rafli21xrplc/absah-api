@@ -694,3 +694,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   3 h after closing; device clock > 10 min off; no industry supervisor) -> pending (industry supervisor
   confirms) or needs_review (guru pembimbing decides). A check-in after opening time is late: confirmed
   as T. GPS accuracy is stored, never widens the radius. The industry supervisor never sees coordinates.
+- Partners (http/partners.ts, application/partners.ts): managers canManagePkl = admin, wakasek, humas_pkl;
+  readers canSeeAllPkl add kepsek. GET|POST /pkl/partners, PATCH /pkl/partners/{id} (idempotent, audited
+  pkl.partner_created|updated; workHours replaced as a whole; name taken 409). Pickers for placements:
+  GET /pkl/students?q= (name or NISN, active this year), GET /pkl/school-mentors (active school staff:
+  STAFF_ROLES minus pembimbing_industri, who is not school staff). OpenAPI paths in contracts pkl/paths.ts.
