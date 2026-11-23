@@ -53,30 +53,37 @@ async function forEachSchool<T>(fn: (school: JobSchool) => Promise<T | null>, lo
 
 export type GenerateResult = { schoolDate: string; created: number } | { schoolDate: string; skipped: 'holiday' | 'not_school_day' };
 
+/**
+ * Sessions of one school date. Without force: once per date, only on school days. With force
+ * (ops CLI): also on other days and again after a schedule change (existing sessions are kept).
+ */
+export function generateForSchool(school: JobSchool, date: string, now: Date, options: { force?: boolean } = {}): Promise<GenerateResult | null> {
+  return withTenant({ schoolId: school.id, userId: null }, async (tx): Promise<GenerateResult | null> => {
+    await lockAttendanceDay(tx, school.id, date);
+    const day = await findDay(tx, date);
+    if (!options.force && (day?.generatedAt || day?.skippedReason)) return null;
+    const yearId = await activeYearId(tx);
+    if (!yearId) return null; // nothing to take attendance for yet; checked again next run
+
+    const check = isSchoolDay({ date, calendarKind: await calendarKind(tx, date), daysWithPeriods: await daysWithPeriods(tx) });
+    if (!options.force && !check.schoolDay && check.reason) {
+      await markDay(tx, school.id, date, { skippedReason: check.reason });
+      return { schoolDate: date, skipped: check.reason };
+    }
+    const caps = resolveFromRows(school, await readCapabilityRows(tx), date);
+    const mode = caps['attendance.mode'];
+    const plan = planSessions(mode, { classes: await classesOfYear(tx, yearId), slots: mode === 'per_period' ? await slotsOfDay(tx, yearId, isoWeekday(date)) : [] });
+    const created = await insertSessions(tx, school.id, date, plan);
+    await markDay(tx, school.id, date, { generatedAt: now });
+    return { schoolDate: date, created };
+  });
+}
+
 /** From 05.00 local time: today's sessions per attendance.mode, unless it is not a school day. */
 export function generateDueSessions(now = new Date(), logger?: Logger): Promise<PerSchool<GenerateResult>> {
   return forEachSchool(async (school) => {
     if (schoolMinutes(school.timezone, now) < GENERATE_AT) return null;
-    const date = schoolDate(school.timezone, now);
-    return withTenant({ schoolId: school.id, userId: null }, async (tx): Promise<GenerateResult | null> => {
-      await lockAttendanceDay(tx, school.id, date);
-      const day = await findDay(tx, date);
-      if (day?.generatedAt || day?.skippedReason) return null;
-      const yearId = await activeYearId(tx);
-      if (!yearId) return null; // nothing to take attendance for yet; checked again next run
-
-      const check = isSchoolDay({ date, calendarKind: await calendarKind(tx, date), daysWithPeriods: await daysWithPeriods(tx) });
-      if (!check.schoolDay && check.reason) {
-        await markDay(tx, school.id, date, { skippedReason: check.reason });
-        return { schoolDate: date, skipped: check.reason };
-      }
-      const caps = resolveFromRows(school, await readCapabilityRows(tx), date);
-      const mode = caps['attendance.mode'];
-      const plan = planSessions(mode, { classes: await classesOfYear(tx, yearId), slots: mode === 'per_period' ? await slotsOfDay(tx, yearId, isoWeekday(date)) : [] });
-      const created = await insertSessions(tx, school.id, date, plan);
-      await markDay(tx, school.id, date, { generatedAt: now });
-      return { schoolDate: date, created };
-    });
+    return generateForSchool(school, schoolDate(school.timezone, now), now);
   }, logger);
 }
 

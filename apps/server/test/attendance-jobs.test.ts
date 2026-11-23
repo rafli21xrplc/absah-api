@@ -1,8 +1,8 @@
 import { schema } from '@absah/db';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { generateDueSessions, lockDueDays, remindUnfilled } from '../src/modules/attendance';
-import { getDb, withTenant } from '../src/shared/db';
+import { findSchool, generateDueSessions, generateForSchool, lockDueDays, remindUnfilled } from '../src/modules/attendance';
+import { getDb, withPlatform, withTenant } from '../src/shared/db';
 import { buildTestApp } from './harness';
 
 const t = buildTestApp();
@@ -135,5 +135,16 @@ describe('prs.lock-sessions', () => {
     );
     // Nothing left to lock; the 17th (holiday) waits for its own 23.59.
     expect(forSchool(await lockDueDays(new Date('2026-11-16T16:10:00Z')), sd.school)).toBeUndefined();
+  });
+});
+
+describe('attendance:generate (ops)', () => {
+  it('can force sessions on a non-school day and add sessions after a schedule change', async () => {
+    const school = await withPlatform((tx) => findSchool(tx, sd.school));
+    if (!school) throw new Error('no school');
+    const sunday = '2026-11-22';
+    expect(await generateForSchool(school, sunday, new Date())).toEqual({ schoolDate: sunday, skipped: 'not_school_day' });
+    expect(await generateForSchool(school, sunday, new Date(), { force: true })).toEqual({ schoolDate: sunday, created: 2 });
+    expect(await generateForSchool(school, sunday, new Date(), { force: true })).toEqual({ schoolDate: sunday, created: 0 });
   });
 });

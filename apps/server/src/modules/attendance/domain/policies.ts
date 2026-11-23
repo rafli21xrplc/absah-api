@@ -21,3 +21,6 @@ export function mayFillSession(actor: Actor, session: SessionOwnership): boolean
 export function mayViewSession(actor: Actor, session: SessionOwnership): boolean {
   return mayFillSession(actor, session) || canSeeAllSessions.allows(actor);
 }
+
+/** Decides correction requests on locked sessions (PRS-05). */
+export const canDecideCorrections = anyRole('wakasek', 'kepsek');

@@ -58,6 +58,14 @@ import {
   ScheduleImportResult,
   UploadIdParam,
 } from './academic/schedule-import';
+import {
+  Correction,
+  CorrectionIdParam,
+  CorrectionList,
+  CorrectionListQuery,
+  CreateCorrectionsRequest,
+  DecideCorrectionRequest,
+} from './attendance/corrections';
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import {
@@ -504,6 +512,39 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: SessionIdParam, body: { content: { 'application/json': { schema: SubmitSessionRequest } } } },
     responses: { 200: json(SessionDetail, 'Filled session'), ...errors(400, 401, 403, 404, 409) },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/sessions/{sessionId}/corrections`,
+    tags: ['attendance'],
+    summary: 'Ask to correct students in a locked session (whoever may fill it)',
+    description: '409 when the session is not locked yet (fill it directly) or a change is already pending.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: SessionIdParam, body: { content: { 'application/json': { schema: CreateCorrectionsRequest } } } },
+    responses: { 200: json(CorrectionList, 'Created requests'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/corrections`,
+    tags: ['attendance'],
+    summary: 'Correction requests: all for wakasek and kepsek, own requests for others',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: CorrectionListQuery },
+    responses: { 200: json(CorrectionList, 'Requests'), ...errors(400, 401, 403) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/corrections/{correctionId}/decide`,
+    tags: ['attendance'],
+    summary: 'Approve or reject a correction (wakasek, kepsek; not your own request)',
+    description: 'Approval writes the status with source manual, which nothing else overrides, and recomputes daily attendance.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: CorrectionIdParam, body: { content: { 'application/json': { schema: DecideCorrectionRequest } } } },
+    responses: { 200: json(Correction, 'Decided'), ...errors(400, 401, 403, 404, 409) },
   });
 
   registry.registerComponent('securitySchemes', 'session', {
