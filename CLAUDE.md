@@ -174,6 +174,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Managers: admin, operator, wakasek (canManageSchedule); readers add kepsek, wali_kelas, guru,
   piket. Teachers must be active staff (school_member_directory). Jam pelajaran cannot be removed
   while lessons use them.
+- Learning groups (routes behind requireCap('attendance.learningGroups')): members are active
+  enrollments; replacing members re-checks student clashes at the group's lesson times.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),

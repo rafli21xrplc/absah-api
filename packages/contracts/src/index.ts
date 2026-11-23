@@ -8,3 +8,4 @@ export * from './academic/enums';
 export * from './academic/imports';
 export * from './academic/registry';
 export * from './academic/schedule';
+export * from './academic/learning-groups';

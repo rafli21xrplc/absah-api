@@ -5,3 +5,4 @@ export { academicConsumers } from './application/student-import-consumers';
 export { IMPORT_RETENTION_QUEUE, importRetentionHandler, purgeStaleImports } from './jobs/import-retention';
 export { registryRouter } from './http/registry';
 export { scheduleRouter } from './http/schedule';
+export { learningGroupsRouter } from './http/learning-groups';
