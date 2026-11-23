@@ -50,6 +50,14 @@ import {
   LearningGroupList,
   ReplaceGroupMembersRequest,
 } from './academic/learning-groups';
+import {
+  CommitScheduleImportRequest,
+  CreateScheduleImportRequest,
+  CreateScheduleImportResponse,
+  ScheduleImportPreview,
+  ScheduleImportResult,
+  UploadIdParam,
+} from './academic/schedule-import';
 import { ErrorBody } from './common';
 import {
   AcceptInvitationRequest,
@@ -428,6 +436,40 @@ function buildRegistry(): OpenAPIRegistry {
     ReplaceGroupMembersRequest,
     GroupIdParam,
     '409 SCHEDULE_CONFLICT when a new member already has a lesson at one of the group lesson times.',
+  );
+
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/schedule/template.xlsx`,
+    tags: ['academic'],
+    summary: 'Absah schedule template, filled with the current rombel lessons (schedule managers)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: {
+      200: { description: 'Excel workbook', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } },
+      ...errors(401, 403, 409),
+    },
+  });
+  scheduleWrite('post', '/schedule/imports', 'Presigned upload for a filled schedule template (admin, operator, wakasek)', CreateScheduleImportResponse, CreateScheduleImportRequest);
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/schedule/imports/{uploadId}/preview`,
+    tags: ['academic'],
+    summary: 'Dry run of a schedule import: lessons, new subjects and per-row errors including clashes',
+    description: '400 when the file is not the Absah template; 409 when nothing was uploaded yet. Writes nothing.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: UploadIdParam },
+    responses: { 200: json(ScheduleImportPreview, 'Preview'), ...errors(400, 401, 403, 409) },
+  });
+  scheduleWrite(
+    'post',
+    '/schedule/imports/{uploadId}/commit',
+    'Apply a schedule import in one transaction (admin, operator, wakasek)',
+    ScheduleImportResult,
+    CommitScheduleImportRequest,
+    UploadIdParam,
+    'Replaces every lesson of the rombel in the file. 409 stale_preview when the file or school data changed since the preview, 409 has_errors while rows have errors.',
   );
 
   registry.registerComponent('securitySchemes', 'session', {
