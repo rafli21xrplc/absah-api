@@ -4,6 +4,7 @@ import { loadConfig } from '../shared/config';
 import { initCrypto } from '../shared/crypto';
 import { closeDb, initDb } from '../shared/db';
 import { createLogger } from '../shared/logger';
+import { createPaymentProvider } from '../shared/payments';
 import { createMessageSender } from '../shared/messaging';
 import { createObjectStorage } from '../shared/storage';
 
@@ -18,6 +19,7 @@ const auth = createAuth({ db, config, messageSender });
 
 const app = createApp({ logger, version: config.APP_VERSION, auth, ipHeaders: config.AUTH_IP_HEADERS, appUrl: config.BETTER_AUTH_URL, storage: createObjectStorage(config), kioskOrigins: config.KIOSK_ORIGINS,
   whatsappWebhook: config.WHATSAPP_APP_SECRET && config.WHATSAPP_VERIFY_TOKEN ? { appSecret: config.WHATSAPP_APP_SECRET, verifyToken: config.WHATSAPP_VERIFY_TOKEN } : undefined,
+  paymentProvider: createPaymentProvider(config),
 });
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'http listening');

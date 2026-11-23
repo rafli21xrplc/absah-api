@@ -9,7 +9,7 @@ import { gateRouter, kioskCors, kioskRouter } from './modules/gate';
 import { linksRouter, portalRouter } from './modules/portal';
 import { leaveRouter } from './modules/leave';
 import { exportsRouter, mbgRouter, reportsRouter } from './modules/report';
-import { invoicesRouter } from './modules/subscription';
+import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
 import { notificationsRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
 import { healthRouter, platformRouter, type Auth } from './modules/platform';
@@ -17,6 +17,7 @@ import { clientIp } from './shared/client-ip';
 import { errorHandler, notFoundHandler } from './shared/http';
 import { serializeErr } from './shared/logger';
 import { requestId } from './shared/request-id';
+import type { PaymentProvider } from './shared/payments';
 import { FsObjectStorage, fsUploadRouter, type ObjectStorage } from './shared/storage';
 
 export interface AppDeps {
@@ -32,9 +33,11 @@ export interface AppDeps {
   kioskOrigins?: readonly string[];
   /** WhatsApp status webhook secrets; without them the webhook route answers 404. */
   whatsappWebhook?: WhatsappWebhookConfig;
+  /** Payment gateway (PAYMENT_PROVIDER); null = online payment off. */
+  paymentProvider?: PaymentProvider | null;
 }
 
-export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [], whatsappWebhook }: AppDeps): Express {
+export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, kioskOrigins = [], whatsappWebhook, paymentProvider = null }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // behind Cloudflare
@@ -62,6 +65,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   if (storage instanceof FsObjectStorage) app.use('/api/v1', fsUploadRouter(storage));
   // Signed over the raw body, so also before express.json().
   app.use('/api/v1/webhooks/whatsapp', whatsappWebhookRouter(whatsappWebhook));
+  app.use('/api/v1/webhooks/payments', paymentWebhookRouter(paymentProvider));
   app.use(express.json({ limit: '1mb' }));
 
   const openapi = generateOpenApiDocument(version);
@@ -86,6 +90,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(exportsRouter(auth, storage));
   v1.use(mbgRouter(auth));
   v1.use(invoicesRouter(auth));
+  v1.use(paymentsRouter(auth, paymentProvider));
   v1.get('/openapi.json', (_req, res) => {
     res.json(openapi);
   });

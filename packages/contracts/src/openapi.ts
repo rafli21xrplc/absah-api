@@ -100,6 +100,7 @@ import { HealthResponse } from './platform/health';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
 import { MbgDaily, MbgDailyQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
+import { CreatePaymentRequest, Payment, PaymentList } from './billing/payments';
 import { ClassRecapDetail, ClassRecapList, RecapClassIdParam, ReportPeriodQuery, ReportSemesterList, SessionCompliance } from './report/recap';
 
 export const API_BASE_PATH = '/api/v1';
@@ -967,6 +968,26 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: InvoiceIdParam },
     responses: { 200: json(InvoiceDetail, 'Invoice'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/billing/invoices/{invoiceId}/payments`,
+    tags: ['billing'],
+    summary: 'Open a VA or QRIS for an invoice (admin); the worker creates it at the gateway (poll the list)',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: InvoiceIdParam, body: { content: { 'application/json': { schema: CreatePaymentRequest } } } },
+    responses: { 202: json(Payment, 'Requested'), ...errors(400, 401, 403, 404, 409, 422) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/billing/invoices/{invoiceId}/payments`,
+    tags: ['billing'],
+    summary: 'Payment attempts of an invoice, newest first',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: InvoiceIdParam },
+    responses: { 200: json(PaymentList, 'Payments'), ...errors(401, 403, 404) },
   });
   registry.registerComponent('securitySchemes', 'actionLink', {
     type: 'apiKey',

@@ -9,7 +9,16 @@ import {
 } from '../modules/platform';
 import { NOTIFY_RELEASE_CRON, NOTIFY_RELEASE_QUEUE, NOTIFY_WEBHOOKS_CRON, NOTIFY_WEBHOOKS_QUEUE, notifyConsumers, releaseHandler, webhookHandler } from '../modules/notify';
 import { EXPORT_RETENTION_QUEUE, exportRetentionHandler, MBG_CUTOFF_CRON, MBG_CUTOFF_QUEUE, mbgCutoffHandler, reportConsumers } from '../modules/report';
-import { ISSUE_INVOICES_CRON, ISSUE_INVOICES_QUEUE, issueInvoicesHandler } from '../modules/subscription';
+import {
+  APPLY_PAYMENTS_CRON,
+  APPLY_PAYMENTS_QUEUE,
+  applyPaymentsHandler,
+  ISSUE_INVOICES_CRON,
+  ISSUE_INVOICES_QUEUE,
+  issueInvoicesHandler,
+  subscriptionConsumers,
+} from '../modules/subscription';
+import { createPaymentProvider } from '../shared/payments';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
 import { initCrypto } from '../shared/crypto';
@@ -75,12 +84,21 @@ await boss.createQueue(NOTIFY_WEBHOOKS_QUEUE);
 await boss.work(NOTIFY_WEBHOOKS_QUEUE, webhookHandler(logger));
 await boss.schedule(NOTIFY_WEBHOOKS_QUEUE, NOTIFY_WEBHOOKS_CRON, null, { tz: 'UTC' });
 
+// Gateway events stored by the API are applied every minute (BIL), when a gateway is configured.
+const paymentProvider = createPaymentProvider(config);
+if (paymentProvider) {
+  await boss.createQueue(APPLY_PAYMENTS_QUEUE);
+  await boss.work(APPLY_PAYMENTS_QUEUE, applyPaymentsHandler(paymentProvider, logger));
+  await boss.schedule(APPLY_PAYMENTS_QUEUE, APPLY_PAYMENTS_CRON, null, { tz: 'UTC' });
+}
+
 // Outbox consumers from every module.
 const sender = createMessageSender(config, logger);
 const consumers: Consumer[] = [
   ...academicConsumers(storage),
   ...attendanceConsumers(),
   ...reportConsumers(storage),
+  ...subscriptionConsumers(paymentProvider),
   ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
 ];
 const outbox = await startOutbox(boss, consumers, logger);
