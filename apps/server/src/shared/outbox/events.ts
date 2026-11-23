@@ -55,6 +55,10 @@ export const EVENTS = {
   'ksw.threshold_reached': z.object({ taskId: z.uuid() }),
   /** The early-warning job saw a pattern in a student's attendance (KSW-04): push to the wali kelas and guru BK. */
   'ksw.early_warning_raised': z.object({ warningId: z.uuid() }),
+  /** A teacher asked for izin (GRU-02): push to the wakasek (kepsek and admin when the school has none). */
+  'teacher.leave_requested': z.object({ teacherLeaveId: z.uuid() }),
+  /** The wakasek decided a teacher's izin (GRU-02): push to the teacher. */
+  'teacher.leave_decided': z.object({ teacherLeaveId: z.uuid(), approved: z.boolean() }),
   /** A TPPK report came in (KSW-06): only the TPPK members are told, never the kepsek or wali kelas. */
   'tppk.report_received': z.object({ reportId: z.uuid() }),
   /** The admin changed the TPPK team (KSW-06): every member is told, so no one joins the team unseen. */

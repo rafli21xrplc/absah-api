@@ -5,6 +5,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
 import { TeacherAttendance, TeacherToday } from './teacher/attendance';
+import { CreateTeacherLeaveRequest, DecideTeacherLeaveRequest, TeacherLeave, TeacherLeaveIdParam, TeacherLeaveList, TeacherLeavesQuery } from './teacher/leave';
 import {
   CompleteFollowupRequest,
   CreatePointThresholdRequest,
@@ -1388,6 +1389,51 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     responses: { 200: json(TeacherAttendance, 'Checked out'), ...errors(401, 403, 404, 409) },
+  });
+  const leaveNote = `${teacherNote} A teacher's izin is always pending; the wakasek, kepsek or admin decides, never on their own izin (403). The reason is encrypted and never enters the audit log.`;
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/teacher-leaves`,
+    tags: ['teacher'],
+    summary: "Teachers' izin: everyone's for the deciders (or their own with mine=true), the caller's own for a teacher (GRU-02)",
+    description: leaveNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: TeacherLeavesQuery },
+    responses: { 200: json(TeacherLeaveList, 'Izin'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/teacher-leaves`,
+    tags: ['teacher'],
+    summary: 'Ask for izin (GRU-02)',
+    description: `${leaveNote} Dates follow a student's izin (30 days, 7 days back). 409 overlap with another pending or approved izin of the same teacher.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateTeacherLeaveRequest } } } },
+    responses: { 201: json(TeacherLeave, 'Pending izin'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/teacher-leaves/{leaveId}/decide`,
+    tags: ['teacher'],
+    summary: "Approve or reject a teacher's izin (GRU-02)",
+    description: `${leaveNote} 409 already_decided when it was decided before. An approved izin is what makes the teacher's sessions need a substitute.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: TeacherLeaveIdParam, body: { content: { 'application/json': { schema: DecideTeacherLeaveRequest } } } },
+    responses: { 200: json(TeacherLeave, 'Decided'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/teacher-leaves/{leaveId}/cancel`,
+    tags: ['teacher'],
+    summary: 'Withdraw your own izin while pending, or approved and not over (GRU-02)',
+    description: `${leaveNote} 404 for another teacher's izin; 409 not_cancellable otherwise.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: TeacherLeaveIdParam },
+    responses: { 200: json(TeacherLeave, 'Cancelled'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });
