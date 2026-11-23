@@ -366,6 +366,7 @@ Semua alur di bawah berakhir di tabel `attendance_records` atau tabel modulnya s
 | TGH | `/student-billing/mine`, `/installments/{id}/payments`, `/recap` | `student.billing` | orang_tua, siswa pay their own; bendahara, admin, kepsek, wakasek read the recap |
 | UJN | `/exam/periods` (GET, POST, PATCH) | `exam.enabled` | wakasek, admin write; kepsek, wali_kelas read |
 | UJN | `/exam/periods/{id}/rooms`, `/exam/rooms/{id}` and `/students` | `exam.enabled` | wakasek, admin arrange; kepsek reads; the room's pengawas reads own room |
+| UJN | `/exam/rooms/{id}/attendance`, `/attendance`, `/scan` | `exam.enabled` | wakasek, admin, the room's pengawas record; kepsek reads |
 | KEG | `GET\|POST /activities`, `POST /activities/{id}/sessions` | – | pembina |
 | KEG | `PUT /habits/{studentId}/{date}` | `habits.kaih` ≠ off atau `religious.worship` | siswa, orang tua |
 | KEG | `POST /memorization-logs` | `religious.memorization` | guru tahfidz |

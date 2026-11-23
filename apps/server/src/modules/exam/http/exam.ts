@@ -1,4 +1,4 @@
-import { CreateExamPeriodRequest, CreateExamRoomRequest, EligibilityList, EligibilityQuery, ExamPeriod, ExamPeriodIdParam, ExamPeriodList, ExamPeriodsQuery, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest, UpdateExamPeriodRequest } from '@absah/contracts';
+import { CreateExamPeriodRequest, CreateExamRoomRequest, EligibilityList, EligibilityQuery, ExamPeriod, ExamPeriodIdParam, ExamCheckIn, ExamCheckInRequest, ExamPeriodList, ExamPeriodsQuery, ExamScanRequest, RoomAttendance, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest, UpdateExamPeriodRequest } from '@absah/contracts';
 import { Router } from 'express';
 import { getCtx } from '../../../shared/context';
 import { schoolDate } from '../../../shared/school-date';
@@ -9,6 +9,7 @@ import { sendContract } from '../../../shared/http';
 import { idempotent } from '../../../shared/idempotency';
 import { resolveContext, type Auth } from '../../platform';
 import { examEligibility } from '../application/eligibility';
+import { checkInByCard, checkInManually, roomAttendance } from '../application/attendance';
 import { createExamRoom, listExamRooms, removeExamRoom, updateExamRoom } from '../application/rooms';
 import { roomRoster, seatStudents, unseatStudent } from '../application/seating';
 import { createExamPeriod, listExamPeriods, updateExamPeriod } from '../application/periods';
@@ -64,6 +65,20 @@ export function examRouter(auth: Auth): Router {
     const { roomId, enrollmentId } = ExamRoomSeatParam.parse(req.params);
     await unseatStudent(actor, auditContext(req, actor), roomId, enrollmentId);
     res.status(204).end();
+  });
+
+  router.get('/exam/rooms/:roomId/attendance', ...exam, async (req, res) => {
+    sendContract(res, RoomAttendance, await roomAttendance(getActor(req), ExamRoomIdParam.parse(req.params).roomId));
+  });
+  router.post('/exam/rooms/:roomId/attendance', ...exam, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { result, created } = await checkInManually(actor, auditContext(req, actor), ExamRoomIdParam.parse(req.params).roomId, ExamCheckInRequest.parse(req.body));
+    sendContract(res, ExamCheckIn, result, created ? 201 : 200);
+  });
+  router.post('/exam/rooms/:roomId/scan', ...exam, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { result, created } = await checkInByCard(actor, auditContext(req, actor), ExamRoomIdParam.parse(req.params).roomId, ExamScanRequest.parse(req.body));
+    sendContract(res, ExamCheckIn, result, created ? 201 : 200);
   });
 
   return router;

@@ -7,6 +7,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../../../shared/e
 import { isUniqueViolation } from '../../../shared/pg-errors';
 import type { Actor } from '../../../shared/policy';
 import { canManageExams, canReadExams } from '../domain/policies';
+import { roomHasCheckIns } from '../infrastructure/attendance-repo';
 import { findPeriod } from '../infrastructure/period-repo';
 import { deleteRoom, findRoom, insertRoom, isStaffMember, listRooms, unseatedCount, updateRoom, type RoomRow } from '../infrastructure/room-repo';
 
@@ -77,12 +78,13 @@ export function updateExamRoom(actor: Actor, auditCtx: AuditContext, roomId: str
   });
 }
 
-/** DELETE /exam/rooms/{id}: the room and its seating (nobody's attendance is kept in the room itself). */
+/** DELETE /exam/rooms/{id}: the room and its seating; refused once anyone has been checked in there (409 room_has_attendance). */
 export function removeExamRoom(actor: Actor, auditCtx: AuditContext, roomId: string): Promise<void> {
   authorize(actor, canManageExams);
   return withTenant(scope(actor), async (tx) => {
     const room = await findRoom(tx, roomId);
     if (!room) throw new NotFoundError('Ruang tidak ditemukan.');
+    if (await roomHasCheckIns(tx, roomId)) throw new ConflictError('Ruang ini sudah dipakai untuk absen ujian dan tidak bisa dihapus.', { reason: 'room_has_attendance' });
     await deleteRoom(tx, roomId);
     await audit(tx, auditCtx, 'exam.room_removed', { type: 'exam_room', id: roomId }, { before: forAudit({ name: room.name, seated: room.seated }) });
   });

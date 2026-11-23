@@ -7,11 +7,29 @@ import { evaluateEligibility } from '../domain/eligibility';
 import { canReadExams } from '../domain/policies';
 import { findPeriod } from '../infrastructure/period-repo';
 import { attendanceCounts, findClass, studentsOf, unpaidInstallmentCounts, yearStart } from '../infrastructure/eligibility-repo';
+import type { ExamPeriodRow } from '../infrastructure/period-repo';
 
 /** The wakasek, kepsek and admin see every rombel; a wali kelas only their own. */
 const seesAllClasses = anyRole('wakasek', 'kepsek', 'admin');
 
 const NONE = { H: 0, T: 0, S: 0, I: 0, A: 0 };
+
+type Tx = Parameters<typeof studentsOf>[0];
+
+/**
+ * The period's rule applied to these students now. Attendance counts from attendance_from (the year's first day if
+ * unset) to the first exam day, no later than today; bills are the unpaid installments due by the first exam day.
+ */
+export async function evaluateStudents<S extends { enrollmentId: string }>(tx: Tx, period: ExamPeriodRow, students: S[], today: string) {
+  const ids = students.map((s) => s.enrollmentId);
+  const from = period.attendanceFrom ?? (await yearStart(tx, period.academicYearId));
+  const to = period.startsOn < today ? period.startsOn : today;
+  // One after the other: a transaction has one connection.
+  const counts = await attendanceCounts(tx, ids, from, to);
+  const unpaid = period.requirePaid ? await unpaidInstallmentCounts(tx, ids, period.startsOn, period.feeTypeIds) : new Map<string, number>();
+  const rule = { minAttendance: period.minAttendance, excusedCounts: period.excusedCounts, requirePaid: period.requirePaid };
+  return students.map((s) => ({ s, ...evaluateEligibility(rule, counts.get(s.enrollmentId) ?? NONE, unpaid.get(s.enrollmentId) ?? 0) }));
+}
 
 /**
  * GET /exam/periods/{id}/eligibility (UJN-02): who may sit, and why not, for the wali kelas to act on. Computed now from
@@ -30,14 +48,7 @@ export function examEligibility(actor: Actor, periodId: string, query: Eligibili
       if (!cls || cls.homeroomTeacherId !== actor.userId) throw new NotFoundError('Rombel tidak ditemukan.');
     }
     const students = await studentsOf(tx, period.academicYearId, { classId: query.classId, homeroomTeacherId: all ? undefined : actor.userId });
-    const ids = students.map((s) => s.enrollmentId);
-    const from = period.attendanceFrom ?? (await yearStart(tx, period.academicYearId));
-    const to = period.startsOn < today ? period.startsOn : today;
-    // One after the other: a transaction has one connection.
-    const counts = await attendanceCounts(tx, ids, from, to);
-    const unpaid = period.requirePaid ? await unpaidInstallmentCounts(tx, ids, period.startsOn, period.feeTypeIds) : new Map<string, number>();
-    const rule = { minAttendance: period.minAttendance, excusedCounts: period.excusedCounts, requirePaid: period.requirePaid };
-    const evaluated = students.map((s) => ({ s, ...evaluateEligibility(rule, counts.get(s.enrollmentId) ?? NONE, unpaid.get(s.enrollmentId) ?? 0) }));
+    const evaluated = await evaluateStudents(tx, period, students, today);
     const ineligible = evaluated.filter((x) => !x.eligible);
     return {
       period: { id: period.id, name: period.name },
