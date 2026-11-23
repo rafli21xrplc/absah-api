@@ -145,8 +145,7 @@
                 }
               },
               "capabilities": {
-                "type": "object",
-                "additionalProperties": {}
+                "$ref": "#/components/schemas/CapabilityMap"
               }
             },
             "required": [
@@ -224,6 +223,22 @@
           "pembimbing_industri",
           "orang_tua",
           "siswa"
+        ]
+      },
+      "CapabilityMap": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/CapabilityValue"
+        }
+      },
+      "CapabilityValue": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "string"
+          }
         ]
       },
       "SchoolMembersResponse": {

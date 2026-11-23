@@ -1,0 +1,177 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`resolveCapabilities: 4 levels x madrasah > sd + madrasah 1`] = `
+{
+  "academic.streams": false,
+  "attendance.learningGroups": false,
+  "attendance.mode": "daily",
+  "card.holder": "parent",
+  "data.source": "emis",
+  "gate.enabled": false,
+  "gate.pickup": true,
+  "gate.visitors": true,
+  "habits.kaih": "parent",
+  "mbg.enabled": false,
+  "pkl.enabled": false,
+  "pkl.tracer": false,
+  "religious.memorization": true,
+  "religious.worship": true,
+  "report.target": "rdm",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > sd 1`] = `
+{
+  "academic.streams": false,
+  "attendance.learningGroups": false,
+  "attendance.mode": "daily",
+  "card.holder": "parent",
+  "data.source": "dapodik",
+  "gate.enabled": false,
+  "gate.pickup": true,
+  "gate.visitors": true,
+  "habits.kaih": "parent",
+  "mbg.enabled": false,
+  "pkl.enabled": false,
+  "pkl.tracer": false,
+  "religious.memorization": false,
+  "religious.worship": false,
+  "report.target": "erapor",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > sma + madrasah 1`] = `
+{
+  "academic.streams": true,
+  "attendance.learningGroups": true,
+  "attendance.mode": "per_period",
+  "card.holder": "student",
+  "data.source": "emis",
+  "gate.enabled": false,
+  "gate.pickup": false,
+  "gate.visitors": true,
+  "habits.kaih": "off",
+  "mbg.enabled": false,
+  "pkl.enabled": false,
+  "pkl.tracer": false,
+  "religious.memorization": true,
+  "religious.worship": true,
+  "report.target": "rdm",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > sma 1`] = `
+{
+  "academic.streams": true,
+  "attendance.learningGroups": true,
+  "attendance.mode": "per_period",
+  "card.holder": "student",
+  "data.source": "dapodik",
+  "gate.enabled": false,
+  "gate.pickup": false,
+  "gate.visitors": true,
+  "habits.kaih": "off",
+  "mbg.enabled": false,
+  "pkl.enabled": false,
+  "pkl.tracer": false,
+  "religious.memorization": false,
+  "religious.worship": false,
+  "report.target": "erapor",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > smk + madrasah 1`] = `
+{
+  "academic.streams": false,
+  "attendance.learningGroups": true,
+  "attendance.mode": "per_period",
+  "card.holder": "student",
+  "data.source": "emis",
+  "gate.enabled": false,
+  "gate.pickup": false,
+  "gate.visitors": true,
+  "habits.kaih": "off",
+  "mbg.enabled": false,
+  "pkl.enabled": true,
+  "pkl.tracer": true,
+  "religious.memorization": true,
+  "religious.worship": true,
+  "report.target": "rdm",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > smk 1`] = `
+{
+  "academic.streams": false,
+  "attendance.learningGroups": true,
+  "attendance.mode": "per_period",
+  "card.holder": "student",
+  "data.source": "dapodik",
+  "gate.enabled": false,
+  "gate.pickup": false,
+  "gate.visitors": true,
+  "habits.kaih": "off",
+  "mbg.enabled": false,
+  "pkl.enabled": true,
+  "pkl.tracer": true,
+  "religious.memorization": false,
+  "religious.worship": false,
+  "report.target": "erapor",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > smp + madrasah 1`] = `
+{
+  "academic.streams": false,
+  "attendance.learningGroups": false,
+  "attendance.mode": "per_period",
+  "card.holder": "student",
+  "data.source": "emis",
+  "gate.enabled": false,
+  "gate.pickup": false,
+  "gate.visitors": true,
+  "habits.kaih": "student",
+  "mbg.enabled": false,
+  "pkl.enabled": false,
+  "pkl.tracer": false,
+  "religious.memorization": true,
+  "religious.worship": true,
+  "report.target": "rdm",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;
+
+exports[`resolveCapabilities: 4 levels x madrasah > smp 1`] = `
+{
+  "academic.streams": false,
+  "attendance.learningGroups": false,
+  "attendance.mode": "per_period",
+  "card.holder": "student",
+  "data.source": "dapodik",
+  "gate.enabled": false,
+  "gate.pickup": false,
+  "gate.visitors": true,
+  "habits.kaih": "student",
+  "mbg.enabled": false,
+  "pkl.enabled": false,
+  "pkl.tracer": false,
+  "religious.memorization": false,
+  "religious.worship": false,
+  "report.target": "erapor",
+  "student.tppk": true,
+  "student.uks": true,
+}
+`;

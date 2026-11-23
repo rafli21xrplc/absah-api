@@ -66,7 +66,7 @@ describe('two-factor is mandatory for admin and operator (PLT-01)', () => {
     const ok = MeContextResponse.parse(
       (await fresh.get('/api/v1/me/context').set('X-School-Id', school).expect(200)).body,
     );
-    expect(ok.active).toEqual({ schoolId: school, roles: ['admin'], capabilities: {} });
+    expect(ok.active).toMatchObject({ schoolId: school, roles: ['admin'], capabilities: { 'pkl.enabled': true } });
   });
 
   it('does not require TOTP for a guru', async () => {

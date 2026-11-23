@@ -1,3 +1,4 @@
+import type { CapabilityValues, Level } from '@absah/capabilities';
 import type { Role } from '@absah/contracts';
 import type { Request } from 'express';
 import { UnauthenticatedError, ValidationError } from './errors';
@@ -14,20 +15,20 @@ export interface AuthUser {
 export interface MembershipSummary {
   schoolId: string;
   schoolName: string;
-  level: 'sd' | 'smp' | 'sma' | 'smk';
+  level: Level;
   isMadrasah: boolean;
   timezone: string;
   roles: Role[];
 }
 
-/** Filled by resolveContext. caps is populated from prompt 1.4. */
+/** Filled by resolveContext. caps is empty when no school is selected. */
 export interface RequestContext {
   user: AuthUser;
   userId: string;
   memberships: MembershipSummary[];
   schoolId: string | null;
   roles: Role[];
-  caps: Record<string, unknown>;
+  caps: Partial<CapabilityValues>;
 }
 
 declare module 'express-serve-static-core' {
