@@ -42,7 +42,7 @@ import {
   issueInvoicesHandler,
   subscriptionConsumers,
 } from '../modules/subscription';
-import { studentBillingConsumers } from '../modules/student-billing';
+import { APPLY_STUDENT_PAYMENTS_CRON, APPLY_STUDENT_PAYMENTS_QUEUE, applyStudentPaymentsHandler, studentBillingConsumers } from '../modules/student-billing';
 import { createPaymentProvider } from '../shared/payments';
 import { loadConfig } from '../shared/config';
 import { createMessageSender } from '../shared/messaging';
@@ -140,6 +140,10 @@ if (paymentProvider) {
   await boss.createQueue(APPLY_PAYMENTS_QUEUE);
   await boss.work(APPLY_PAYMENTS_QUEUE, applyPaymentsHandler(paymentProvider, logger));
   await boss.schedule(APPLY_PAYMENTS_QUEUE, APPLY_PAYMENTS_CRON, null, { tz: 'UTC' });
+  // The same inbox also carries student payments (TGH).
+  await boss.createQueue(APPLY_STUDENT_PAYMENTS_QUEUE);
+  await boss.work(APPLY_STUDENT_PAYMENTS_QUEUE, applyStudentPaymentsHandler(paymentProvider, logger));
+  await boss.schedule(APPLY_STUDENT_PAYMENTS_QUEUE, APPLY_STUDENT_PAYMENTS_CRON, null, { tz: 'UTC' });
 }
 
 // Outbox consumers from every module.

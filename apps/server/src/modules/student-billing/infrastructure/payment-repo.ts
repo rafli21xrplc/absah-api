@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 const sp = schema.studentPayments;
 const i = schema.billInstallments;
@@ -91,4 +91,40 @@ export async function lockPayment(tx: Tx, id: string) {
 
 export function updatePayment(tx: Tx, id: string, fields: Partial<{ status: 'requested' | 'pending' | 'paid' | 'expired' | 'failed'; providerRef: string; vaBank: string | null; vaNumber: string | null; qrString: string | null; expiresAt: Date; providerTxnId: string; paidAt: Date; lastError: string | null }>) {
   return tx.update(sp).set(fields).where(eq(sp.id, id));
+}
+
+/** Which school a gateway charge belongs to (cross-tenant lookup for webhook processing; run it in withPlatform). */
+export async function paymentByProviderRef(tx: Tx, provider: string, providerRef: string) {
+  const [row] = await tx.select({ id: sp.id, schoolId: sp.schoolId }).from(sp).where(and(eq(sp.provider, provider), eq(sp.providerRef, providerRef)));
+  return row ?? null;
+}
+
+/** Gateway events stored by the API and not applied yet, oldest first (the inbox is shared with the Absah invoices). */
+export function pendingWebhooks(tx: Tx, provider: string, limit: number) {
+  const w = schema.inboxWebhooks;
+  return tx.select({ id: w.id, payload: w.payload }).from(w).where(and(eq(w.provider, provider), isNull(w.processedAt))).orderBy(asc(w.receivedAt)).limit(limit);
+}
+
+/** The installment a payment is for, locked, with the state of its bill. */
+export async function lockInstallment(tx: Tx, id: string) {
+  const [row] = await tx
+    .select({ id: i.id, billId: i.billId, paidAt: i.paidAt, billStatus: b.status })
+    .from(i)
+    .innerJoin(b, eq(b.id, i.billId))
+    .where(eq(i.id, id))
+    .for('update', { of: i });
+  return row;
+}
+
+export function markInstallmentPaid(tx: Tx, id: string, at: Date) {
+  return tx.update(i).set({ paidAt: at }).where(eq(i.id, id));
+}
+
+export async function unpaidInstallments(tx: Tx, billId: string): Promise<number> {
+  const [row] = await tx.select({ n: count() }).from(i).where(and(eq(i.billId, billId), isNull(i.paidAt)));
+  return row?.n ?? 0;
+}
+
+export function markBillPaid(tx: Tx, billId: string, at: Date) {
+  return tx.update(b).set({ status: 'paid', paidAt: at }).where(and(eq(b.id, billId), eq(b.status, 'open')));
 }
