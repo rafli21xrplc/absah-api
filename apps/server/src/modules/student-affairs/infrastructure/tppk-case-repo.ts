@@ -1,11 +1,12 @@
 import type { TppkCaseStatus, TppkEventKind, TppkReportStatus } from '@absah/contracts';
 import { schema, sensitive, type Tx } from '@absah/db';
-import { asc, desc, eq, type SQL, sql } from 'drizzle-orm';
+import { asc, desc, eq, type AnyColumn } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const r = schema.tppkReports;
 const c = schema.tppkCases;
 const ev = schema.tppkCaseEvents;
-const nameOf = (column: SQL | typeof c.openedBy) => sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${column} limit 1)`;
+const nameOf = (column: AnyColumn) => directoryName(column);
 
 // Reads below run under the members-only policies: a non-member gets nothing, whatever the code does.
 
@@ -33,7 +34,7 @@ export async function findReport(tx: Tx, id: string) {
       reporterName: r.reporterName,
       reporterContact: r.reporterContact,
       reporterUserId: r.reporterUserId,
-      reporterAccountName: nameOf(sql`${r.reporterUserId}`),
+      reporterAccountName: nameOf(r.reporterUserId),
     })
     .from(r)
     .leftJoin(c, eq(c.reportId, r.id))
@@ -52,7 +53,7 @@ const caseColumns = {
   status: c.status,
   openedAt: c.createdAt,
   openedById: c.openedBy,
-  openedByName: nameOf(sql`${c.openedBy}`),
+  openedByName: nameOf(c.openedBy),
   closedAt: c.closedAt,
 };
 
@@ -88,7 +89,7 @@ export async function insertEvent(tx: Tx, row: { schoolId: string; caseId: strin
 
 export const eventsOf = (tx: Tx, caseId: string) =>
   tx
-    .select({ id: ev.id, kind: ev.kind, note: ev.note, createdAt: ev.createdAt, createdById: ev.createdBy, createdByName: nameOf(sql`${ev.createdBy}`) })
+    .select({ id: ev.id, kind: ev.kind, note: ev.note, createdAt: ev.createdAt, createdById: ev.createdBy, createdByName: nameOf(ev.createdBy) })
     .from(ev)
     .where(eq(ev.caseId, caseId))
     .orderBy(asc(ev.createdAt), asc(ev.id));

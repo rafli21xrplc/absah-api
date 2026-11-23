@@ -1,11 +1,12 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, lte, sql, type AnyColumn } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const s = schema.attendanceSessions;
 const sl = schema.scheduleSlots;
 const lv = schema.teacherLeaves;
 const sub = schema.sessionSubstitutions;
-const name = (column: typeof sub.substituteId | typeof sub.fromTeacherId) => sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${column} limit 1)`;
+const name = (column: AnyColumn) => directoryName(column);
 
 /** Teachers on approved izin on a school date, with the izin that says so. */
 export async function leavesOn(tx: Tx, date: string) {

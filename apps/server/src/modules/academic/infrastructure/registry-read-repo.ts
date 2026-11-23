@@ -1,5 +1,6 @@
 import { schema, type Tx } from '@absah/db';
 import { and, asc, count, eq, gt, ilike, isNotNull, or, sql, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 export interface StudentPageQuery {
   academicYearId: string | null;
@@ -68,7 +69,7 @@ export async function listClassesWithCounts(tx: Tx, academicYearId: string) {
       grade: c.grade,
       stream: c.stream,
       homeroomTeacherId: c.homeroomTeacherId,
-      homeroomTeacherName: sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${c.homeroomTeacherId} limit 1)`,
+      homeroomTeacherName: directoryName(c.homeroomTeacherId),
       activeStudents: count(e.id),
       missingStudents: sql<number>`count(${e.id}) filter (where ${e.missingSince} is not null)`.mapWith(Number),
     })

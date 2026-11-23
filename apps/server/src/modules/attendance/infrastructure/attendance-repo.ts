@@ -1,5 +1,6 @@
 import { schema, type Tx } from '@absah/db';
 import { and, asc, eq, gte, inArray, lte, ne, or, sql, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const s = schema.attendanceSessions;
 const classes = schema.classes;
@@ -67,7 +68,7 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
       homeroomTeacherId: classes.homeroomTeacherId,
       coachIds,
       teacherId: s.teacherId,
-      teacherName: sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${s.teacherId} limit 1)`,
+      teacherName: directoryName(s.teacherId),
       lockedAt: s.lockedAt,
       periodNumber: slot.period,
       startsAt: period.startsAt,

@@ -1,9 +1,10 @@
 import { schema, type Tx } from '@absah/db';
 import { and, desc, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const v = schema.visitors;
 
-const hostName = sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${v.hostUserId} limit 1)`;
+const hostName = directoryName(v.hostUserId);
 
 const columns = {
   id: v.id,

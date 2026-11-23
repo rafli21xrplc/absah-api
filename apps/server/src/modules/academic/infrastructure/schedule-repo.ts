@@ -1,6 +1,7 @@
 import type { SlotOwnerType } from '@absah/contracts';
 import { schema, type Tx } from '@absah/db';
 import { and, asc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 export async function lockSchedule(tx: Tx, schoolId: string): Promise<void> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`schedule:${schoolId}`}, 0))`);
@@ -83,7 +84,7 @@ export async function listSlots(tx: Tx, academicYearId: string, filter: SlotFilt
       subjectId: s.subjectId,
       subjectName: schema.subjects.name,
       teacherId: s.teacherId,
-      teacherName: sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${s.teacherId} limit 1)`,
+      teacherName: directoryName(s.teacherId),
     })
     .from(s)
     .innerJoin(schema.subjects, eq(schema.subjects.id, s.subjectId))

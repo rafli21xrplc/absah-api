@@ -1,6 +1,7 @@
 import { schema, sensitive, type Tx } from '@absah/db';
 import type { FollowupStatus } from '@absah/contracts';
 import { and, asc, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const th = schema.pointThresholds;
 const f = schema.followupTasks;
@@ -41,7 +42,7 @@ export async function insertTaskOnce(tx: Tx, row: { id: string; schoolId: string
   return inserted.length > 0;
 }
 
-const completer = sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${f.completedBy} limit 1)`;
+const completer = directoryName(f.completedBy);
 
 const taskColumns = {
   id: f.id,

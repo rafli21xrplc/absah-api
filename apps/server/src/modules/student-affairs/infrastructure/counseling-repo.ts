@@ -1,6 +1,7 @@
 import { schema, sensitive, type Tx } from '@absah/db';
 import type { CounselingFollowUp } from '@absah/contracts';
-import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const c = schema.counselingNotes;
 const e = schema.enrollments;
@@ -29,7 +30,7 @@ export async function insertNote(tx: Tx, row: NewNote): Promise<void> {
   await tx.insert(c).values({ ...row, note: sensitive(row.note) });
 }
 
-const recorder = sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${c.recordedBy} limit 1)`;
+const recorder = directoryName(c.recordedBy);
 
 const columns = {
   id: c.id,

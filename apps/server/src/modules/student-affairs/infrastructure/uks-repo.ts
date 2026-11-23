@@ -1,6 +1,7 @@
 import { schema, sensitive, type Tx } from '@absah/db';
 import type { UksOutcome } from '@absah/contracts';
-import { and, asc, desc, eq, ilike, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const u = schema.uksVisits;
 const e = schema.enrollments;
@@ -45,7 +46,7 @@ export async function insertVisit(tx: Tx, row: NewVisit): Promise<void> {
   await tx.insert(u).values({ ...row, complaint: sensitive(row.complaint), action: row.action === null ? null : sensitive(row.action) });
 }
 
-const recorder = sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${u.recordedBy} limit 1)`;
+const recorder = directoryName(u.recordedBy);
 
 const visitColumns = {
   id: u.id,

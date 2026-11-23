@@ -1,9 +1,10 @@
 import type { LeaveStatus, TeacherLeaveKind } from '@absah/contracts';
 import { schema, sensitive, type Tx } from '@absah/db';
-import { and, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql, type AnyColumn, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const l = schema.teacherLeaves;
-const name = (column: SQL | typeof l.userId | typeof l.decidedBy) => sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${column} limit 1)`;
+const name = (column: AnyColumn) => directoryName(column);
 
 /** Serializes the izin of one teacher so two overlapping requests cannot both pass. */
 export async function lockTeacherLeaves(tx: Tx, userId: string): Promise<void> {
