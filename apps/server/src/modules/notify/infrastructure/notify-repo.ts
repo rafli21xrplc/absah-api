@@ -352,3 +352,10 @@ export async function dueInstallment(tx: Tx, installmentId: string) {
     .where(eq(schema.billInstallments.id, installmentId));
   return row && !row.paidAt && row.billStatus === 'open' ? row : null;
 }
+
+/** PKL-05: an alumnus to invite: their name and WhatsApp number (decrypted here, never logged). */
+export async function tracerInviteNotice(tx: Tx, alumnusId: string): Promise<{ phone: string; name: string } | undefined> {
+  const [row] = await tx.select({ name: schema.tracerAlumni.name, phone: schema.tracerAlumni.phone }).from(schema.tracerAlumni).where(eq(schema.tracerAlumni.id, alumnusId));
+  const phone = row?.phone?.reveal();
+  return row && phone ? { phone, name: row.name } : undefined;
+}

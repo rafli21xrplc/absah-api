@@ -140,3 +140,21 @@ export const TracerFormContext = z
   })
   .meta({ id: 'TracerFormContext' });
 export type TracerFormContext = z.infer<typeof TracerFormContext>;
+
+/**
+ * POST /api/v1/tracer/invitations (BKK): sends the WhatsApp link to the listed alumni or to a whole angkatan. Only alumni with a
+ * number are invited, and those who already answered only with `resend`. Sending the same day twice sends nothing twice.
+ */
+export const InviteTracerRequest = z
+  .object({
+    alumnusIds: z.array(z.uuid()).min(1).max(500).optional(),
+    graduationYear: GraduationYear.optional(),
+    resend: z.boolean().default(false),
+  })
+  .strict()
+  .refine((r) => (r.alumnusIds === undefined) !== (r.graduationYear === undefined), { message: 'Pilih alumni atau satu angkatan.', path: ['alumnusIds'] })
+  .meta({ id: 'InviteTracerRequest' });
+export type InviteTracerRequest = z.infer<typeof InviteTracerRequest>;
+
+export const InviteTracerResult = z.object({ queued: z.int().nonnegative(), withoutPhone: z.int().nonnegative(), alreadyAnswered: z.int().nonnegative() }).meta({ id: 'InviteTracerResult' });
+export type InviteTracerResult = z.infer<typeof InviteTracerResult>;

@@ -19,7 +19,7 @@ export const TemplateApproval = z.enum(TEMPLATE_APPROVALS).meta({ id: 'TemplateA
 export type TemplateApproval = z.infer<typeof TemplateApproval>;
 
 /** Templates the product sends; rows in message_templates (one per language). */
-export const TEMPLATE_CODES = ['absent_marked', 'leave_approved', 'leave_rejected', 'login_otp', 'mbg_count', 'mbg_count_corrected', 'liaison_message', 'mbg_forecast', 'student_sent_home', 'student_picked_up', 'unlisted_pickup', 'tppk_report_received', 'tppk_team_changed', 'pkl_mentor_assigned', 'pkl_checkin_missing', 'student_discipline_threshold', 'student_bill_due'] as const;
+export const TEMPLATE_CODES = ['absent_marked', 'leave_approved', 'leave_rejected', 'login_otp', 'mbg_count', 'mbg_count_corrected', 'liaison_message', 'mbg_forecast', 'student_sent_home', 'student_picked_up', 'unlisted_pickup', 'tppk_report_received', 'tppk_team_changed', 'pkl_mentor_assigned', 'pkl_checkin_missing', 'student_discipline_threshold', 'student_bill_due', 'tracer_invitation'] as const;
 export const TemplateCode = z.enum(TEMPLATE_CODES).meta({ id: 'TemplateCode' });
 export type TemplateCode = z.infer<typeof TemplateCode>;
 

@@ -1,9 +1,10 @@
-import { maskPhone, type AlumniFromClassRequest, type AlumniFromClassResult, type CreateTracerAlumnusRequest, type SaveTracerResponseRequest, type TracerAlumnus, type TracerAlumniList, type TracerAlumniQuery, type TracerRecap } from '@absah/contracts';
+import { maskPhone, type InviteTracerRequest, type InviteTracerResult, type AlumniFromClassRequest, type AlumniFromClassResult, type CreateTracerAlumnusRequest, type SaveTracerResponseRequest, type TracerAlumnus, type TracerAlumniList, type TracerAlumniQuery, type TracerRecap } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
 import { withTenant } from '../../../shared/db';
 import { NotFoundError } from '../../../shared/errors';
+import { emit } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
 import { canManageTracer, canReadTracer } from '../domain/policies';
 import { tracerRecap } from '../domain/tracer';
@@ -85,5 +86,20 @@ export function exportTracer(actor: Actor, today: string): Promise<{ file: Buffe
   return withTenant(scope(actor), async (tx) => {
     const rows = await alumniRows(tx);
     return { file: await tracerWorkbook(recapOf(rows), rows, (s) => (s ? (STREAMS[s] ?? s) : '')), fileName: `tracer-study-${today}.xlsx` };
+  });
+}
+
+/** The BKK sends the WhatsApp link: one event per alumnus with a number (and, unless `resend`, without an answer yet). */
+export function inviteAlumni(actor: Actor, auditCtx: AuditContext, input: InviteTracerRequest): Promise<InviteTracerResult> {
+  authorize(actor, canManageTracer);
+  return withTenant(scope(actor), async (tx) => {
+    const rows = await alumniRows(tx, input.alumnusIds ? { ids: input.alumnusIds } : { graduationYear: input.graduationYear as number });
+    if (input.alumnusIds && rows.length !== new Set(input.alumnusIds).size) throw new NotFoundError('Alumni tidak ditemukan.');
+    const withPhone = rows.filter((r) => r.phone !== null);
+    const send = withPhone.filter((r) => input.resend || r.status === null);
+    for (const r of send) await emit(tx, 'tracer.invitation_requested', { alumnusId: r.id });
+    const result = { queued: send.length, withoutPhone: rows.length - withPhone.length, alreadyAnswered: withPhone.length - send.length };
+    await audit(tx, auditCtx, 'tracer.invited', { type: 'tracer_alumni', id: actor.schoolId }, { after: { ...result, graduationYear: input.graduationYear ?? null, resend: input.resend } });
+    return result;
   });
 }
