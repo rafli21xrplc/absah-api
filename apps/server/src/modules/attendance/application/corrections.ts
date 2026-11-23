@@ -2,13 +2,12 @@ import type { Correction, CorrectionList, CorrectionListQuery, CreateCorrections
 import { audit, type AuditContext } from '../../../shared/audit';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors';
-import { emit } from '../../../shared/outbox';
 import { isUniqueViolation } from '../../../shared/pg-errors';
 import type { Actor } from '../../../shared/policy';
 import { canDecideCorrections, mayFillSession, mayViewSession } from '../domain/policies';
-import { listSessions, recordsOf, roster, upsertRecords } from '../infrastructure/attendance-repo';
+import { listSessions, recordsOf, roster } from '../infrastructure/attendance-repo';
 import { decideCorrection, insertCorrections, listCorrections, lockCorrection, type CorrectionRow } from '../infrastructure/correction-repo';
-import { recomputeDaily } from '../infrastructure/session-repo';
+import { changeMarks } from './marks';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 const ref = (id: string | null, name: string | null) => (id ? { id, name: name ?? '' } : null);
@@ -92,12 +91,9 @@ export async function decide(actor: Actor, auditCtx: AuditContext, correctionId:
     await decideCorrection(tx, correctionId, { status, decidedBy: actor.userId, decisionNote: input.note ?? null });
     if (input.approve) {
       const before = (await recordsOf(tx, row.sessionId)).find((r) => r.enrollmentId === row.enrollmentId);
-      await upsertRecords(tx, [
-        { schoolId: actor.schoolId, sessionId: row.sessionId, enrollmentId: row.enrollmentId, status: row.toStatus, source: 'manual', sourceRef: row.id, recordedBy: actor.userId },
-      ]);
-      const [session] = await listSessions(tx, { id: row.sessionId });
-      if (session) await recomputeDaily(tx, actor.schoolId, session.schoolDate, [row.enrollmentId]);
-      if (row.toStatus === 'A' && before?.status !== 'A') await emit(tx, 'attendance.absent_marked', { sessionId: row.sessionId, enrollmentId: row.enrollmentId });
+      await changeMarks(tx, actor.schoolId, {
+        write: [{ sessionId: row.sessionId, enrollmentId: row.enrollmentId, source: 'manual', status: row.toStatus, sourceRef: row.id, recordedBy: actor.userId }],
+      });
       await audit(tx, auditCtx, 'attendance.corrected', { type: 'attendance_record', id: row.id }, {
         before: { status: before?.status ?? null, source: before?.source ?? null },
         after: { status: row.toStatus, source: 'manual', sessionId: row.sessionId, enrollmentId: row.enrollmentId },

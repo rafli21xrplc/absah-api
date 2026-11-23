@@ -1,4 +1,3 @@
-import type { AttendanceSource, AttendanceStatus } from '@absah/contracts';
 import { schema, type Tx } from '@absah/db';
 import { and, asc, eq, or, sql, type SQL } from 'drizzle-orm';
 
@@ -94,21 +93,6 @@ export const recordsOf = (tx: Tx, sessionId: string) =>
     .select({ enrollmentId: schema.attendanceRecords.enrollmentId, status: schema.attendanceRecords.status, source: schema.attendanceRecords.source })
     .from(schema.attendanceRecords)
     .where(eq(schema.attendanceRecords.sessionId, sessionId));
-
-export async function upsertRecords(
-  tx: Tx,
-  rows: { schoolId: string; sessionId: string; enrollmentId: string; status: AttendanceStatus; source: AttendanceSource; sourceRef?: string | null; recordedBy: string | null }[],
-): Promise<void> {
-  if (rows.length === 0) return;
-  const r = schema.attendanceRecords;
-  await tx
-    .insert(r)
-    .values(rows)
-    .onConflictDoUpdate({
-      target: [r.sessionId, r.enrollmentId],
-      set: { status: sql`excluded.status`, source: sql`excluded.source`, sourceRef: sql`excluded.source_ref`, recordedBy: sql`excluded.recorded_by`, recordedAt: sql`now()` },
-    });
-}
 
 export async function markSubmitted(tx: Tx, id: string, userId: string): Promise<void> {
   await tx.update(s).set({ status: 'submitted', submittedAt: new Date(), submittedBy: userId }).where(eq(s.id, id));
