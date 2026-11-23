@@ -3,3 +3,4 @@ export { gateRouter } from './http/gate-admin';
 export { kioskRouter } from './http/kiosk';
 export { kioskCors } from './http/kiosk-cors';
 export { createLoadFixture } from './application/load-fixture';
+export { linkCardKeys } from './application/cards';

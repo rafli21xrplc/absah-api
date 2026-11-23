@@ -2,7 +2,7 @@ import { LEAVE_KINDS, LEAVE_STATUSES } from '@absah/contracts';
 import { sql } from 'drizzle-orm';
 import { date, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { encryptedText } from '../crypto';
-import { enrollments } from './academic';
+import { enrollments, guardians } from './academic';
 import { createdAt, id, schoolId } from './_shared';
 import { user } from './auth';
 import { schools } from './platform';
@@ -34,6 +34,8 @@ export const leaveRequests = pgTable(
     attachmentType: text('attachment_type'),
     status: leaveStatus('status').notNull().default('pending'),
     requestedBy: userRef('requested_by'),
+    /** Set instead of requested_by when a guardian without an account asks through an action link. */
+    requestedByGuardianId: uuid('requested_by_guardian_id').references(() => guardians.id, { onDelete: 'set null' }),
     decidedBy: userRef('decided_by'),
     decidedAt: at('decided_at'),
     decisionNote: text('decision_note'),

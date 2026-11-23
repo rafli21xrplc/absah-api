@@ -3,7 +3,7 @@ import type { Tx } from '@absah/db';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { withTenant } from '../../../shared/db';
-import { NotFoundError } from '../../../shared/errors';
+import { ConflictError, NotFoundError } from '../../../shared/errors';
 import type { Actor } from '../../../shared/policy';
 import { nextDates } from '../domain/tokens';
 import { activeDevice, bindDevice, heldStudents, lockCard } from '../infrastructure/card-repo';
@@ -44,4 +44,25 @@ export function getDeviceKeys(actor: Actor, timezone: string, today: string, dev
     if (!device || device.userId !== actor.userId) throw new NotFoundError('HP ini tidak lagi terikat ke kartu. Aktifkan ulang kartu.');
     return keysFor(tx, actor.schoolId, { cardId: device.cardId, deviceId }, timezone, today);
   });
+}
+
+/**
+ * The card shown through an action link (ORT-01), in the caller's tenant transaction. The link
+ * keeps its own device: reopening returns fresh keys for it. A card active on another phone is
+ * only taken over with `replace`, which ends that phone's card like a normal rebind.
+ */
+export async function linkCardKeys(
+  tx: Tx,
+  auditCtx: AuditContext,
+  input: { schoolId: string; studentId: string; linkDeviceId: string | null; replace: boolean; timezone: string; today: string },
+): Promise<CardDeviceKeys> {
+  const card = await lockCard(tx, input.schoolId, input.studentId);
+  if (input.linkDeviceId && card.activeDeviceId === input.linkDeviceId) {
+    return keysFor(tx, input.schoolId, { cardId: card.id, deviceId: input.linkDeviceId }, input.timezone, input.today);
+  }
+  if (card.activeDeviceId && !input.replace) throw new ConflictError('Kartu sedang aktif di HP lain.', { reason: 'bound_elsewhere' });
+  const deviceId = uuidv7();
+  await bindDevice(tx, card, { deviceId, holder: 'parent', userId: null, label: 'Tautan WhatsApp' });
+  await audit(tx, auditCtx, 'card.device_bound', { type: 'card', id: card.id }, { before: { deviceId: card.activeDeviceId }, after: { deviceId, holder: 'parent', via: 'action_link' } });
+  return keysFor(tx, input.schoolId, { cardId: card.id, deviceId }, input.timezone, input.today);
 }

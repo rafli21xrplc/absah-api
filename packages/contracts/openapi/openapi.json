@@ -11,6 +11,12 @@
   ],
   "components": {
     "securitySchemes": {
+      "actionLink": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Link <token> from the action link in a WhatsApp message (the web page reads it from /t/<token>)"
+      },
       "kiosk": {
         "type": "apiKey",
         "in": "header",
@@ -87,6 +93,7 @@
           "CAPABILITY_DISABLED",
           "SCHEDULE_CONFLICT",
           "SESSION_LOCKED",
+          "LINK_EXPIRED",
           "IDEMPOTENCY_KEY_REUSED",
           "IDEMPOTENCY_IN_PROGRESS",
           "RATE_LIMITED",
@@ -3735,6 +3742,204 @@
           "leave_rejected",
           "login_otp"
         ]
+      },
+      "ActionLinkContext": {
+        "type": "object",
+        "properties": {
+          "school": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "timezone"
+            ]
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "firstName": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "firstName",
+              "className"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "today": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "format": "date"
+              },
+              "status": {
+                "$ref": "#/components/schemas/AttendanceStatus"
+              },
+              "sessions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "$ref": "#/components/schemas/SessionMode"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/AttendanceStatus"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "status"
+                  ]
+                }
+              },
+              "arrivedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "date",
+              "status",
+              "sessions",
+              "arrivedAt"
+            ]
+          },
+          "leaves": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "$ref": "#/components/schemas/LeaveKind"
+                },
+                "startsOn": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "endsOn": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/LeaveStatus"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "startsOn",
+                "endsOn",
+                "status"
+              ]
+            }
+          },
+          "canRequestLeave": {
+            "type": "boolean"
+          },
+          "cardAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "school",
+          "student",
+          "expiresAt",
+          "today",
+          "leaves",
+          "canRequestLeave",
+          "cardAvailable"
+        ]
+      },
+      "ActionLinkLeave": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LeaveKind"
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LeaveStatus"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "startsOn",
+          "endsOn",
+          "status"
+        ]
+      },
+      "ActionLinkLeaveRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/LeaveKind"
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "kind",
+          "startsOn",
+          "endsOn",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "ActionLinkCardRequest": {
+        "type": "object",
+        "properties": {
+          "replace": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -9437,6 +9642,201 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/links/context": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Action link: the student's day (first name only), recent izin and what the link can still do",
+        "security": [
+          {
+            "actionLink": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionLinkContext"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/links/leave": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Action link: the link's one write, an izin request pending for the wali kelas",
+        "description": "409 reason link_used once spent; a request refused with 400 does not spend it.",
+        "security": [
+          {
+            "actionLink": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionLinkLeaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pending izin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionLinkLeave"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/links/card": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Action link: day keys for the student's card on this phone (gate.enabled)",
+        "description": "409 reason bound_elsewhere while the card is active on another phone, unless replace is true.",
+        "security": [
+          {
+            "actionLink": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionLinkCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Card keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardDeviceKeys"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {

@@ -67,7 +67,8 @@ export async function insertLeave(
     attachmentKey: string | null;
     attachmentType: string | null;
     status: LeaveStatus;
-    requestedBy: string;
+    requestedBy: string | null;
+    requestedByGuardianId?: string;
     decidedBy: string | null;
     decidedAt: Date | null;
   },
@@ -119,6 +120,8 @@ export function listLeaves(tx: Tx, filter: { status?: LeaveStatus; id?: string; 
       status: l.status,
       requestedBy: l.requestedBy,
       requestedByName: name(l.requestedBy),
+      requestedByGuardianId: l.requestedByGuardianId,
+      requestedByGuardianName: sql<string | null>`(select g.name from guardians g where g.id = ${l.requestedByGuardianId})`,
       decidedBy: l.decidedBy,
       decidedByName: name(l.decidedBy),
       decidedAt: l.decidedAt,
