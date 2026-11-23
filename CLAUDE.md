@@ -640,6 +640,17 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   amount, active; bills: status, paid_at, voided_at, void_reason; installments: paid_at, reminded_at; payments: gateway
   steps, never the amount). Reuses paymentMethod/paymentStatus from subscription. Not built, by design: student savings
   and school cash.
+- Tagihan siswa API (module student-billing; student-billing/{domain,application,infrastructure,http}), all under
+  /student-billing, behind student.billing; BILLING_MANAGERS (bendahara, admin) write, BILLING_READERS add kepsek and
+  wakasek (the wali kelas and parents see no money here). fee-types GET/POST/PATCH (name unique ignoring case ->
+  409 name_taken; a new amount only applies to later bills; audit key `fee`, because "name" is redacted). POST /issue:
+  target {kind: class|grade}, fee type, period, optional title/amount, then dueOn XOR installments (2..12 parts that
+  add up exactly, in date order, the bill is due on the last); bills only active enrollments of the active year;
+  onConflictDoNothing on (school, enrollment, fee type, period), so repeating it skips (created/skipped/billed); one
+  tx, all or none; 409 fee_type_inactive / no_students. GET /bills (status, feeTypeId, classId, enrollmentId, period,
+  overdue=true, limit <= 500, total counts all matches); `overdue` = open with an installment unpaid past its date
+  on the school's clock. POST /bills/{id}/void: reason required, 409 already_void / has_payments (a paid bill is a
+  refund, which is not built). Audit of an issue holds counts and target, never students.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

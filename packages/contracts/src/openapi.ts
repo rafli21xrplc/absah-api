@@ -4,6 +4,8 @@ import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
+import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { CreateFeeTypeRequest, FeeType, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, UpdateFeeTypeRequest } from './student-billing/fees';
 import { TeacherAttendance, TeacherToday } from './teacher/attendance';
 import { TeacherReport, TeacherReportQuery } from './teacher/report';
 import { AssignSubstituteRequest, CandidateList, CandidatesQuery, SubstitutionItem, SubstitutionList, SubstitutionsQuery } from './teacher/substitutions';
@@ -1481,6 +1483,73 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { body: { content: { 'application/json': { schema: AssignSubstituteRequest } } } },
     responses: { 201: json(SubstitutionItem, 'Assigned'), ...errors(400, 401, 403, 404, 409) },
+  });
+  const billingNote = 'Tagihan siswa (TGH), behind student.billing. The bendahara and admin manage; kepsek and wakasek read. Money is whole rupiah; a bill is never deleted, only voided.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/student-billing/fee-types`,
+    tags: ['student-billing'],
+    summary: 'Fee types of the school (TGH-01)',
+    description: `${billingNote} includeInactive=true also lists the switched-off ones.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: FeeTypesQuery },
+    responses: { 200: json(FeeTypeList, 'Fee types'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/student-billing/fee-types`,
+    tags: ['student-billing'],
+    summary: 'Create a fee type (TGH-01)',
+    description: `${billingNote} 409 name_taken (ignoring case).`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateFeeTypeRequest } } } },
+    responses: { 201: json(FeeType, 'Created'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/student-billing/fee-types/{feeTypeId}`,
+    tags: ['student-billing'],
+    summary: 'Rename, reprice or switch off a fee type (TGH-01)',
+    description: `${billingNote} A new amount applies to bills issued afterwards; switching off keeps it for the bills that cite it.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: FeeTypeIdParam, body: { content: { 'application/json': { schema: UpdateFeeTypeRequest } } } },
+    responses: { 200: json(FeeType, 'Updated'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/student-billing/issue`,
+    tags: ['student-billing'],
+    summary: 'Issue bills to a rombel or a grade (TGH-01/02)',
+    description: `${billingNote} One bill per active student for the fee type and period; students who already have it are skipped, so repeating the request bills nobody twice. A plan of 2-12 installments adding up to the amount replaces dueOn. 409 fee_type_inactive, no_students.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: IssueBillsRequest } } } },
+    responses: { 201: json(IssueBillsResult, 'Issued'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/student-billing/bills`,
+    tags: ['student-billing'],
+    summary: 'Student bills with their installments (TGH)',
+    description: `${billingNote} Soonest due first; overdue=true keeps open bills with an installment unpaid past its date. total counts all matches, items are capped by limit.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: BillsQuery },
+    responses: { 200: json(StudentBillList, 'Bills'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/student-billing/bills/{billId}/void`,
+    tags: ['student-billing'],
+    summary: 'Void an unpaid bill (TGH)',
+    description: `${billingNote} 409 already_void, has_payments (money paid is a refund, which this does not do).`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: BillIdParam, body: { content: { 'application/json': { schema: VoidBillRequest } } } },
+    responses: { 200: json(StudentBill, 'Voided'), ...errors(400, 401, 403, 404, 409) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });
