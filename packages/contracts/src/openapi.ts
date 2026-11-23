@@ -179,6 +179,7 @@ import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersRespon
 import { HealthResponse } from './platform/health';
 import { CreateWorkspaceExportRequest, WorkspaceExport, WorkspaceExportDownload, WorkspaceExportIdParam, WorkspaceExportList } from './platform/workspace-export';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
+import { PrincipalDashboard } from './report/dashboard';
 import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
 import { CreatePaymentRequest, Payment, PaymentList } from './billing/payments';
@@ -2237,6 +2238,17 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: WorkspaceExportIdParam },
     responses: { 200: json(WorkspaceExportDownload, 'Download'), ...errors(401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/dashboard/principal`,
+    tags: ['report'],
+    summary: 'Dasbor kepala sekolah (RKP-05): attendance today and the last 14 school dates, session fill, students at risk, MBG',
+    description:
+      'For kepsek, wakasek and admin. atRisk is null unless student.early_warning is on, mbg null unless mbg.enabled is on. Numbers come from the same rows as the rekap, the compliance report, the early warnings and the MBG count.',
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(PrincipalDashboard, 'Dashboard'), ...errors(401, 403, 404) },
   });
   registry.registerPath({
     method: 'get',

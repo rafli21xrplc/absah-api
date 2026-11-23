@@ -1036,3 +1036,13 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   arbitrary member's name (found by the guru e2e, where the izin of Bu Wali showed "Admin E2E"). The helper writes
   "table"."column" explicitly. Raw SQL with its own aliases (p.school_mentor_id) is fine. Tests with a single member
   cannot see this: test/directory-names.test.ts uses three.
+
+## Dasbor kepala sekolah (RKP-05; modules/report application/dashboard.ts)
+- GET /dashboard/principal for kepsek, wakasek, admin (canReadPrincipalDashboard). One answer, four parts from the SAME rows as the
+  reports they summarise: today's rekap and the last DASHBOARD_TREND_DAYS (14) school dates (daily_attendance grouped by date,
+  presentRate = (H+T)/days, dates without rows left out), today's session fill (summarizeCompliance, open sessions are not due),
+  `atRisk` (early warnings of the last 7 days folded per student by domain/dashboard.ts, most kinds first, at most 5 listed, `students`
+  counts all) and `mbg` (mbgDaily of today). atRisk is null without student.early_warning and mbg null without mbg.enabled: the router
+  passes the school's capabilities, the application never reads them. The dashboard reaches the early warnings through the
+  student-affairs index (listEarlyWarnings), never its tables.
+

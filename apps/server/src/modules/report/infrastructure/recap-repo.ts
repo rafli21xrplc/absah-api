@@ -57,6 +57,16 @@ export function classCounts(tx: Tx, classIds: string[], from: string, to: string
     .groupBy(e.classId);
 }
 
+/** Rekap rows per school date in the period (the dashboard's trend and today's numbers). */
+export function dailyCounts(tx: Tx, from: string, to: string) {
+  return tx
+    .select({ date: d.schoolDate, ...statusCounts })
+    .from(d)
+    .where(and(gte(d.schoolDate, from), lte(d.schoolDate, to)))
+    .groupBy(d.schoolDate)
+    .orderBy(asc(d.schoolDate));
+}
+
 /** Per enrollment of one rombel in the period, by student name. */
 export function studentCounts(tx: Tx, classId: string, from: string, to: string) {
   return tx
