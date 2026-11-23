@@ -722,3 +722,10 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   (mayFillSession false) and Hari ini leaves them out (withoutPkl). The pkl module uses attendance's
   openPklSession (creates the session when missing; locked when the day is already locked) and setPklStatus
   (changeMarks with source pkl_confirm, sourceRef = check-in or null).
+- Check-in (http/checkins.ts, application/checkins.ts; canCheckIn = siswa): POST /pkl/checkins
+  (PklCheckinBody {kind in|out, latitude, longitude, accuracyM?, deviceTime}; Idempotency-Key required, 201)
+  finds the student's running placement through students.user_id (none -> 409 no_placement), classifies
+  it, stores the rounded point, one per kind per day (409 already_recorded), opens today's pkl session on a
+  check-in, emits pkl.checkin_recorded {checkinId} (no consumer yet) and audits without coordinates.
+  GET /pkl/me: placement (DUDI name/address/radius, supervisors' names, today's hours) + today's check-in/out,
+  never coordinates. A check-in's status: confirmed -> H/T (late), decided -> decided_status.
