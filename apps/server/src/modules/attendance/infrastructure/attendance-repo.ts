@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, eq, gte, inArray, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 
 const s = schema.attendanceSessions;
 const classes = schema.classes;
@@ -15,9 +15,11 @@ const rosterSize = sql<number>`(case
     where m.learning_group_id = ${s.ownerId} and e.status = 'active')
   when ${s.ownerType} = 'activity' then (select count(*) from activity_members m join enrollments e on e.id = m.enrollment_id
     where m.activity_id = ${s.ownerId} and e.status = 'active')
+  when ${s.ownerType} = 'placement' then (select count(*) from pkl_placements p join enrollments e on e.id = p.enrollment_id
+    where p.id = ${s.ownerId} and e.status = 'active')
   else 0 end)::int`;
 const coachIds = sql<string[]>`coalesce((select array_agg(ac.user_id order by ac.user_id) from activity_coaches ac where ac.activity_id = ${s.activityId}), '{}')`;
-const ownerName = sql<string>`coalesce(${classes.name}, ${groups.name}, ${activities.name}, '')`;
+const ownerName = sql<string>`coalesce(${classes.name}, ${groups.name}, ${activities.name}, ${schema.dudiPartners.name}, '')`;
 
 export interface SessionFilter {
   date?: string;
@@ -28,12 +30,15 @@ export interface SessionFilter {
   journal?: { from: string; to: string; teacherId?: string };
   /** AKD-10: sessions of a rombel and of learning groups with any of its active students (no activities). */
   forClass?: string;
+  /** Leave out PKL sessions (Hari ini: they are handled on the PKL pages, one per student). */
+  withoutPkl?: boolean;
 }
 
 export async function listSessions(tx: Tx, filter: SessionFilter) {
   const where: SQL[] = [];
   if (filter.date) where.push(eq(s.schoolDate, filter.date));
   if (filter.id) where.push(eq(s.id, filter.id));
+  if (filter.withoutPkl) where.push(ne(s.mode, 'pkl'));
   if (filter.forUser) {
     const coaching = sql`exists (select 1 from activity_coaches ac where ac.activity_id = ${s.activityId} and ac.user_id = ${filter.forUser}::uuid)`;
     const mine = or(eq(s.teacherId, filter.forUser), and(eq(s.mode, 'daily'), eq(classes.homeroomTeacherId, filter.forUser)), and(eq(s.mode, 'activity'), coaching));
@@ -77,6 +82,8 @@ export async function listSessions(tx: Tx, filter: SessionFilter) {
     .leftJoin(classes, and(eq(s.ownerType, 'class'), eq(classes.id, s.ownerId)))
     .leftJoin(groups, and(eq(s.ownerType, 'group'), eq(groups.id, s.ownerId)))
     .leftJoin(activities, and(eq(s.ownerType, 'activity'), eq(activities.id, s.ownerId)))
+    .leftJoin(schema.pklPlacements, eq(schema.pklPlacements.id, s.pklPlacementId))
+    .leftJoin(schema.dudiPartners, eq(schema.dudiPartners.id, schema.pklPlacements.partnerId))
     .leftJoin(slot, eq(slot.id, s.slotId))
     .leftJoin(period, and(eq(period.schoolId, s.schoolId), eq(period.day, slot.day), eq(period.number, slot.period)))
     .leftJoin(schema.subjects, eq(schema.subjects.id, slot.subjectId))
@@ -90,7 +97,7 @@ export async function lockSessionRow(tx: Tx, id: string) {
   return row;
 }
 
-/** Active students of a rombel, learning group or activity, with their rombel name. */
+/** Active students of a rombel, learning group, activity or PKL placement (one), with their rombel name. */
 export async function roster(tx: Tx, owner: { ownerType: string; ownerId: string }) {
   const e = schema.enrollments;
   const base = tx
@@ -114,6 +121,10 @@ export async function roster(tx: Tx, owner: { ownerType: string; ownerId: string
       .innerJoin(m, eq(m.enrollmentId, e.id))
       .where(and(eq(m.activityId, owner.ownerId), eq(e.status, 'active')))
       .orderBy(asc(classes.name), asc(schema.students.name));
+  }
+  if (owner.ownerType === 'placement') {
+    const p = schema.pklPlacements;
+    return base.innerJoin(p, eq(p.enrollmentId, e.id)).where(and(eq(p.id, owner.ownerId), eq(e.status, 'active')));
   }
   return [];
 }

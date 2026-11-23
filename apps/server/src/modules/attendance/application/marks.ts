@@ -6,8 +6,8 @@ import { recomputeDaily } from '../infrastructure/session-repo';
 /**
  * The one way attendance statuses change: write or remove source marks, re-resolve the records,
  * recompute daily_attendance for the touched days, and emit attendance.absent_marked for students
- * who became A in a class session (an alpa at an activity is not the school day's alpa: it stays in
- * the activity rekap and tells the parents nothing). Returns the record changes.
+ * who became A in a class or PKL session (an alpa at an activity is not the school day's alpa: it
+ * stays in the activity rekap and tells the parents nothing). Returns the record changes.
  */
 export async function changeMarks(
   tx: Tx,
@@ -29,7 +29,7 @@ export async function changeMarks(
   for (const [date, enrollments] of byDate) await recomputeDaily(tx, schoolId, date, [...enrollments]);
   for (const c of changes) {
     const mode = dates.get(c.sessionId)?.mode;
-    if (c.after === 'A' && (mode === 'per_period' || mode === 'daily')) await emit(tx, 'attendance.absent_marked', { sessionId: c.sessionId, enrollmentId: c.enrollmentId });
+    if (c.after === 'A' && (mode === 'per_period' || mode === 'daily' || mode === 'pkl')) await emit(tx, 'attendance.absent_marked', { sessionId: c.sessionId, enrollmentId: c.enrollmentId });
   }
   return changes;
 }

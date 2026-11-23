@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLockDue, planActivitySessions, planSessions, reminderDueAt } from './session-plan';
+import { isLockDue, planActivitySessions, planPklSessions, planSessions, reminderDueAt } from './session-plan';
 
 const day = {
   classes: [
@@ -56,5 +56,21 @@ describe('planActivitySessions', () => {
     expect(planActivitySessions([kemah], '2026-11-25', 3)).toHaveLength(1);
     expect(planActivitySessions([kemah], '2026-11-27', 5)).toEqual([]);
     expect(planActivitySessions([{ ...base, days: [] }], '2026-11-25', 3)).toEqual([]);
+  });
+});
+
+describe('planPklSessions', () => {
+  const placement = { id: 'p', startsOn: '2027-01-04', endsOn: '2027-03-31', workDays: [1, 2, 3, 4, 5, 6] };
+
+  it('plans one session per placement on DUDI work days inside the period', () => {
+    expect(planPklSessions([placement], '2027-01-04', 1)).toEqual([{ mode: 'pkl', ownerType: 'placement', ownerId: 'p', slotId: null, teacherId: null, pklPlacementId: 'p' }]);
+    expect(planPklSessions([placement], '2027-01-09', 6)).toHaveLength(1);
+    expect(planPklSessions([placement], '2027-01-10', 7)).toEqual([]);
+  });
+
+  it('skips dates outside the period', () => {
+    expect(planPklSessions([placement], '2027-01-01', 5)).toEqual([]);
+    expect(planPklSessions([placement], '2027-03-31', 3)).toHaveLength(1);
+    expect(planPklSessions([placement], '2027-04-01', 4)).toEqual([]);
   });
 });

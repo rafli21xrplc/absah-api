@@ -74,6 +74,20 @@ export const activitiesOfYear = (tx: Tx, academicYearId: string) =>
     .from(schema.activities)
     .where(eq(schema.activities.academicYearId, academicYearId));
 
+/**
+ * PKL placements running on `date` (not cancelled, active enrollment) with their DUDI's work days
+ * (PKL-02). Read here like activities: the session engine owns the sessions of every mode.
+ */
+export async function pklPlacementsOn(tx: Tx, date: string) {
+  const res = await tx.execute<{ id: string; starts_on: string; ends_on: string; work_days: number[] }>(sql`
+    select p.id, p.starts_on::text, p.ends_on::text,
+           coalesce((select array_agg(h.day::int order by h.day) from dudi_work_hours h where h.partner_id = p.partner_id), '{}') as work_days
+      from pkl_placements p
+      join enrollments e on e.id = p.enrollment_id
+     where p.status = 'active' and e.status = 'active' and p.starts_on <= ${date}::date and p.ends_on >= ${date}::date`);
+  return res.rows.map((r) => ({ id: r.id, startsOn: r.starts_on, endsOn: r.ends_on, workDays: r.work_days }));
+}
+
 /** The activity session of a date, if there is one. */
 export async function activitySessionOf(tx: Tx, activityId: string, date: string): Promise<string | null> {
   const s = schema.attendanceSessions;
@@ -126,13 +140,14 @@ export async function lockSessions(tx: Tx, date: string, at: Date): Promise<{ se
 }
 
 /**
- * Recomputes daily_attendance of a school date from the records of that day's class and group
- * sessions (activity and PKL sessions keep their own rekap), for all students or only `enrollmentIds`.
+ * Recomputes daily_attendance of a school date from the records of that day's class, group and PKL
+ * sessions (a PKL day at the DUDI is the student's school day; activity sessions keep their own
+ * rekap), for all students or only `enrollmentIds`.
  */
 export async function recomputeDaily(tx: Tx, schoolId: string, date: string, enrollmentIds?: string[]): Promise<number> {
   const r = schema.attendanceRecords;
   const s = schema.attendanceSessions;
-  const where = [eq(s.schoolDate, date), inArray(s.mode, ['per_period', 'daily'])];
+  const where = [eq(s.schoolDate, date), inArray(s.mode, ['per_period', 'daily', 'pkl'])];
   if (enrollmentIds) {
     if (enrollmentIds.length === 0) return 0;
     where.push(inArray(r.enrollmentId, enrollmentIds));
