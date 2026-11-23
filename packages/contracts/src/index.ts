@@ -37,6 +37,7 @@ export * from './teacher/constants';
 export * from './teacher/attendance';
 export * from './teacher/leave';
 export * from './teacher/substitutions';
+export * from './teacher/report';
 export * from './notify/enums';
 export * from './notify/notifications';
 export * from './notify/preferences';

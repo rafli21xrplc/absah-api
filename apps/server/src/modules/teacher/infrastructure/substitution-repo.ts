@@ -70,12 +70,12 @@ export async function teachersOfSubject(tx: Tx, subjectId: string, date: string)
 }
 
 /** How many sessions each person took over since the first of the month of `date`. */
-export async function substitutionCounts(tx: Tx, date: string): Promise<Map<string, number>> {
+export async function substitutionCounts(tx: Tx, date: string, timezone: string): Promise<Map<string, number>> {
   const monthStart = `${date.slice(0, 7)}-01`;
   const rows = await tx
     .select({ id: sub.substituteId, n: sql<number>`count(*)::int` })
     .from(sub)
-    .where(sql`(${sub.createdAt} at time zone 'Asia/Jakarta')::date >= ${monthStart}::date`)
+    .where(sql`(${sub.createdAt} at time zone ${timezone})::date >= ${monthStart}::date`)
     .groupBy(sub.substituteId);
   return new Map(rows.map((r) => [r.id, r.n]));
 }
