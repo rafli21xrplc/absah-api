@@ -29,6 +29,7 @@ export * from './activity/habits';
 export * from './activity/memorization';
 export * from './student-affairs/tppk';
 export * from './student-affairs/uks';
+export * from './student-affairs/counseling';
 export * from './student-affairs/early-warning';
 export * from './student-affairs/followup';
 export * from './student-affairs/points';

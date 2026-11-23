@@ -30,3 +30,7 @@ export const canFollowUp = anyRole('admin', 'wakasek', 'wali_kelas', 'guru_bk');
 
 /** Early warnings (KSW-04): the wali kelas of the class, guru BK and the leaders read them. */
 export const canReadEarlyWarnings = anyRole('admin', 'kepsek', 'wakasek', 'wali_kelas', 'guru_bk');
+
+/** BK notes (KSW-05): only the guru BK writes; only guru BK and admin read. The database enforces the same (RLS). */
+export const canWriteCounseling = anyRole('guru_bk');
+export const canReadCounseling = anyRole('guru_bk', 'admin');
