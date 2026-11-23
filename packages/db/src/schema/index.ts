@@ -9,6 +9,7 @@ export * from './teacher';
 export * from './tppk';
 export * from './activity';
 export * from './pkl';
+export * from './integration';
 export * from './idempotency';
 export * from './imports';
 export * from './invitations';

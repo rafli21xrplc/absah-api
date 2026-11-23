@@ -27,6 +27,7 @@ export const CAPABILITIES = {
   'student.billing': { kind: 'bool', default: true },
   'exam.enabled': { kind: 'bool', default: true },
   'portal.liaison': { kind: 'bool', default: true },
+  'platform.openApi': { kind: 'bool', default: false },
   'data.source': { kind: 'enum', values: ['dapodik', 'emis'], default: 'dapodik' },
   'report.target': { kind: 'enum', values: ['erapor', 'rdm'], default: 'erapor' },
 } as const satisfies Record<string, CapabilityDef>;
