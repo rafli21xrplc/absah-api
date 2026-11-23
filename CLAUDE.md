@@ -627,7 +627,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   encrypted (counseling_notes.note). follow_up none|planned|done (+ followUpOn), planned to done once (409
   not_planned). POST /counseling-notes and POST /counseling-notes/{id}/complete (guru BK only; admin reads only),
   GET /counseling-notes[?enrollmentId&followUp] (guru BK, admin; everyone else 403). Audit keeps ids and counts and
-  never the note; READS are audited too (ksw.counseling_read). Endpoints read the school date through
+  never the note; READS are audited too (ksw.counseling_read). GET /counseling-notes/students?q= (guru BK) finds a
+  student by name because the guru BK does not read the registry (same shape as /point-entries/students). Endpoints read the school date through
   student-affairs/http/clock.ts todayOf.
 - TPPK (KSW-06/07, behind student.tppk; schema/tppk.ts, migrations 0047-0048): own Postgres schema
   "tppk" with explicit GRANTs. tppk.members is the source of truth for access (not the membership role

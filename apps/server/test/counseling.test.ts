@@ -147,6 +147,27 @@ describe('POST /counseling-notes (KSW-05)', () => {
   });
 });
 
+describe('GET /counseling-notes/students (KSW-05)', () => {
+  const search = (agent: Agent, q: string, schoolId = school) => get(agent, `/counseling-notes/students?q=${encodeURIComponent(q)}`, schoolId);
+  const found = (res: { body: unknown }) => (res.body as { items: { name: string; className: string; enrollmentId: string }[] }).items;
+
+  it('lets the guru BK find an active student by name, with the class', async () => {
+    expect(found(await search(bk, 'ani').expect(200))).toEqual([{ enrollmentId: enrollments['ANI KONSELING'], name: 'ANI KONSELING', className: '8B' }]);
+    expect(found(await search(bk, 'KONSELING').expect(200)).map((s) => s.name).sort()).toEqual(['ANI KONSELING', 'BUDI KONSELING']);
+  });
+
+  it('leaves out students who left and students of other schools', async () => {
+    expect(found(await search(bk, 'PINDAH').expect(200))).toEqual([]);
+    expect(found(await search(bk, 'SEKOLAH LAIN').expect(200))).toEqual([]);
+  });
+
+  it('is for whoever writes notes: the guru BK only', async () => {
+    await search(bk, 'a').expect(400);
+    for (const agent of [admin, wali, kepsek, wakasek, guru]) await search(agent, 'ani').expect(403);
+    await search(offBk, 'ani', offSchool).expect(404);
+  });
+});
+
 describe('GET /counseling-notes (KSW-05)', () => {
   it('is read by the guru BK and by admin', async () => {
     for (const agent of [bk, admin]) expect(items(await get(agent, '/counseling-notes').expect(200)).length).toBeGreaterThanOrEqual(4);
