@@ -123,6 +123,7 @@ import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStuden
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
 import { PklAssessmentExportQuery } from './pkl/assessment';
+import { OpenDailyAttendance, OpenDailyAttendanceQuery } from './integration/open';
 import { ApiKey, ApiKeyIdParam, ApiKeyList, CreatedApiKey, CreateApiKeyRequest } from './integration/api-keys';
 import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, InviteTracerRequest, InviteTracerResult, TracerClassList, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
@@ -2500,6 +2501,26 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: ApiKeyIdParam },
     responses: { 200: json(ApiKey, 'Key'), ...errors(401, 403, 404) },
+  });
+  registry.registerComponent('securitySchemes', 'apiKey', {
+    type: 'http',
+    scheme: 'bearer',
+    description: 'API key made by the school admin (POST /integrations/api-keys): Authorization: Bearer abk_<schoolId>.<secret>. Server to server only; never put it in a browser or an app.',
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/open/attendance/daily`,
+    tags: ['open'],
+    summary: 'Open API: the recorded daily attendance of the key\'s school on one date (ids and statuses, no names)',
+    description:
+      'Scope attendance:read, capability platform.openApi. date defaults to today in the school timezone (not in the future, at most 366 days back). ' +
+      'Each key has its own limit per minute (X-RateLimit-Limit/Remaining/Reset on every answer; 429 with Retry-After). Unknown or revoked key: 401; key without the scope: 403.',
+    security: [{ apiKey: [] }],
+    request: { query: OpenDailyAttendanceQuery },
+    responses: {
+      200: { ...json(OpenDailyAttendance, 'Statuses'), headers: { 'X-RateLimit-Limit': { schema: { type: 'integer' } }, 'X-RateLimit-Remaining': { schema: { type: 'integer' } }, 'X-RateLimit-Reset': { schema: { type: 'integer' } } } },
+      ...errors(400, 401, 403, 404, 429),
+    },
   });
   registry.registerComponent('securitySchemes', 'tracerLink', {
     type: 'apiKey',

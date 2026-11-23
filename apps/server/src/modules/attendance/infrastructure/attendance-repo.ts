@@ -187,3 +187,15 @@ export const classHeader = async (tx: Tx, classId: string) => {
   const [row] = await tx.select({ id: classes.id, name: classes.name, homeroomTeacherId: classes.homeroomTeacherId }).from(classes).where(eq(classes.id, classId));
   return row ?? null;
 };
+
+/** The recorded daily status of every enrollment on a school date, with its rombel (optionally one rombel). Ids and statuses only. */
+export async function dailyStatusesOn(tx: Tx, date: string, classId?: string) {
+  const d = schema.dailyAttendance;
+  const e = schema.enrollments;
+  return tx
+    .select({ enrollmentId: d.enrollmentId, classId: e.classId, status: d.status })
+    .from(d)
+    .innerJoin(e, eq(e.id, d.enrollmentId))
+    .where(and(eq(d.schoolDate, date), classId ? eq(e.classId, classId) : undefined))
+    .orderBy(asc(e.classId), asc(d.enrollmentId));
+}

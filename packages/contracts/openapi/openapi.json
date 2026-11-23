@@ -17,6 +17,11 @@
         "name": "Authorization",
         "description": "Link <token> from the action link in a WhatsApp message (the web page /t reads it from the URL fragment)"
       },
+      "apiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key made by the school admin (POST /integrations/api-keys): Authorization: Bearer abk_<schoolId>.<secret>. Server to server only; never put it in a browser or an app."
+      },
       "tracerLink": {
         "type": "apiKey",
         "in": "header",
@@ -14471,6 +14476,43 @@
           "scopes"
         ],
         "additionalProperties": false
+      },
+      "OpenDailyAttendance": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "classId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/AttendanceStatus"
+                }
+              },
+              "required": [
+                "enrollmentId",
+                "classId",
+                "status"
+              ]
+            }
+          }
+        },
+        "required": [
+          "date",
+          "items"
+        ]
       },
       "TracerFormContext": {
         "type": "object",
@@ -38115,6 +38157,119 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/open/attendance/daily": {
+      "get": {
+        "tags": [
+          "open"
+        ],
+        "summary": "Open API: the recorded daily attendance of the key's school on one date (ids and statuses, no names)",
+        "description": "Scope attendance:read, capability platform.openApi. date defaults to today in the school timezone (not in the future, at most 366 days back). Each key has its own limit per minute (X-RateLimit-Limit/Remaining/Reset on every answer; 429 with Retry-After). Unknown or revoked key: 401; key without the scope: 403.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "classId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statuses",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenDailyAttendance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this client (RATE_LIMITED)",
             "content": {
               "application/json": {
                 "schema": {
