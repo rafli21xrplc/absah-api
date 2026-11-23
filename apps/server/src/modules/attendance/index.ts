@@ -9,3 +9,4 @@ export {
   REMIND_UNFILLED_QUEUE,
   remindUnfilled,
 } from './jobs/session-jobs';
+export { sessionsRouter } from './http/sessions';

@@ -198,6 +198,11 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   slot of the weekday), remind 10 min after the lesson (daily: 10.00) via attendance.session_unfilled,
   lock at 23.59 or later (catch-up): open -> missed, others locked, recomputeDaily, one
   attendance.session_locked per day. attendance_days rows make each step idempotent.
+- Filling (application/sessions.ts): GET /attendance/today?scope=mine|all, GET /sessions/{id},
+  POST /sessions/{id}/submit with exceptions only (rest H, source teacher, never over higher
+  sources: those students come back fixed=true). Teacher, wali kelas (daily) or admin/operator/
+  wakasek/piket may fill (domain/policies.ts). Locked -> 409 SESSION_LOCKED. Unchanged rows are not
+  rewritten, so attendance.absent_marked fires only on a change to A. "Today" uses the school timezone.
 
 ## File storage (apps/server/src/shared/storage)
 - ObjectStorage interface: presignUpload (5-minute PUT, Content-Type and Content-Length signed),
