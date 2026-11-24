@@ -22,3 +22,4 @@ export { openPklSession, setPklStatus } from './application/pkl-sessions';
 export { getSession } from './application/sessions';
 export { listSessions, type SessionRow } from './infrastructure/attendance-repo';
 export { isoWeekday } from './domain/status-rules';
+export { dailyStatusesOn } from './infrastructure/attendance-repo';

@@ -27,3 +27,20 @@ export async function revokeKeyRow(tx: Tx, keyId: string, by: string): Promise<b
   const rows = await tx.update(k).set({ revokedAt: sql`now()`, revokedBy: by }).where(and(eq(k.id, keyId), isNull(k.revokedAt))).returning({ id: k.id });
   return rows.length > 0;
 }
+
+/** The key with this hash (in the school of the key, under RLS). */
+export async function findKeyByHash(tx: Tx, tokenHash: string) {
+  const [row] = await tx.select().from(k).where(eq(k.tokenHash, tokenHash));
+  return row;
+}
+
+/** Records use at most once a minute: a busy key must not turn every request into a write. */
+export async function touchKey(tx: Tx, keyId: string): Promise<void> {
+  await tx.update(k).set({ lastUsedAt: sql`now()` }).where(and(eq(k.id, keyId), sql`(${k.lastUsedAt} is null or ${k.lastUsedAt} < now() - interval '1 minute')`));
+}
+
+export async function schoolOfKey(tx: Tx, schoolId: string) {
+  const s = schema.schools;
+  const [row] = await tx.select({ id: s.id, level: s.level, isMadrasah: s.isMadrasah, timezone: s.timezone }).from(s).where(eq(s.id, schoolId));
+  return row;
+}
