@@ -4,6 +4,7 @@ export * from './platform/context';
 export * from './platform/roles';
 export * from './academic/school-settings';
 export * from './platform/invitations';
+export * from './platform/workspace-export';
 export * from './academic/enums';
 export * from './academic/imports';
 export * from './academic/registry';

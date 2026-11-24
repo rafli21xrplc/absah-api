@@ -177,6 +177,7 @@ import {
 } from './platform/invitations';
 import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersResponse, UpdateMembershipStatusRequest } from './platform/context';
 import { HealthResponse } from './platform/health';
+import { CreateWorkspaceExportRequest, WorkspaceExport, WorkspaceExportDownload, WorkspaceExportIdParam, WorkspaceExportList } from './platform/workspace-export';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
 import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
@@ -2192,6 +2193,50 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }],
     request: { params: ExportIdParam },
     responses: { 200: json(ExportDownload, 'Download'), ...errors(401, 403, 404, 409) },
+  });
+  const workspaceNote = 'PLT-11, admin of the school only. The ZIP holds one CSV per table plus the school files; it is removed after 7 days.';
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/workspace/exports`,
+    tags: ['workspace'],
+    summary: 'Ask for the whole workspace as a ZIP (202, built by the worker)',
+    description: `${workspaceNote} One waiting at a time (409 already_queued). The tppk schema is included only when the admin is a TPPK member.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateWorkspaceExportRequest } } } },
+    responses: { 202: json(WorkspaceExport, 'Queued'), ...errors(400, 401, 403, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/workspace/exports`,
+    tags: ['workspace'],
+    summary: 'Workspace exports of this school, newest first',
+    description: workspaceNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(WorkspaceExportList, 'Exports'), ...errors(401, 403) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/workspace/exports/{exportId}`,
+    tags: ['workspace'],
+    summary: 'One workspace export (poll until done)',
+    description: workspaceNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: WorkspaceExportIdParam },
+    responses: { 200: json(WorkspaceExport, 'Export'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/workspace/exports/{exportId}/download`,
+    tags: ['workspace'],
+    summary: 'A 5-minute presigned URL that saves the ZIP (audited)',
+    description: workspaceNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: WorkspaceExportIdParam },
+    responses: { 200: json(WorkspaceExportDownload, 'Download'), ...errors(401, 403, 404, 409) },
   });
   registry.registerPath({
     method: 'get',

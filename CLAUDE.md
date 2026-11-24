@@ -713,6 +713,12 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   decimal (never rounded up to look compliant). Bills: unpaid installments of OPEN bills due on or before the first exam
   day (fee_type_ids, empty = all); reasons carry the count, never the amount. Wali kelas: own rombels only
   (classes.homeroom_teacher_id), another rombel's classId = 404; wakasek/kepsek/admin all.
+- Ekspor workspace (PLT-11, module workspace-export, migrations 0099-0100, table workspace_exports): POST /workspace/exports
+  {includeFiles=true} (202, admin ONLY: not the kepsek) queues one export per school (unique index on status queued ->
+  409 already_queued), emits workspace_export.requested, audited. include_tppk is decided at request time (the admin is on
+  the TPPK team) and never widened later; the tppk schema is members-only under RLS, so a non-member's export could not read
+  it anyway. GET /workspace/exports, GET /{id}, GET /{id}/download (presigned 5 min, audited workspace_export.downloaded;
+  409 not_ready / expired). File: schools/{id}/workspace_exports/{id}, removed after WORKSPACE_EXPORT_RETENTION_DAYS (7).
 - Ruang ujian (UJN-03, migrations 0095-0096): exam_rooms (period, name unique per period, capacity, supervisor_id) and
   exam_seats (one room per student per period; seat_no unique per room; composite FK keeps a seat's period = its
   room's period). Rooms/seats may be deleted (a mistake), never truncated; only name/capacity/supervisor and a seat's
