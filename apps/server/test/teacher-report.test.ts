@@ -69,7 +69,9 @@ beforeAll(async () => {
     const [cls] = await tx.insert(schema.classes).values({ schoolId: school, academicYearId: year?.id ?? '', name: '8A', grade: 8 }).returning();
     for (const [i, from] of [ids['g2'], ids['g3']].entries()) {
       const [session] = await tx.insert(schema.attendanceSessions).values({ schoolId: school, schoolDate: nov(16 + i), mode: 'daily', ownerType: 'class', ownerId: cls?.id ?? '', teacherId: ids['g1'] ?? null }).returning();
-      await tx.insert(schema.sessionSubstitutions).values({ schoolId: school, sessionId: session?.id ?? '', fromTeacherId: from ?? null, substituteId: ids['g1'] ?? '' });
+      // The report counts a substitution on the day it was made, on the school's clock. Only `Date` is pinned here, so the
+      // database's now() would put these rows on the day the suite runs (and the test would fail after midnight in Jakarta).
+      await tx.insert(schema.sessionSubstitutions).values({ schoolId: school, sessionId: session?.id ?? '', fromTeacherId: from ?? null, substituteId: ids['g1'] ?? '', createdAt: new Date(`${nov(16 + i)}T03:00:00Z`) });
     }
   });
   await checkIns(ids['g1'] ?? '', [2, 3, 4, 5, 6, 9, 11, 12, 13, 14], [3, 9, 13]);
