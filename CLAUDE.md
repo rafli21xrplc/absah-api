@@ -721,6 +721,10 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   = the room's list (present/absent/eligible). Guards: a room with check-ins cannot be deleted
   (room_has_attendance); a checked-in student cannot be unseated or moved (checked_in). A thrown error rolls the whole
   withTenant back, including the lazily created gate secret: tests insert gate_secrets themselves.
+- Kartu ujian siswa (UJN-01, application/mine.ts): GET /exam/mine for orang_tua/siswa (EXAM_CARD_HOLDERS): per exam not
+  closed and not over x own student (parent by guardians.user_id, student by students.user_id): eligible NOW (same
+  evaluateStudents), reasons (own percent, count of open installments, never amounts), room+seat, arrived. The QR itself
+  is the daily card's (GET /cards/mine + card device keys), the PWA shows it while eligible; no second card.
 - Guru (GRU-01..04, behind teacher.attendance, default on; schema packages/db/src/schema/teacher.ts, migrations
   0088-0089, constants in contracts/teacher/constants.ts). teacher_attendance: one row per teacher per school date,
   made by the first check-in (source app|kiosk), only checked_out_at may change (column GRANT), `late` is decided once

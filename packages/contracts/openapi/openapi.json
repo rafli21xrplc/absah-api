@@ -7745,6 +7745,112 @@
           "items"
         ]
       },
+      "MyExams": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyExam"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MyExam": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrollmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "period": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "startsOn": {
+                "type": "string"
+              },
+              "endsOn": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "startsOn",
+              "endsOn"
+            ]
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EligibilityReason"
+            }
+          },
+          "room": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "seatNo": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "seatNo"
+            ]
+          },
+          "arrived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "studentId",
+          "enrollmentId",
+          "student",
+          "className",
+          "period",
+          "eligible",
+          "reasons",
+          "room",
+          "arrived"
+        ]
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -25616,6 +25722,74 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exam/mine": {
+      "get": {
+        "tags": [
+          "exam"
+        ],
+        "summary": "Exam card status of my own children, or of myself (UJN-01)",
+        "description": "Ujian (UJN), behind exam.enabled. The wakasek and admin manage periods; kepsek and the wali kelas read. Who may sit is computed from live data (attendance and bills) each time, never stored. For parents and students, each exam not closed and not over, per own student: eligible (by the school's rule, right now), the reasons when not (attendance: own percent and the minimum; bills: how many installments are open, never the amount), the room and seat once arranged, and whether the student has already arrived. The QR on the exam card is the same dynamic QR as the daily card (GET /cards/mine, card device keys): the PWA shows it while an exam is open and eligible is true.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "My exams",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyExams"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {
