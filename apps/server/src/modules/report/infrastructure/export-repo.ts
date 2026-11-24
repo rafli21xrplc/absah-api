@@ -72,7 +72,7 @@ export function finishJob(tx: Tx, id: string, result: { status: 'done'; fileName
 }
 
 export async function schoolInfo(tx: Tx, schoolId: string) {
-  const [row] = await tx.select({ name: schema.schools.name, npsn: schema.schools.npsn, timezone: schema.schools.timezone }).from(schema.schools).where(eq(schema.schools.id, schoolId));
+  const [row] = await tx.select({ name: schema.schools.name, npsn: schema.schools.npsn, timezone: schema.schools.timezone, isMadrasah: schema.schools.isMadrasah }).from(schema.schools).where(eq(schema.schools.id, schoolId));
   return row ?? null;
 }
 
@@ -96,6 +96,7 @@ export function enrollmentDays(tx: Tx, academicYearId: string, from: string, to:
   const st = schema.students;
   return tx
     .select({
+      enrollmentId: e.id,
       studentId: st.id,
       name: st.name,
       nisn: st.nisn,

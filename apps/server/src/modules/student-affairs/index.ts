@@ -5,3 +5,4 @@ export { uksRouter } from './http/uks';
 export { pointsRouter } from './http/points';
 export { EARLY_WARNING_CRON, EARLY_WARNING_QUEUE, earlyWarningHandler } from './jobs/early-warning';
 export { listEarlyWarnings, raiseEarlyWarnings } from './application/early-warning';
+export { totalsInRange as pointTotalsInRange } from './infrastructure/point-entry-repo';
