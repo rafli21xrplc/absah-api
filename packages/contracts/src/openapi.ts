@@ -125,6 +125,7 @@ import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJou
 import { PklAssessmentExportQuery } from './pkl/assessment';
 import { OpenDailyAttendance, OpenDailyAttendanceQuery } from './integration/open';
 import { ApiKey, ApiKeyIdParam, ApiKeyList, CreatedApiKey, CreateApiKeyRequest } from './integration/api-keys';
+import { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookIdParam, WebhookList } from './integration/webhooks';
 import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, InviteTracerRequest, InviteTracerResult, TracerClassList, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
@@ -2501,6 +2502,50 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: ApiKeyIdParam },
     responses: { 200: json(ApiKey, 'Key'), ...errors(401, 403, 404) },
+  });
+  const webhookNote = 'Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/integrations/webhooks`,
+    tags: ['integration'],
+    summary: "The school's webhook addresses (host only; never the secret)",
+    description: webhookNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(WebhookList, 'Webhooks'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/integrations/webhooks`,
+    tags: ['integration'],
+    summary: 'Register a webhook address and pick events; the answer holds the signing secret, once',
+    description: `${webhookNote} 409 reason too_many at 5 addresses.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateWebhookRequest } } } },
+    responses: { 201: json(CreatedWebhook, 'The webhook'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'patch',
+    path: `${API_BASE_PATH}/integrations/webhooks/{webhookId}`,
+    tags: ['integration'],
+    summary: 'Change the address, the events, or switch a webhook on or off',
+    description: webhookNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: WebhookIdParam, body: { content: { 'application/json': { schema: UpdateWebhookRequest } } } },
+    responses: { 200: json(Webhook, 'Webhook'), ...errors(400, 401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'delete',
+    path: `${API_BASE_PATH}/integrations/webhooks/{webhookId}`,
+    tags: ['integration'],
+    summary: 'Delete a webhook address',
+    description: webhookNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: WebhookIdParam },
+    responses: { 204: { description: 'Removed' }, ...errors(401, 403, 404) },
   });
   registry.registerComponent('securitySchemes', 'apiKey', {
     type: 'http',
