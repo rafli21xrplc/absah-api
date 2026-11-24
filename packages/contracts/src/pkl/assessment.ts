@@ -47,3 +47,63 @@ export const SavePklAspectsRequest = z
   .strict()
   .meta({ id: 'SavePklAspectsRequest' });
 export type SavePklAspectsRequest = z.infer<typeof SavePklAspectsRequest>;
+
+/** The form is open from this many days before the placement ends until this many days after it ended. */
+export const PKL_ASSESSMENT_OPEN_BEFORE_DAYS = 14;
+export const PKL_ASSESSMENT_OPEN_AFTER_DAYS = 30;
+
+export const PKL_ASSESSMENT_WINDOWS = ['not_yet', 'open', 'closed'] as const;
+export const PklAssessmentWindow = z.enum(PKL_ASSESSMENT_WINDOWS).meta({ id: 'PklAssessmentWindow' });
+export type PklAssessmentWindow = z.infer<typeof PklAssessmentWindow>;
+
+export const PklAssessmentScore = z.object({
+  aspectId: z.uuid(),
+  /** Name and weight as they were when the score was given. */
+  aspectName: z.string(),
+  weight: z.int(),
+  score: z.int().min(0).max(PKL_SCORE_MAX),
+});
+export type PklAssessmentScore = z.infer<typeof PklAssessmentScore>;
+
+export const PklAssessment = z
+  .object({
+    /** Weighted average of the scores, one decimal. */
+    overall: z.number().min(0).max(PKL_SCORE_MAX),
+    note: z.string().nullable(),
+    assessedAt: z.iso.datetime({ offset: true }),
+    scores: z.array(PklAssessmentScore),
+  })
+  .meta({ id: 'PklAssessment' });
+export type PklAssessment = z.infer<typeof PklAssessment>;
+
+/** One placement with its assessment state (null: not given yet). */
+export const PklAssessmentItem = z
+  .object({
+    placementId: z.uuid(),
+    student: z.object({ name: z.string(), className: z.string() }),
+    partner: z.object({ id: z.uuid(), name: z.string() }),
+    startsOn: z.iso.date(),
+    endsOn: z.iso.date(),
+    window: PklAssessmentWindow,
+    assessment: PklAssessment.nullable(),
+  })
+  .meta({ id: 'PklAssessmentItem' });
+export type PklAssessmentItem = z.infer<typeof PklAssessmentItem>;
+
+/** GET /api/v1/pkl/assessments: a pembimbing industri their own students, a guru pembimbing theirs, managers and kepsek all. */
+export const PklAssessmentList = z.object({ items: z.array(PklAssessmentItem) }).meta({ id: 'PklAssessmentList' });
+export type PklAssessmentList = z.infer<typeof PklAssessmentList>;
+
+/** GET one: the item plus the aspects the form asks for now. */
+export const PklAssessmentForm = PklAssessmentItem.extend({ aspects: z.array(PklAssessmentAspect) }).meta({ id: 'PklAssessmentForm' });
+export type PklAssessmentForm = z.infer<typeof PklAssessmentForm>;
+
+/** PUT /api/v1/pkl/placements/{placementId}/assessment: one score per current aspect (all of them). The pembimbing industri of the placement. */
+export const SavePklAssessmentRequest = z
+  .object({
+    scores: z.array(z.object({ aspectId: z.uuid(), score: z.int().min(0).max(PKL_SCORE_MAX) }).strict()).min(1).max(PKL_ASPECT_MAX),
+    note: z.string().trim().max(1000).nullish(),
+  })
+  .strict()
+  .meta({ id: 'SavePklAssessmentRequest' });
+export type SavePklAssessmentRequest = z.infer<typeof SavePklAssessmentRequest>;
