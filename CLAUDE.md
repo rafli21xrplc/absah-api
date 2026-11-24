@@ -719,6 +719,16 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   the TPPK team) and never widened later; the tppk schema is members-only under RLS, so a non-member's export could not read
   it anyway. GET /workspace/exports, GET /{id}, GET /{id}/download (presigned 5 min, audited workspace_export.downloaded;
   409 not_ready / expired). File: schools/{id}/workspace_exports/{id}, removed after WORKSPACE_EXPORT_RETENTION_DAYS (7).
+  Builder (application/build.ts, consumer `workspace_export_build`, retryLimit 1): reads in ONE tenant
+  transaction AS THE REQUESTER (RLS decides what is visible: counseling notes by role, tppk members only), every public
+  table with school_id plus `schools`, minus domain/tables.ts EXCLUDED_TABLES (secrets, queues, platform_flags) and columns
+  ending _hash/secret; encrypted cells (v1:... ) are decrypted with AAD "<table>.<column>" ("tppk.<table>.<column>"), a cell
+  that fails becomes "[gagal didekripsi]" and is counted in README.txt. One CSV per table (UTF-8 BOM, CRLF, formula-injection
+  guard in domain/csv.ts), files from STORAGE_COLUMNS (leave/pkl attachments, visitor/pickup photos, imports, point evidence)
+  under berkas/<module>/<uuid> with berkas/_daftar.csv (missing or over MAX_FILE_BYTES_TOTAL 400 MB are listed, not fatal).
+  The ZIP (infrastructure/zip.ts, own writer: no archive dependency, no ZIP64, so < 4 GB) is built in memory. Adding a table
+  with a storage-key column or a secret: test/workspace-export-build.test.ts fails until STORAGE_COLUMNS /
+  IGNORED_STORAGE_COLUMNS / EXCLUDED_TABLES know it. Retention: job workspace_export.retention 02.52 WIB expires + removes.
 - Ruang ujian (UJN-03, migrations 0095-0096): exam_rooms (period, name unique per period, capacity, supervisor_id) and
   exam_seats (one room per student per period; seat_no unique per room; composite FK keeps a seat's period = its
   room's period). Rooms/seats may be deleted (a mistake), never truncated; only name/capacity/supervisor and a seat's
