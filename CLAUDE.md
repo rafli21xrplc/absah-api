@@ -678,6 +678,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   provider name absah_student_bill_due_v1: SUBMIT IT) to each guardian with a number: school, first name, due date,
   link; never the amount or the fee (dedup key bill_due:<installment>:<guardian>); an installment paid or voided
   since is skipped. Not in MUTABLE_TEMPLATE_CODES (a parent cannot switch it off yet).
+- GET /student-billing/classes (BILLING_READERS): rombel of the active year with active students, because the bendahara cannot
+  read the registry's /classes (found while building the app; the issue form needs a rombel picker).
 - Rekap pembayaran (TGH-04, application/recap.ts): GET /student-billing/recap?month=YYYY-MM&feeTypeId= for
   BILLING_READERS. `received`: student_payments `paid` with paid_at in the month on the SCHOOL's clock (not UTC), by
   day and method, `flagged` = those with last_error paid_twice/bill_void (money that counted for nothing, for the

@@ -129,3 +129,14 @@ export async function hasPaidInstallment(tx: Tx, billId: string): Promise<boolea
 export function markVoid(tx: Tx, id: string, reason: string, at: Date) {
   return tx.update(b).set({ status: 'void', voidedAt: at, voidReason: reason }).where(eq(b.id, id));
 }
+
+/** Rombel of the active academic year with their active students: what a mass issue can be aimed at. */
+export async function billableClasses(tx: Tx) {
+  return tx
+    .select({ id: schema.classes.id, name: schema.classes.name, grade: schema.classes.grade, activeStudents: sql<number>`count(${e.id}) filter (where ${e.status} = 'active')::int` })
+    .from(schema.classes)
+    .innerJoin(schema.academicYears, and(eq(schema.academicYears.id, schema.classes.academicYearId), eq(schema.academicYears.isActive, true)))
+    .leftJoin(e, eq(e.classId, schema.classes.id))
+    .groupBy(schema.classes.id)
+    .orderBy(asc(schema.classes.grade), asc(schema.classes.name), asc(schema.classes.id));
+}

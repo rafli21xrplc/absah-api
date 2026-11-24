@@ -1,4 +1,4 @@
-import type { CreateFeeTypeRequest, FeeType, FeeTypeList, UpdateFeeTypeRequest } from '@absah/contracts';
+import type { BillingClassList, CreateFeeTypeRequest, FeeType, FeeTypeList, UpdateFeeTypeRequest } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
@@ -7,6 +7,7 @@ import { ConflictError, NotFoundError } from '../../../shared/errors';
 import { isUniqueViolation } from '../../../shared/pg-errors';
 import type { Actor } from '../../../shared/policy';
 import { canManageBilling, canReadStudentBills } from '../domain/policies';
+import { billableClasses } from '../infrastructure/bill-repo';
 import { findFeeType, insertFeeType, listFeeTypes, updateFeeType } from '../infrastructure/fee-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
@@ -58,4 +59,10 @@ export function updateFeeTypeFor(actor: Actor, auditCtx: AuditContext, id: strin
     if (!row) throw new Error('fee type vanished');
     return row;
   });
+}
+
+/** GET /student-billing/classes: the rombel a bill can be aimed at, for everyone who reads bills. */
+export function listBillingClasses(actor: Actor): Promise<BillingClassList> {
+  authorize(actor, canReadStudentBills);
+  return withTenant(scope(actor), async (tx) => ({ items: await billableClasses(tx) }));
 }

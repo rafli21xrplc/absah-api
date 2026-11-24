@@ -7851,6 +7851,41 @@
           "arrived"
         ]
       },
+      "BillingClassList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "grade": {
+                  "type": "integer"
+                },
+                "activeStudents": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "grade",
+                "activeStudents"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "ActivityList": {
         "type": "object",
         "properties": {
@@ -25764,6 +25799,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MyExams"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/student-billing/classes": {
+      "get": {
+        "tags": [
+          "student-billing"
+        ],
+        "summary": "Rombel a bill can be issued to, with active students (TGH-01)",
+        "description": "Tagihan siswa (TGH), behind student.billing. The bendahara and admin manage; kepsek and wakasek read. Money is whole rupiah; a bill is never deleted, only voided. The registry's /classes is not readable by the bendahara, so billing lists the rombel of the active academic year itself (bendahara, admin, kepsek, wakasek).",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rombel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingClassList"
                 }
               }
             }

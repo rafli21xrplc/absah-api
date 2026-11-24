@@ -4,7 +4,7 @@ import type { z } from 'zod';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { CounselingNote, CounselingNoteIdParam, CounselingNoteList, CounselingNotesQuery, CreateCounselingNoteRequest } from './student-affairs/counseling';
 import { EarlyWarningList, EarlyWarningsQuery } from './student-affairs/early-warning';
-import { BillIdParam, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
+import { BillIdParam, BillingClassList, BillsQuery, IssueBillsRequest, IssueBillsResult, MyBillsList, StudentBill, StudentBillList, VoidBillRequest } from './student-billing/bills';
 import { MyExams } from './exam/mine';
 import { ExamCheckIn, ExamCheckInRequest, ExamScanRequest, RoomAttendance } from './exam/attendance';
 import { CreateExamRoomRequest, ExamRoom, ExamRoomIdParam, ExamRoomList, ExamRoomSeatParam, RoomRoster, SeatStudentsRequest, SeatStudentsResult, UpdateExamRoomRequest } from './exam/rooms';
@@ -1756,6 +1756,16 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
     responses: { 200: json(MyExams, 'My exams'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/student-billing/classes`,
+    tags: ['student-billing'],
+    summary: 'Rombel a bill can be issued to, with active students (TGH-01)',
+    description: `${billingNote} The registry's /classes is not readable by the bendahara, so billing lists the rombel of the active academic year itself (bendahara, admin, kepsek, wakasek).`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(BillingClassList, 'Rombel'), ...errors(401, 403, 404) },
   });
   const activityNote = 'Kegiatan (KEG-01) of the active academic year. Managers (admin, wakasek) create and edit; admin, operator, wakasek and kepsek see all; a coach (pembina) sees and manages the members of their own activities (404 for others).';
   const activityBody = (schema: z.ZodType) => ({ body: { content: { 'application/json': { schema } } } });

@@ -131,6 +131,17 @@ describe('fee types (TGH-01)', () => {
   });
 });
 
+describe('the rombel a bill can be aimed at (TGH-01)', () => {
+  it('are listed for the bendahara, who cannot read the registry, with their active students, and for no one outside billing', async () => {
+    const list = (await get(A('bendahara'), '/classes').expect(200)).body as { items: { id: string; name: string; grade: number; activeStudents: number }[] };
+    expect(list.items.map((c) => [c.name, c.grade, c.activeStudents])).toEqual([['7A', 7, 1], ['8A', 8, 3], ['8B', 8, 2], ['9A', 9, 0]]); // the student who left is not counted
+    expect(list.items.find((c) => c.name === '8A')?.id).toBe(class8a);
+    for (const name of ['admin', 'kepsek', 'wakasek']) await get(A(name), '/classes').expect(200);
+    for (const name of ['guru', 'wali', 'ortu']) await get(A(name), '/classes').expect(403);
+    await get(A('bendahara'), '/classes', off).expect(404);
+  });
+});
+
 describe('issuing bills (TGH-01, TGH-02)', () => {
   it('bills the active students of a rombel, once however often it is sent', async () => {
     const first = await issue({ target: { kind: 'class', classId: class8a } }).expect(201);

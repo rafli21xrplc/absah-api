@@ -1,4 +1,4 @@
-import { BillIdParam, BillingRecap, BillingRecapQuery, BillsQuery, CreateFeeTypeRequest, FeeType, InstallmentIdParam, MyBillsList, RequestStudentPaymentRequest, StudentPayment, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, UpdateFeeTypeRequest, VoidBillRequest } from '@absah/contracts';
+import { BillIdParam, BillingClassList, BillingRecap, BillingRecapQuery, BillsQuery, CreateFeeTypeRequest, FeeType, InstallmentIdParam, MyBillsList, RequestStudentPaymentRequest, StudentPayment, FeeTypeIdParam, FeeTypeList, FeeTypesQuery, IssueBillsRequest, IssueBillsResult, StudentBill, StudentBillList, UpdateFeeTypeRequest, VoidBillRequest } from '@absah/contracts';
 import { Router, type Request } from 'express';
 import type { PaymentProvider } from '../../../shared/payments';
 import { auditContext } from '../../../shared/audit';
@@ -9,7 +9,7 @@ import { idempotent } from '../../../shared/idempotency';
 import { schoolDate } from '../../../shared/school-date';
 import { resolveContext, type Auth } from '../../platform';
 import { issueBills, listStudentBills, voidBill } from '../application/bills';
-import { createFeeType, listFeeTypesFor, updateFeeTypeFor } from '../application/fees';
+import { listBillingClasses, createFeeType, listFeeTypesFor, updateFeeTypeFor } from '../application/fees';
 import { myBills, requestStudentPayment } from '../application/payments';
 import { billingRecap } from '../application/recap';
 
@@ -24,6 +24,9 @@ export function studentBillingRouter(auth: Auth, provider: PaymentProvider | nul
   const router = Router();
   const billing = [resolveContext(auth, { school: 'required' }), requireCap('student.billing')];
 
+  router.get('/student-billing/classes', ...billing, async (req, res) => {
+    sendContract(res, BillingClassList, await listBillingClasses(getActor(req)));
+  });
   router.get('/student-billing/fee-types', ...billing, async (req, res) => {
     sendContract(res, FeeTypeList, await listFeeTypesFor(getActor(req), FeeTypesQuery.parse(req.query).includeInactive));
   });
