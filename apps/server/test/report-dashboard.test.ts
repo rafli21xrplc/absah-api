@@ -78,9 +78,9 @@ describe('GET /dashboard/principal (RKP-05)', () => {
     expect(d.schoolDate).toBe('2027-01-14');
     expect(d.attendance.today).toMatchObject({ counts: { H: 1, T: 1, S: 1, I: 0, A: 1 }, days: 4, presentRate: 0.5 });
     expect(d.attendance.trend).toEqual([
-      { date: '2027-01-12', presentRate: 1, days: 4 },
-      { date: '2027-01-13', presentRate: 0.75, days: 4 },
-      { date: '2027-01-14', presentRate: 0.5, days: 4 },
+      { date: '2027-01-12', presentRate: 1, present: 4, days: 4 },
+      { date: '2027-01-13', presentRate: 0.75, present: 3, days: 4 },
+      { date: '2027-01-14', presentRate: 0.5, present: 2, days: 4 },
     ]);
   });
 

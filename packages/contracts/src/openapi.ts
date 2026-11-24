@@ -179,7 +179,7 @@ import { MeContextResponse, MembershipIdParam, SchoolMember, SchoolMembersRespon
 import { HealthResponse } from './platform/health';
 import { CreateWorkspaceExportRequest, WorkspaceExport, WorkspaceExportDownload, WorkspaceExportIdParam, WorkspaceExportList } from './platform/workspace-export';
 import { CreateExportRequest, ExportDownload, ExportIdParam, ExportJob, ExportJobList } from './report/exports';
-import { PrincipalDashboard } from './report/dashboard';
+import { CollectionDashboardList, PrincipalDashboard } from './report/dashboard';
 import { MbgDaily, MbgDailyQuery, MbgForecast, MbgForecastQuery, MbgSettings, UpdateMbgSettingsRequest } from './report/mbg';
 import { InvoiceDetail, InvoiceIdParam, InvoiceList } from './billing/invoices';
 import { CreatePaymentRequest, Payment, PaymentList } from './billing/payments';
@@ -2249,6 +2249,16 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: [{ ...schoolHeader, required: true }],
     responses: { 200: json(PrincipalDashboard, 'Dashboard'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/dashboard/collections`,
+    tags: ['report'],
+    summary: 'Dasbor koleksi / yayasan (RKP-06): the caller\'s schools grouped by collection, each computed in its own tenant and then put together',
+    description:
+      'No X-School-Id. A collection lists only the schools where the caller is kepsek, wakasek or an admin with two-step login (the same rule as the principal dashboard); a collection with no such school is not listed. Schools without a collection do not appear.',
+    security: [{ session: [] }],
+    responses: { 200: json(CollectionDashboardList, 'Dashboards'), ...errors(401) },
   });
   registry.registerPath({
     method: 'get',

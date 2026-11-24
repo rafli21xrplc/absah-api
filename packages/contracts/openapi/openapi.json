@@ -12314,6 +12314,10 @@
                       "minimum": 0,
                       "maximum": 1
                     },
+                    "present": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
                     "days": {
                       "type": "integer",
                       "minimum": 0
@@ -12322,6 +12326,7 @@
                   "required": [
                     "date",
                     "presentRate",
+                    "present",
                     "days"
                   ]
                 }
@@ -12453,6 +12458,282 @@
           "sessions",
           "atRisk",
           "mbg"
+        ]
+      },
+      "CollectionDashboardList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionDashboard"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CollectionDashboard": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "schoolId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "schoolDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "attendance": {
+                  "type": "object",
+                  "properties": {
+                    "days": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "present": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "presentRate": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "days",
+                    "present",
+                    "presentRate"
+                  ]
+                },
+                "sessions": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "filled": {
+                      "type": "integer"
+                    },
+                    "missed": {
+                      "type": "integer"
+                    },
+                    "open": {
+                      "type": "integer"
+                    },
+                    "fillRate": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "total",
+                    "filled",
+                    "missed",
+                    "open",
+                    "fillRate"
+                  ]
+                },
+                "atRiskStudents": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "mbg": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "enrolled": {
+                      "type": "integer"
+                    },
+                    "present": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "enrolled",
+                    "present"
+                  ]
+                }
+              },
+              "required": [
+                "schoolId",
+                "name",
+                "schoolDate",
+                "attendance",
+                "sessions",
+                "atRiskStudents",
+                "mbg"
+              ]
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "schools": {
+                "type": "integer"
+              },
+              "attendance": {
+                "type": "object",
+                "properties": {
+                  "days": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "present": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "presentRate": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "days",
+                  "present",
+                  "presentRate"
+                ]
+              },
+              "sessions": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "filled": {
+                    "type": "integer"
+                  },
+                  "missed": {
+                    "type": "integer"
+                  },
+                  "open": {
+                    "type": "integer"
+                  },
+                  "fillRate": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "total",
+                  "filled",
+                  "missed",
+                  "open",
+                  "fillRate"
+                ]
+              },
+              "atRiskStudents": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "mbg": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "enrolled": {
+                    "type": "integer"
+                  },
+                  "present": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "enrolled",
+                  "present"
+                ]
+              }
+            },
+            "required": [
+              "schools",
+              "attendance",
+              "sessions",
+              "atRiskStudents",
+              "mbg"
+            ]
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "present": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "days": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "presentRate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "date",
+                "present",
+                "days",
+                "presentRate"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "schools",
+          "totals",
+          "trend"
         ]
       },
       "MbgDaily": {
@@ -33960,6 +34241,42 @@
           },
           "404": {
             "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/collections": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Dasbor koleksi / yayasan (RKP-06): the caller's schools grouped by collection, each computed in its own tenant and then put together",
+        "description": "No X-School-Id. A collection lists only the schools where the caller is kepsek, wakasek or an admin with two-step login (the same rule as the principal dashboard); a collection with no such school is not listed. Schools without a collection do not appear.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionDashboardList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
             "content": {
               "application/json": {
                 "schema": {
