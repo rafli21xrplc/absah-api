@@ -289,6 +289,10 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   required; today, not in the future; gate_scans method manual + recorded_by; 409 already_arrived;
   audited gate.manual_arrival) and GET /gate/today (late arrivals, not-arrived list with approved
   izin flagged S/I so piket does not chase them; reads leave_requests directly).
+- Papan kedatangan (GRB-08, application/arrivals.ts arrivalBoard, domain/board.ts boardByClass): GET /gate/board for
+  the same roles as /gate/today: per rombel students/onTime/late/notArrived/excused (excused = not in but covered by an
+  approved izin), totals, updatedAt. Counts only, no names (small enough to poll every 5 s; the names are on /gate/today).
+  Polling, not SSE: the app asks every 5 s while the tab is visible.
 - Load: test/kiosk-load.test.ts (900 scans, 3 kiosks, resent batches, CI) and
   load/kiosk-scans.k6.js with `gate:load-fixture --school <id>` (dev/staging only).
 

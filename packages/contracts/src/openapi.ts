@@ -118,7 +118,7 @@ import { ClassStudentHours, ClassStudentHoursParams, ClassStudentHoursQuery } fr
 import { SessionDetail, SessionIdParam, SubmitSessionRequest, SyncSessionRequest, SyncSessionResult, TodayQuery, TodayResponse } from './attendance/sessions';
 import { ErrorBody } from './common';
 import { BindCardDeviceRequest, CardDeviceKeys, DeviceIdParam, MyCards } from './gate/cards';
-import { Arrival, GateToday, ManualArrivalRequest } from './gate/arrivals';
+import { Arrival, ArrivalBoard, GateToday, ManualArrivalRequest } from './gate/arrivals';
 import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStudentParam, LiaisonStudentQuery, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
@@ -965,6 +965,16 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ session: [] }],
     parameters: gateParams,
     responses: { 200: json(GateToday, 'Today'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/gate/board`,
+    tags: ['gate'],
+    summary: 'Live arrival board: per rombel on time, late, not in yet (piket, admin, operator, wakasek, kepsek)',
+    description: `${gateNote} Counts only, no names, built to be polled every 5 seconds; names are on GET /gate/today.`,
+    security: [{ session: [] }],
+    parameters: gateParams,
+    responses: { 200: json(ArrivalBoard, 'Board'), ...errors(401, 403, 404) },
   });
   const visitorNote = 'Requires gate.visitors (404 CAPABILITY_DISABLED otherwise).';
   registry.registerPath({
