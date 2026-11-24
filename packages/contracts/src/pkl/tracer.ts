@@ -158,3 +158,9 @@ export type InviteTracerRequest = z.infer<typeof InviteTracerRequest>;
 
 export const InviteTracerResult = z.object({ queued: z.int().nonnegative(), withoutPhone: z.int().nonnegative(), alreadyAnswered: z.int().nonnegative() }).meta({ id: 'InviteTracerResult' });
 export type InviteTracerResult = z.infer<typeof InviteTracerResult>;
+
+/** The rombel an angkatan can be copied from (PKL-05): the BKK (humas PKL) cannot read the registry's /classes, so the tracer lists them itself. */
+export const TracerClassList = z
+  .object({ items: z.array(z.object({ id: z.uuid(), name: z.string(), grade: z.int(), stream: ClassStream.nullable(), activeStudents: z.int() })) })
+  .meta({ id: 'TracerClassList' });
+export type TracerClassList = z.infer<typeof TracerClassList>;

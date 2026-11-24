@@ -13,6 +13,8 @@ export function lastActionLink(schoolId: string): Promise<{ templateCode: string
     const [row] = await tx.select({ templateCode: n.templateCode, params: n.params }).from(n).orderBy(desc(n.createdAt)).limit(1);
     if (!row) return null;
     const params = JSON.parse(row.params.reveal()) as Record<string, unknown>;
-    return { templateCode: row.templateCode, link: typeof params.link === 'string' ? params.link : null };
+    // The tracer invitation carries its link as `url` (it is no guardian's action link); e2e opens it like any other.
+    const link = row.templateCode === 'tracer_invitation' ? params.url : params.link;
+    return { templateCode: row.templateCode, link: typeof link === 'string' ? link : null };
   });
 }

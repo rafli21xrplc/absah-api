@@ -10725,6 +10725,45 @@
         },
         "additionalProperties": false
       },
+      "TracerClassList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "grade": {
+                  "type": "integer"
+                },
+                "stream": {
+                  "$ref": "#/components/schemas/ClassStream"
+                },
+                "activeStudents": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "grade",
+                "stream",
+                "activeStudents"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "TracerRecap": {
         "type": "object",
         "properties": {
@@ -32427,6 +32466,84 @@
           },
           "409": {
             "description": "Same Idempotency-Key still running (IDEMPOTENCY_IN_PROGRESS) or state conflict (CONFLICT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tracer/classes": {
+      "get": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Rombel of the active year to copy an angkatan from (managers only)",
+        "description": "Tracer study (PKL-05, capability pkl.tracer). Managers (admin, wakasek, humas_pkl) keep the alumni list and enter answers; kepsek reads; others 403. Status BMW = bekerja, melanjutkan, wirausaha.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-School-Id",
+            "in": "header",
+            "description": "Active school (workspace). Must be a school where the user has an active membership.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Classes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracerClassList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member, wrong role (FORBIDDEN) or 2FA missing (TWO_FACTOR_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
             "content": {
               "application/json": {
                 "schema": {

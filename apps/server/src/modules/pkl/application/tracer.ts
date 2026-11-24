@@ -1,4 +1,4 @@
-import { maskPhone, type InviteTracerRequest, type InviteTracerResult, type AlumniFromClassRequest, type AlumniFromClassResult, type CreateTracerAlumnusRequest, type SaveTracerResponseRequest, type TracerAlumnus, type TracerAlumniList, type TracerAlumniQuery, type TracerRecap } from '@absah/contracts';
+import { maskPhone, type InviteTracerRequest, type InviteTracerResult, type AlumniFromClassRequest, type TracerClassList, type AlumniFromClassResult, type CreateTracerAlumnusRequest, type SaveTracerResponseRequest, type TracerAlumnus, type TracerAlumniList, type TracerAlumniQuery, type TracerRecap } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
@@ -8,7 +8,7 @@ import { emit } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
 import { canManageTracer, canReadTracer } from '../domain/policies';
 import { tracerRecap } from '../domain/tracer';
-import { activeStudentsOfClass, alumniRows, alumniStudentIds, findClass, insertAlumni, upsertResponse, type AlumniRow } from '../infrastructure/tracer-repo';
+import { activeStudentsOfClass, alumniRows, alumniStudentIds, findClass, insertAlumni, tracerClasses, upsertResponse, type AlumniRow } from '../infrastructure/tracer-repo';
 import { tracerWorkbook } from '../infrastructure/tracer-xlsx';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
@@ -102,4 +102,10 @@ export function inviteAlumni(actor: Actor, auditCtx: AuditContext, input: Invite
     await audit(tx, auditCtx, 'tracer.invited', { type: 'tracer_alumni', id: actor.schoolId }, { after: { ...result, graduationYear: input.graduationYear ?? null, resend: input.resend } });
     return result;
   });
+}
+
+/** GET /tracer/classes: the rombel to copy an angkatan from (highest grade first: the ones about to graduate). */
+export function listTracerClasses(actor: Actor): Promise<TracerClassList> {
+  authorize(actor, canManageTracer);
+  return withTenant(scope(actor), async (tx) => ({ items: await tracerClasses(tx) }));
 }
