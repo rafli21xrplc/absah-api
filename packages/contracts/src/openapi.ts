@@ -123,6 +123,7 @@ import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStuden
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
 import { PklAssessmentExportQuery } from './pkl/assessment';
+import { ApiKey, ApiKeyIdParam, ApiKeyList, CreatedApiKey, CreateApiKeyRequest } from './integration/api-keys';
 import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, InviteTracerRequest, InviteTracerResult, TracerClassList, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
@@ -2466,6 +2467,39 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ actionLink: [] }],
     request: { params: PickupEventIdParam },
     responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404, 410) },
+  });
+  const apiKeyNote = 'Open API keys (PLT-09, capability platform.openApi). Admin only, with two-step login. The key is returned once, at creation; only its hash is stored.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/integrations/api-keys`,
+    tags: ['integration'],
+    summary: "The school's API keys, newest first (never the key itself)",
+    description: apiKeyNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    responses: { 200: json(ApiKeyList, 'Keys'), ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/integrations/api-keys`,
+    tags: ['integration'],
+    summary: 'Create an API key: name, scopes and rate limit; the answer holds the key, once',
+    description: `${apiKeyNote} 409 reason too_many at 10 active keys.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { body: { content: { 'application/json': { schema: CreateApiKeyRequest } } } },
+    responses: { 201: json(CreatedApiKey, 'The key'), ...errors(400, 401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/integrations/api-keys/{keyId}/revoke`,
+    tags: ['integration'],
+    summary: 'Revoke a key at once (revoking again changes nothing)',
+    description: apiKeyNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: ApiKeyIdParam },
+    responses: { 200: json(ApiKey, 'Key'), ...errors(401, 403, 404) },
   });
   registry.registerComponent('securitySchemes', 'tracerLink', {
     type: 'apiKey',

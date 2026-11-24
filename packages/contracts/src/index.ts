@@ -72,3 +72,4 @@ export * from './pkl/reviews';
 export * from './pkl/journals';
 export * from './pkl/assessment';
 export * from './pkl/tracer';
+export * from './integration/api-keys';

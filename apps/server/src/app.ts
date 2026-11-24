@@ -16,6 +16,7 @@ import { substitutionsRouter, teacherAttendanceRouter, teacherLeaveRouter } from
 import { pklAssessmentsRouter, pklTracerFormRouter, pklTracerRouter, pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { dashboardRouter, exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { workspaceExportsRouter } from './modules/workspace-export';
+import { apiKeysRouter } from './modules/integration';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
 import { notificationsRouter, preferencesRouter, pushRouter, whatsappWebhookRouter, type WhatsappWebhookConfig } from './modules/notify';
 import { academicRouter, importsRouter, learningGroupsRouter, registryRouter, scheduleImportRouter, scheduleRouter } from './modules/academic';
@@ -84,6 +85,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(healthRouter(version));
   v1.use(linksRouter(storage));
   v1.use(pklTracerFormRouter());
+  v1.use(apiKeysRouter(auth));
   v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
   v1.use(importsRouter(auth, storage));
