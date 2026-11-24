@@ -1,10 +1,11 @@
 import type { AttendanceStatus, CorrectionStatus } from '@absah/contracts';
 import { schema, type Tx } from '@absah/db';
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, type AnyColumn, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const c = schema.correctionRequests;
 const s = schema.attendanceSessions;
-const name = (column: SQL | typeof c.requestedBy) => sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${column} limit 1)`;
+const name = (column: AnyColumn) => directoryName(column);
 
 export async function insertCorrections(
   tx: Tx,

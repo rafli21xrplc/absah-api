@@ -1,6 +1,7 @@
 import { schema, sensitive, type Tx } from '@absah/db';
 import type { PointKind } from '@absah/contracts';
 import { asc, desc, eq, sql } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const p = schema.pointEntries;
 const e = schema.enrollments;
@@ -37,7 +38,7 @@ export async function insertEntry(tx: Tx, row: NewEntry): Promise<void> {
   await tx.insert(p).values({ ...row, note: row.note === null ? null : sensitive(row.note) });
 }
 
-const recorder = sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${p.recordedBy} limit 1)`;
+const recorder = directoryName(p.recordedBy);
 // Qualified by hand: drizzle renders ${p.id} as a bare "id", which inside the subquery would bind to r.id.
 const isReversed = sql<boolean>`exists (select 1 from point_entries r where r.reverses_entry_id = point_entries.id)`;
 

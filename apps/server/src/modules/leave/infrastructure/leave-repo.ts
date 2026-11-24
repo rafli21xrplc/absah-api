@@ -1,12 +1,13 @@
 import type { LeaveKind, LeaveStatus } from '@absah/contracts';
 import { schema, sensitive, type Tx } from '@absah/db';
-import { and, asc, desc, eq, exists, gte, inArray, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gte, inArray, lte, or, sql, type AnyColumn, type SQL } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 const l = schema.leaveRequests;
 const e = schema.enrollments;
 const k = schema.classes;
 const st = schema.students;
-const name = (column: SQL | typeof l.requestedBy) => sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${column} limit 1)`;
+const name = (column: AnyColumn) => directoryName(column);
 
 /** The student's guardian account is `userId` (guardians.user_id via student_guardians). */
 const guardianOf = (tx: Tx, userId: string) =>

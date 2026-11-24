@@ -1,5 +1,6 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { directoryName } from '../../../shared/directory-name';
 
 export async function listGroups(tx: Tx, academicYearId: string, id?: string) {
   const g = schema.learningGroups;
@@ -11,7 +12,7 @@ export async function listGroups(tx: Tx, academicYearId: string, id?: string) {
       subjectId: g.subjectId,
       subjectName: schema.subjects.name,
       teacherId: g.teacherId,
-      teacherName: sql<string | null>`(select d.name from school_member_directory d where d.user_id = ${g.teacherId} limit 1)`,
+      teacherName: directoryName(g.teacherId),
       memberCount: count(m.enrollmentId),
     })
     .from(g)

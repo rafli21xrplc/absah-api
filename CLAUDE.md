@@ -1028,3 +1028,11 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   {decision approved|revision, note (required for revision)}: the placement's guru pembimbing, its industry
   supervisor or canManagePkl (else 404); submitted only (409 not_submitted). GET .../attachment: 5-minute link
   for anyone who sees the journal. Audited pkl.journal_written|updated|reviewed (no text).
+
+## Names of members in SQL (shared/directory-name.ts)
+- A name next to a user-id column comes from `directoryName(table.column)`, never from a hand-written
+  `(select d.name from school_member_directory d where d.user_id = ${col})`: Drizzle renders a column of a
+  single-table select unqualified, so `"user_id"` resolved to the directory's own column and EVERY row got the same,
+  arbitrary member's name (found by the guru e2e, where the izin of Bu Wali showed "Admin E2E"). The helper writes
+  "table"."column" explicitly. Raw SQL with its own aliases (p.school_mentor_id) is fine. Tests with a single member
+  cannot see this: test/directory-names.test.ts uses three.
