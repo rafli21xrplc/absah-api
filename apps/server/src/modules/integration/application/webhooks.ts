@@ -1,15 +1,16 @@
 import { randomBytes } from 'node:crypto';
-import type { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookEventType, WebhookList } from '@absah/contracts';
-import { WEBHOOK_MAX_ENDPOINTS, WEBHOOK_SECRET_PREFIX } from '@absah/contracts';
+import type { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookDelivery, WebhookDeliveryList, WebhookEventType, WebhookList, WebhookTestQueued } from '@absah/contracts';
+import { WEBHOOK_DELIVERIES_SHOWN, WEBHOOK_MAX_ENDPOINTS, WEBHOOK_SECRET_PREFIX, WEBHOOK_TEST_EVENT } from '@absah/contracts';
 import { uuidv7 } from 'uuidv7';
 import { audit, type AuditContext } from '../../../shared/audit';
 import { authorize } from '../../../shared/authorize';
 import { withTenant } from '../../../shared/db';
 import { ConflictError, NotFoundError, ValidationError } from '../../../shared/errors';
+import { emit } from '../../../shared/outbox';
 import type { Actor } from '../../../shared/policy';
 import { canManageIntegrations } from '../domain/policies';
 import { webhookUrlPreview, webhookUrlProblem, type UrlProblem } from '../domain/webhook-url';
-import { deleteWebhook, findWebhook, insertWebhook, listWebhooks, updateWebhook, webhookCount, type WebhookRow } from '../infrastructure/webhook-repo';
+import { deleteWebhook, findWebhook, insertDelivery, insertWebhook, listWebhooks, pendingTest, recentDeliveries, updateWebhook, webhookCount, type DeliveryRow, type WebhookRow } from '../infrastructure/webhook-repo';
 
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 
@@ -81,5 +82,47 @@ export function deleteWebhookEndpoint(actor: Actor, auditCtx: AuditContext, id: 
   return withTenant(scope(actor), async (tx) => {
     if (!(await deleteWebhook(tx, id))) throw new NotFoundError('Alamat webhook tidak ditemukan.');
     await audit(tx, auditCtx, 'integration.webhook_deleted', { type: 'webhook', id });
+  });
+}
+
+/** A ping still waiting for this long no longer blocks the next one. */
+export const WEBHOOK_TEST_WAIT_MINUTES = 10;
+
+const viewDelivery = (r: DeliveryRow): WebhookDelivery => ({
+  id: r.id,
+  eventType: r.eventType,
+  status: r.status as WebhookDelivery['status'],
+  attempts: r.attempts,
+  lastStatus: r.lastStatus,
+  lastError: r.lastError,
+  createdAt: r.createdAt.toISOString(),
+  finishedAt: r.finishedAt?.toISOString() ?? null,
+});
+
+/** The last calls to one address, newest first; the body of a call is never part of the answer. */
+export function listWebhookDeliveries(actor: Actor, id: string): Promise<WebhookDeliveryList> {
+  authorize(actor, canManageIntegrations);
+  return withTenant(scope(actor), async (tx) => {
+    if (!(await findWebhook(tx, id))) throw new NotFoundError('Alamat webhook tidak ditemukan.');
+    return { items: (await recentDeliveries(tx, id, WEBHOOK_DELIVERIES_SHOWN)).map(viewDelivery) };
+  });
+}
+
+/**
+ * Stores one ping and asks the worker to send it (rule 3: nothing leaves from here). The same signed call as a real event,
+ * with empty data. A switched-off address is 409 inactive; one ping at a time per address (409 already_pending).
+ */
+export function testWebhookEndpoint(actor: Actor, auditCtx: AuditContext, id: string): Promise<WebhookTestQueued> {
+  authorize(actor, canManageIntegrations);
+  return withTenant(scope(actor), async (tx) => {
+    const endpoint = await findWebhook(tx, id);
+    if (!endpoint) throw new NotFoundError('Alamat webhook tidak ditemukan.');
+    if (!endpoint.active) throw new ConflictError('Alamat ini sedang dimatikan. Nyalakan dulu sebelum mengirim tes.', { reason: 'inactive' });
+    if (await pendingTest(tx, id, WEBHOOK_TEST_EVENT, WEBHOOK_TEST_WAIT_MINUTES)) throw new ConflictError('Tes sebelumnya masih menunggu. Tunggu hasilnya dulu.', { reason: 'already_pending' });
+    const deliveryId = await insertDelivery(tx, { id: uuidv7(), schoolId: actor.schoolId, endpointId: id, eventId: uuidv7(), eventType: WEBHOOK_TEST_EVENT, payload: {} });
+    if (!deliveryId) throw new Error('webhook test not stored');
+    await emit(tx, 'webhook.delivery_requested', { deliveryId });
+    await audit(tx, auditCtx, 'integration.webhook_tested', { type: 'webhook', id }, { after: { host: webhookUrlPreview(endpoint.url.reveal()) } });
+    return { deliveryId };
   });
 }

@@ -125,7 +125,7 @@ import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJou
 import { PklAssessmentExportQuery } from './pkl/assessment';
 import { OpenDailyAttendance, OpenDailyAttendanceQuery } from './integration/open';
 import { ApiKey, ApiKeyIdParam, ApiKeyList, CreatedApiKey, CreateApiKeyRequest } from './integration/api-keys';
-import { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookIdParam, WebhookList } from './integration/webhooks';
+import { CreatedWebhook, CreateWebhookRequest, UpdateWebhookRequest, Webhook, WebhookDeliveryList, WebhookIdParam, WebhookList, WebhookTestQueued } from './integration/webhooks';
 import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, InviteTracerRequest, InviteTracerResult, TracerClassList, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
@@ -2546,6 +2546,28 @@ function buildRegistry(): OpenAPIRegistry {
     parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
     request: { params: WebhookIdParam },
     responses: { 204: { description: 'Removed' }, ...errors(401, 403, 404) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: `${API_BASE_PATH}/integrations/webhooks/{webhookId}/test`,
+    tags: ['integration'],
+    summary: 'Send a test ping (event webhook.test, empty data) to one address',
+    description: `${webhookNote} 202: queued, the worker sends it; read the result in the delivery list. 409 reason inactive (switched off) or already_pending (a test of the last 10 minutes is still waiting).`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }, idempotencyHeader],
+    request: { params: WebhookIdParam },
+    responses: { 202: json(WebhookTestQueued, 'Queued'), ...errors(401, 403, 404, 409) },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/integrations/webhooks/{webhookId}/deliveries`,
+    tags: ['integration'],
+    summary: 'The last 20 calls to one address: event, outcome, attempts (never the body)',
+    description: webhookNote,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { params: WebhookIdParam },
+    responses: { 200: json(WebhookDeliveryList, 'Deliveries, newest first'), ...errors(401, 403, 404) },
   });
   registry.registerComponent('securitySchemes', 'apiKey', {
     type: 'http',
