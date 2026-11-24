@@ -1,7 +1,7 @@
 import { PgBoss } from 'pg-boss';
 import { academicConsumers, IMPORT_RETENTION_QUEUE, importRetentionHandler } from '../modules/academic';
 import { ATTENDANCE_JOB_CRON, attendanceConsumers, attendanceJobHandlers } from '../modules/attendance';
-import { HttpWebhookSender, webhookConsumers } from '../modules/integration';
+import { HttpWebhookSender, WEBHOOK_RETENTION_QUEUE, webhookConsumers, webhookRetentionHandler } from '../modules/integration';
 import {
   HEARTBEAT_QUEUE,
   IDEMPOTENCY_CLEANUP_QUEUE,
@@ -78,6 +78,9 @@ await boss.work(OUTBOX_RETENTION_QUEUE, async () => {
   logger.info({ deleted: await deleteOldOutboxRows(), queue: OUTBOX_RETENTION_QUEUE }, 'old outbox rows deleted');
 });
 await boss.schedule(OUTBOX_RETENTION_QUEUE, '30 2 * * *', null, { tz: 'Asia/Jakarta' });
+await boss.createQueue(WEBHOOK_RETENTION_QUEUE);
+await boss.work(WEBHOOK_RETENTION_QUEUE, webhookRetentionHandler(logger));
+await boss.schedule(WEBHOOK_RETENTION_QUEUE, '35 2 * * *', null, { tz: 'Asia/Jakarta' });
 
 const storage = createObjectStorage(config);
 await boss.createQueue(IMPORT_RETENTION_QUEUE);
