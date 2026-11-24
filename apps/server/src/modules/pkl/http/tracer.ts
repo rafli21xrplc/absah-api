@@ -1,0 +1,52 @@
+import {
+  AlumniFromClassRequest,
+  AlumniFromClassResult,
+  CreateTracerAlumnusRequest,
+  SaveTracerResponseRequest,
+  TracerAlumniList,
+  TracerAlumniQuery,
+  TracerAlumnus,
+  TracerAlumnusIdParam,
+  TracerRecap,
+} from '@absah/contracts';
+import { Router } from 'express';
+import { auditContext } from '../../../shared/audit';
+import { requireCap } from '../../../shared/capability';
+import { getActor } from '../../../shared/context';
+import { sendContract } from '../../../shared/http';
+import { idempotent } from '../../../shared/idempotency';
+import { resolveContext, type Auth } from '../../platform';
+import { alumniFromClass, createAlumnus, exportTracer, listAlumni, recap, saveResponse } from '../application/tracer';
+import { todayOf } from './clock';
+
+/** Tracer study (PKL-05), behind pkl.tracer. */
+export function pklTracerRouter(auth: Auth): Router {
+  const router = Router();
+  const tracer = [resolveContext(auth, { school: 'required' }), requireCap('pkl.tracer')];
+
+  router.get('/tracer/alumni', ...tracer, async (req, res) => {
+    sendContract(res, TracerAlumniList, await listAlumni(getActor(req), TracerAlumniQuery.parse(req.query)));
+  });
+  router.post('/tracer/alumni', ...tracer, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, TracerAlumnus, await createAlumnus(actor, auditContext(req, actor), CreateTracerAlumnusRequest.parse(req.body)), 201);
+  });
+  router.post('/tracer/alumni/from-class', ...tracer, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    sendContract(res, AlumniFromClassResult, await alumniFromClass(actor, auditContext(req, actor), AlumniFromClassRequest.parse(req.body)));
+  });
+  router.put('/tracer/alumni/:alumnusId/response', ...tracer, idempotent(), async (req, res) => {
+    const actor = getActor(req);
+    const { alumnusId } = TracerAlumnusIdParam.parse(req.params);
+    sendContract(res, TracerAlumnus, await saveResponse(actor, auditContext(req, actor), alumnusId, SaveTracerResponseRequest.parse(req.body)));
+  });
+  router.get('/tracer/recap', ...tracer, async (req, res) => {
+    sendContract(res, TracerRecap, await recap(getActor(req)));
+  });
+  router.get('/tracer/export.xlsx', ...tracer, async (req, res) => {
+    const { file, fileName } = await exportTracer(getActor(req), todayOf(req));
+    res.status(200).set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': `attachment; filename="${fileName}"`, 'Cache-Control': 'no-store' }).send(file);
+  });
+
+  return router;
+}

@@ -13,7 +13,7 @@ import { counselingRouter, pointsRouter, tppkRouter, uksRouter } from './modules
 import { examRouter } from './modules/exam';
 import { studentBillingRouter } from './modules/student-billing';
 import { substitutionsRouter, teacherAttendanceRouter, teacherLeaveRouter } from './modules/teacher';
-import { pklAssessmentsRouter, pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
+import { pklAssessmentsRouter, pklTracerRouter, pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { dashboardRouter, exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { workspaceExportsRouter } from './modules/workspace-export';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
@@ -108,6 +108,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   v1.use(memorizationRouter(auth));
   v1.use(pklPartnersRouter(auth));
   v1.use(pklAssessmentsRouter(auth));
+  v1.use(pklTracerRouter(auth));
   v1.use(pklPlacementsRouter(auth));
   v1.use(pklCheckinsRouter(auth));
   v1.use(pklSupervisionRouter(auth));
