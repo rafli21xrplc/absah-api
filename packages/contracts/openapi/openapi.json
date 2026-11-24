@@ -17,6 +17,12 @@
         "name": "Authorization",
         "description": "Link <token> from the action link in a WhatsApp message (the web page /t reads it from the URL fragment)"
       },
+      "tracerLink": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Tracer <token> from the tracer study link in a WhatsApp message (the web page /alumni reads it from the URL fragment)"
+      },
       "kiosk": {
         "type": "apiKey",
         "in": "header",
@@ -14230,6 +14236,64 @@
           "decision"
         ],
         "additionalProperties": false
+      },
+      "TracerFormContext": {
+        "type": "object",
+        "properties": {
+          "schoolName": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "graduationYear": {
+            "type": "integer"
+          },
+          "response": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/TracerStatus"
+              },
+              "organization": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "position": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "answeredAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "status",
+              "organization",
+              "position",
+              "answeredAt"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "schoolName",
+          "firstName",
+          "graduationYear",
+          "response",
+          "expiresAt"
+        ]
       }
     },
     "parameters": {}
@@ -37345,6 +37409,135 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PickupPhotoLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tracer/form": {
+      "get": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Tracer link: first name, school and the current answer",
+        "description": "Tracer study (PKL-05) for an alumnus, no session: the link token is the credential. Valid 30 days; 404 CAPABILITY_DISABLED when the school switched pkl.tracer off.",
+        "security": [
+          {
+            "tracerLink": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracerFormContext"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session (UNAUTHENTICATED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (NOT_FOUND); unknown, used or expired invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "pkl"
+        ],
+        "summary": "Tracer link: the alumnus answers (again, until the link expires, replaces the answer)",
+        "description": "Tracer study (PKL-05) for an alumnus, no session: the link token is the credential. Valid 30 days; 404 CAPABILITY_DISABLED when the school switched pkl.tracer off.",
+        "security": [
+          {
+            "tracerLink": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTracerResponseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Context with the saved answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracerFormContext"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }

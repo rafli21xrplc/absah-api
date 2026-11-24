@@ -13,7 +13,7 @@ import { counselingRouter, pointsRouter, tppkRouter, uksRouter } from './modules
 import { examRouter } from './modules/exam';
 import { studentBillingRouter } from './modules/student-billing';
 import { substitutionsRouter, teacherAttendanceRouter, teacherLeaveRouter } from './modules/teacher';
-import { pklAssessmentsRouter, pklTracerRouter, pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
+import { pklAssessmentsRouter, pklTracerFormRouter, pklTracerRouter, pklCheckinsRouter, pklJournalsRouter, pklPartnersRouter, pklPlacementsRouter, pklReviewsRouter, pklSupervisionRouter } from './modules/pkl';
 import { dashboardRouter, exportsRouter, mbgRouter, reportsRouter } from './modules/report';
 import { workspaceExportsRouter } from './modules/workspace-export';
 import { invoicesRouter, paymentsRouter, paymentWebhookRouter } from './modules/subscription';
@@ -83,6 +83,7 @@ export function createApp({ logger, version, auth, ipHeaders, appUrl, storage, k
   const v1 = express.Router();
   v1.use(healthRouter(version));
   v1.use(linksRouter(storage));
+  v1.use(pklTracerFormRouter());
   v1.use(platformRouter(auth, appUrl));
   v1.use(academicRouter(auth));
   v1.use(importsRouter(auth, storage));

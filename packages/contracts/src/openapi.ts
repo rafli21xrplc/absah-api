@@ -123,7 +123,7 @@ import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStuden
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
 import { PklAssessmentExportQuery } from './pkl/assessment';
-import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, TracerAlumniList, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
+import { AlumniFromClassRequest, AlumniFromClassResult, CreateTracerAlumnusRequest, SaveTracerResponseRequest, TracerAlumniList, TracerFormContext, TracerAlumniQuery, TracerAlumnus, TracerAlumnusIdParam, TracerRecap } from './pkl/tracer';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
 import {
@@ -2464,6 +2464,32 @@ function buildRegistry(): OpenAPIRegistry {
     security: [{ actionLink: [] }],
     request: { params: PickupEventIdParam },
     responses: { 200: json(PickupPhotoLink, 'Link'), ...errors(401, 404, 410) },
+  });
+  registry.registerComponent('securitySchemes', 'tracerLink', {
+    type: 'apiKey',
+    in: 'header',
+    name: 'Authorization',
+    description: 'Tracer <token> from the tracer study link in a WhatsApp message (the web page /alumni reads it from the URL fragment)',
+  });
+  const tracerFormNote = 'Tracer study (PKL-05) for an alumnus, no session: the link token is the credential. Valid 30 days; 404 CAPABILITY_DISABLED when the school switched pkl.tracer off.';
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/tracer/form`,
+    tags: ['pkl'],
+    summary: 'Tracer link: first name, school and the current answer',
+    description: tracerFormNote,
+    security: [{ tracerLink: [] }],
+    responses: { 200: json(TracerFormContext, 'Context'), ...errors(401, 404, 410) },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: `${API_BASE_PATH}/tracer/form`,
+    tags: ['pkl'],
+    summary: 'Tracer link: the alumnus answers (again, until the link expires, replaces the answer)',
+    description: tracerFormNote,
+    security: [{ tracerLink: [] }],
+    request: { body: { content: { 'application/json': { schema: SaveTracerResponseRequest } } } },
+    responses: { 200: json(TracerFormContext, 'Context with the saved answer'), ...errors(400, 401, 404, 410) },
   });
   registry.registerComponent('securitySchemes', 'kiosk', {
     type: 'apiKey',
