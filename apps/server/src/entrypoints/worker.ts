@@ -1,6 +1,7 @@
 import { PgBoss } from 'pg-boss';
 import { academicConsumers, IMPORT_RETENTION_QUEUE, importRetentionHandler } from '../modules/academic';
 import { ATTENDANCE_JOB_CRON, attendanceConsumers, attendanceJobHandlers } from '../modules/attendance';
+import { HttpWebhookSender, webhookConsumers } from '../modules/integration';
 import {
   HEARTBEAT_QUEUE,
   IDEMPOTENCY_CLEANUP_QUEUE,
@@ -165,6 +166,8 @@ const consumers: Consumer[] = [
   ...subscriptionConsumers(paymentProvider),
   ...studentBillingConsumers(paymentProvider),
   ...notifyConsumers({ sender, appUrl: config.BETTER_AUTH_URL }),
+  // Webhooks of the open API (PLT-09): the sender re-checks every address and what it resolves to before each call.
+  ...webhookConsumers(new HttpWebhookSender()),
   ...(pushSender ? pushConsumers({ push: pushSender }) : []),
 ];
 const outbox = await startOutbox(boss, consumers, logger);
