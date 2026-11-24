@@ -122,6 +122,7 @@ import { Arrival, ArrivalBoard, GateToday, ManualArrivalRequest } from './gate/a
 import { LiaisonMessageParam, LiaisonSettings, LiaisonStudentList, LiaisonStudentParam, LiaisonStudentQuery, LiaisonThread, LiaisonThreadList, PostLiaisonMessageRequest, UpdateLiaisonSettingsRequest } from './portal/liaison';
 import { Activity, ActivityIdParam, ActivityList, ActivityMemberList, ActivityRecap, ActivityRecapQuery, ActivityStudentQuery, CreateActivityRequest, OpenActivitySessionRequest, SetActivityMembersRequest, UpdateActivityRequest } from './activity/activities';
 import { ClassHabitsParams, ClassHabitsQuery, ClassHabitWeek, HabitDay, HabitJournal, HabitParams, HabitRangeQuery, PutHabitsRequest } from './activity/habits';
+import { PklAssessmentExportQuery } from './pkl/assessment';
 import { PKL_NOTE, PKL_PATHS } from './pkl/paths';
 import { CreateMemorizationLogRequest, MemorizationLog, MemorizationLogList, MemorizationLogQuery, MemorizationStudentList, MemorizationStudentQuery } from './activity/memorization';
 import {
@@ -1909,6 +1910,26 @@ function buildRegistry(): OpenAPIRegistry {
       responses: { ...(p.ok ? { [p.status ?? 200]: json(p.ok, p.label) } : { 204: { description: p.label } }), ...errors(...(p.write ? [400, 401, 403, 404, 409] : [400, 401, 403, 404])) },
     });
   }
+  registry.registerPath({
+    method: 'get',
+    path: `${API_BASE_PATH}/pkl/assessments/export`,
+    tags: ['pkl'],
+    summary: 'The DUDI assessment results as Excel or a PDF for the archive (PKL-04)',
+    description: `${PKL_NOTE} One row per placement the caller may see (managers and kepsek all, a guru pembimbing theirs), one column per aspect, the weighted score and the note; not for the pembimbing industri (403). Built on the spot: a school has hundreds of placements, not thousands.`,
+    security: [{ session: [] }],
+    parameters: [{ ...schoolHeader, required: true }],
+    request: { query: PklAssessmentExportQuery },
+    responses: {
+      200: {
+        description: 'The file',
+        content: {
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } },
+          'application/pdf': { schema: { type: 'string', format: 'binary' } },
+        },
+      },
+      ...errors(400, 401, 403, 404),
+    },
+  });
   const liaisonNote = 'Buku penghubung (ORT-07, capability portal.liaison). Participants: guardians (orang_tua), the wali kelas and guru mapel of the student this year; others 404. The admin reads every thread, retracted messages included (audited), and cannot write. The sender may retract within 15 minutes.';
   const liaisonPaths: { method: 'get' | 'post' | 'put'; path: string; summary: string; request?: object; ok?: z.ZodType; label: string; write?: boolean }[] = [
     { method: 'get', path: '/liaison/threads', summary: 'Threads of the user (orang_tua: every child; staff: students they teach; admin: all)', ok: LiaisonThreadList, label: 'Threads' },

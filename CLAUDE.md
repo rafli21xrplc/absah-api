@@ -1086,5 +1086,9 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
 - Visibility = placements filtered like the placement list: managers and kepsek all, pembimbing_industri their industryMentorId,
   anyone else (a guru pembimbing is just a teacher named school mentor) only schoolMentorId = them. A placement outside the
   caller's students is 404, never 403. canReadPklAssessment therefore includes plain `guru`; writing is canSuperviseAtDudi only.
-- Cancelled placements are not listed. The Excel/PDF results are prompt 6.2c.
+- Cancelled placements are not listed.
+- GET /pkl/assessments/export?format=xlsx|pdf[&partnerId] builds the file ON THE SPOT (hundreds of rows, no job; same visibility as the list;
+  canExportPklAssessment excludes the industry supervisors). domain/assessment-table.ts makes the table both files draw: current
+  aspects in form order, then retired aspect names still present in given assessments, blanks where a student has no such score. Excel
+  scores are numbers; the PDF is landscape A4 and leaves out the long note.
 

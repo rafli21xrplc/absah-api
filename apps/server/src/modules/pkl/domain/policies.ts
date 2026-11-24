@@ -17,3 +17,6 @@ export const canSuperviseAtDudi = anyRole('pembimbing_industri');
  * pembimbing is any teacher named school mentor of a placement; the rows they get are filtered to those placements).
  */
 export const canReadPklAssessment = anyRole('admin', 'wakasek', 'humas_pkl', 'kepsek', 'pembimbing_pkl', 'pembimbing_industri', 'guru');
+
+/** Exports the assessment results (PKL-04): everyone who reads them except the industry supervisors, who only see their own students. */
+export const canExportPklAssessment = anyRole('admin', 'wakasek', 'humas_pkl', 'kepsek', 'pembimbing_pkl', 'guru');

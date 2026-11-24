@@ -107,3 +107,7 @@ export const SavePklAssessmentRequest = z
   .strict()
   .meta({ id: 'SavePklAssessmentRequest' });
 export type SavePklAssessmentRequest = z.infer<typeof SavePklAssessmentRequest>;
+
+/** GET /api/v1/pkl/assessments/export?format=xlsx|pdf: the results as a file (not for the industry supervisors); partnerId limits it to one DUDI. */
+export const PklAssessmentExportQuery = z.object({ format: z.enum(['xlsx', 'pdf']), partnerId: z.uuid().optional() }).meta({ id: 'PklAssessmentExportQuery' });
+export type PklAssessmentExportQuery = z.infer<typeof PklAssessmentExportQuery>;
