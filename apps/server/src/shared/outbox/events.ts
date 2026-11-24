@@ -79,6 +79,8 @@ export const EVENTS = {
   'pkl.checkin_recorded': z.object({ checkinId: z.uuid() }),
   /** A student has not checked in at the DUDI by 10.00 (PKL-02); notify reminds them over WhatsApp. */
   'pkl.checkin_missing': z.object({ sessionId: z.uuid() }),
+  /** The BKK invited an alumnus to the tracer study (PKL-05); notify mints the link and sends it over WhatsApp. */
+  'tracer.invitation_requested': z.object({ alumnusId: z.uuid() }),
   /** A notification is due; notify sends it (3 attempts, then failed). */
   'notification.queued': z.object({ notificationId: z.uuid() }),
 } as const;

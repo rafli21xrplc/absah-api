@@ -1,12 +1,13 @@
 import type { ClassStream, TracerSource, TracerStatus } from '@absah/contracts';
 import { schema, sensitive, type Tx } from '@absah/db';
-import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 const al = schema.tracerAlumni;
 const rs = schema.tracerResponses;
 
 export interface AlumniFilter {
   id?: string;
+  ids?: readonly string[];
   graduationYear?: number;
   stream?: ClassStream;
   answered?: 'yes' | 'no';
@@ -17,6 +18,7 @@ export interface AlumniFilter {
 export function alumniRows(tx: Tx, f: AlumniFilter = {}) {
   const where: SQL[] = [];
   if (f.id) where.push(eq(al.id, f.id));
+  if (f.ids) where.push(inArray(al.id, [...f.ids]));
   if (f.graduationYear) where.push(eq(al.graduationYear, f.graduationYear));
   if (f.stream) where.push(eq(al.stream, f.stream));
   if (f.answered === 'yes') where.push(isNotNull(rs.id));

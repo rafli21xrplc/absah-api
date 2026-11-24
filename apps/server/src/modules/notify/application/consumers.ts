@@ -1,6 +1,7 @@
 import type { LeaveKind } from '@absah/contracts';
 import { defineConsumer, type Consumer } from '../../../shared/outbox';
 import { firstName } from '../../../shared/names';
+import { mintTracerLink } from '../../../shared/tracer-links';
 import type { MessageSender } from '../../../shared/messaging';
 import { schoolDate, schoolMinutes } from '../../../shared/school-date';
 import { clockLabel, dateLabel, dateRangeLabel, mbgClassesLine, releaseTime } from '../domain/messages';
@@ -25,6 +26,8 @@ import {
   staffNames,
   thresholdTask,
   tppkContacts,
+  tracerInviteNotice,
+  usedDedupKeys,
 } from '../infrastructure/notify-repo';
 import { deliverConsumer } from './deliver';
 import { queueMessages } from './queue';
@@ -423,5 +426,35 @@ export function notifyConsumers(deps: NotifyDeps): Consumer[] {
     },
   });
 
-  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, disciplineThreshold, billDue, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, deliverConsumer(deps.sender)];
+  /** PKL-05: an alumnus gets their own link to the tracer study. The link is minted here (once per message), never in the request. */
+  const tracerInvitation = defineConsumer({
+    name: 'notify_tracer_invitation',
+    event: 'tracer.invitation_requested',
+    async handle(tx, event) {
+      const school = await schoolOf(tx, event.schoolId);
+      if (!school) return;
+      const notice = await tracerInviteNotice(tx, event.payload.alumnusId);
+      if (!notice) return;
+      const now = deps.now?.() ?? new Date();
+      const today = schoolDate(school.timezone, now);
+      const dedupKey = `tracer_invite:${event.payload.alumnusId}:${today}`;
+      // One invitation per alumnus per day: a second click the same day mints and sends nothing.
+      if ((await usedDedupKeys(tx, [dedupKey])).has(dedupKey)) return;
+      const url = await mintTracerLink(tx, { schoolId: event.schoolId, alumnusId: event.payload.alumnusId, appUrl: deps.appUrl, now });
+      await queueMessages(tx, {
+        schoolId: event.schoolId,
+        timezone: school.timezone,
+        eventId: event.id,
+        templateCode: 'tracer_invitation',
+        enrollmentId: null,
+        recipients: [{ phone: notice.phone }],
+        dedupKey: () => dedupKey,
+        params: { school: school.name, first_name: firstName(notice.name), url },
+        appUrl: deps.appUrl,
+        now,
+      });
+    },
+  });
+
+  return [absent, leaveDecision('leave.approved'), leaveDecision('leave.rejected'), mbgCount, mbgForecast, sentHome, disciplineThreshold, billDue, pickedUp, unlistedPickup, tppkReport, tppkTeam, liaison, pklMentor, pklMissing, tracerInvitation, deliverConsumer(deps.sender)];
 }
