@@ -11,6 +11,7 @@ import {
   ReviewPklJournalRequest,
   WritePklJournalRequest,
 } from './journals';
+import { PklAssessmentAspectList, SavePklAspectsRequest } from './assessment';
 import { DecidePklDayRequest, PklDayDecision, PklReviewList, PklSessionIdParam } from './reviews';
 import { ConfirmPklCheckinsRequest, DisputePklCheckinRequest, PklCheckinIdParam, PklSupervisionDay, PklSupervisionQuery } from './supervision';
 import { CreatePklPlacementsRequest, PklPlacement, PklPlacementIdParam, PklPlacementList, PklPlacementQuery, UpdatePklPlacementRequest } from './placements';
@@ -35,6 +36,23 @@ export const PKL_NOTE =
   'PKL (SMK): requires pkl.enabled (404 CAPABILITY_DISABLED when off). Managers: admin, wakasek, humas_pkl; kepsek also reads.';
 
 export const PKL_PATHS: PklPath[] = [
+  {
+    method: 'get',
+    path: '/pkl/assessment-aspects',
+    summary: 'Aspects of the DUDI assessment (PKL-04) in form order: managers, kepsek, guru pembimbing and pembimbing industri',
+    ok: PklAssessmentAspectList,
+    label: 'Aspects',
+  },
+  {
+    method: 'put',
+    path: '/pkl/assessment-aspects',
+    summary: 'Set the aspects of the DUDI assessment: the whole list in form order (managers)',
+    description: 'An item with an id edits that aspect, one without adds one, an existing aspect left out is retired; assessments already given keep their own copy.',
+    request: { body: SavePklAspectsRequest },
+    ok: PklAssessmentAspectList,
+    label: 'Saved',
+    write: true,
+  },
   { method: 'get', path: '/pkl/partners', summary: 'DUDI partners with working hours (managers, kepsek)', ok: DudiPartnerList, label: 'Partners' },
   { method: 'post', path: '/pkl/partners', summary: 'Add a DUDI partner (radius default 150 m)', request: { body: CreateDudiPartnerRequest }, ok: DudiPartner, label: 'Created', write: true, status: 201 },
   {

@@ -16,6 +16,7 @@ import {
   time,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { enrollments } from './academic';
@@ -187,3 +188,63 @@ export const pklJournals = pgTable(
     check('pkl_journals_attachment_check', sql`(${t.attachmentKey} is null) = (${t.attachmentType} is null)`),
   ],
 );
+
+/** Aspects the school grades PKL students on (PKL-04). Retired aspects stay: assessments given keep their own copy of name and weight. */
+export const pklAssessmentAspects = pgTable(
+  'pkl_assessment_aspects',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    name: text('name').notNull(),
+    description: text('description'),
+    weight: smallint('weight').notNull().default(1),
+    position: smallint('position').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('pkl_assessment_aspects_school_id_name_key').on(t.schoolId, sql`lower(${t.name})`).where(sql`${t.active}`),
+    check('pkl_assessment_aspects_weight_check', sql`${t.weight} between 1 and 10`),
+  ],
+);
+
+/** One assessment of one placement, given by its pembimbing industri (PKL-04). */
+export const pklAssessments = pgTable(
+  'pkl_assessments',
+  {
+    id: id(),
+    schoolId: schoolRef(),
+    placementId: uuid('placement_id')
+      .notNull()
+      .references(() => pklPlacements.id, { onDelete: 'cascade' }),
+    assessedBy: userRef('assessed_by'),
+    note: text('note'),
+    createdAt: createdAt(),
+    updatedAt: at('updated_at').notNull().defaultNow(),
+  },
+  (t) => [unique('pkl_assessments_placement_id_key').on(t.placementId), index('pkl_assessments_school_id_idx').on(t.schoolId)],
+);
+
+/** A score per aspect, with the aspect's name and weight as they were when it was given. */
+export const pklAssessmentScores = pgTable(
+  'pkl_assessment_scores',
+  {
+    schoolId: schoolRef(),
+    assessmentId: uuid('assessment_id')
+      .notNull()
+      .references(() => pklAssessments.id, { onDelete: 'cascade' }),
+    aspectId: uuid('aspect_id')
+      .notNull()
+      .references(() => pklAssessmentAspects.id, { onDelete: 'restrict' }),
+    aspectName: text('aspect_name').notNull(),
+    weight: smallint('weight').notNull(),
+    score: smallint('score').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.assessmentId, t.aspectId] }),
+    index('pkl_assessment_scores_school_id_idx').on(t.schoolId),
+    check('pkl_assessment_scores_score_check', sql`${t.score} between 0 and 100`),
+  ],
+);
+
