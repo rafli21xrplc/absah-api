@@ -14510,6 +14510,16 @@
           "active": {
             "type": "boolean"
           },
+          "disabledReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "too_many_failures",
+              null
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -14524,6 +14534,7 @@
           "urlPreview",
           "events",
           "active",
+          "disabledReason",
           "createdAt",
           "updatedAt"
         ]
@@ -14556,6 +14567,16 @@
           "active": {
             "type": "boolean"
           },
+          "disabledReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "too_many_failures",
+              null
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -14573,6 +14594,7 @@
           "urlPreview",
           "events",
           "active",
+          "disabledReason",
           "createdAt",
           "updatedAt",
           "secret"
@@ -38402,7 +38424,7 @@
           "integration"
         ],
         "summary": "The school's webhook addresses (host only; never the secret)",
-        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again.",
         "security": [
           {
             "session": []
@@ -38468,7 +38490,7 @@
           "integration"
         ],
         "summary": "Register a webhook address and pick events; the answer holds the signing secret, once",
-        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. 409 reason too_many at 5 addresses.",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again. 409 reason too_many at 5 addresses.",
         "security": [
           {
             "session": []
@@ -38575,7 +38597,7 @@
           "integration"
         ],
         "summary": "Change the address, the events, or switch a webhook on or off",
-        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again.",
         "security": [
           {
             "session": []
@@ -38679,7 +38701,7 @@
           "integration"
         ],
         "summary": "Delete a webhook address",
-        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again.",
         "security": [
           {
             "session": []
@@ -38759,7 +38781,7 @@
           "integration"
         ],
         "summary": "Send a test ping (event webhook.test, empty data) to one address",
-        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. 202: queued, the worker sends it; read the result in the delivery list. 409 reason inactive (switched off) or already_pending (a test of the last 10 minutes is still waiting).",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again. 202: queued, the worker sends it; read the result in the delivery list. 409 reason inactive (switched off) or already_pending (a test of the last 10 minutes is still waiting).",
         "security": [
           {
             "session": []
@@ -38856,7 +38878,7 @@
           "integration"
         ],
         "summary": "The last 20 calls to one address: event, outcome, attempts (never the body)",
-        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.",
+        "description": "Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again.",
         "security": [
           {
             "session": []

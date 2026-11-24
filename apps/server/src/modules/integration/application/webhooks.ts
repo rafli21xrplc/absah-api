@@ -31,6 +31,7 @@ export const viewWebhook = (r: WebhookRow): Webhook => ({
   urlPreview: webhookUrlPreview(r.url.reveal()),
   events: r.events as WebhookEventType[],
   active: r.active,
+  disabledReason: r.disabledReason === 'too_many_failures' ? 'too_many_failures' : null,
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
 });

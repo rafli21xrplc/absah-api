@@ -1,5 +1,5 @@
 import { schema, sensitive, type Tx } from '@absah/db';
-import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ne, or, isNull, sql } from 'drizzle-orm';
 
 const w = schema.webhookEndpoints;
 export type WebhookRow = typeof w.$inferSelect;
@@ -25,7 +25,7 @@ export async function insertWebhook(tx: Tx, row: { id: string; schoolId: string;
 export async function updateWebhook(tx: Tx, id: string, patch: { url?: string; events?: string[]; active?: boolean }): Promise<WebhookRow | undefined> {
   const [row] = await tx
     .update(w)
-    .set({ ...(patch.url === undefined ? {} : { url: sensitive(patch.url) }), ...(patch.events === undefined ? {} : { events: patch.events }), ...(patch.active === undefined ? {} : { active: patch.active }), updatedAt: sql`now()` })
+    .set({ ...(patch.url === undefined ? {} : { url: sensitive(patch.url) }), ...(patch.events === undefined ? {} : { events: patch.events }), ...(patch.active === undefined ? {} : { active: patch.active, disabledReason: null }), updatedAt: sql`now()` })
     .where(eq(w.id, id))
     .returning();
   return row;
@@ -73,5 +73,38 @@ export async function pendingTest(tx: Tx, endpointId: string, eventType: string,
     .from(d)
     .where(and(eq(d.endpointId, endpointId), eq(d.eventType, eventType), eq(d.status, 'pending'), gt(d.createdAt, sql`now() - make_interval(mins => ${minutes})`)))
     .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * The latest finished outcomes of an address that say something about the receiver: no test pings (the admin's own try) and no
+ * call that failed only because the address was off, and only those finished after the address was last changed, so switching it
+ * on again (or fixing its URL) starts the count over.
+ */
+export async function recentOutcomes(tx: Tx, endpointId: string, limit: number): Promise<{ status: 'delivered' | 'failed' }[]> {
+  const rows = await tx
+    .select({ status: d.status })
+    .from(d)
+    .where(
+      and(
+        eq(d.endpointId, endpointId),
+        ne(d.eventType, 'webhook.test'),
+        sql`${d.status} in ('delivered', 'failed')`,
+        or(isNull(d.lastError), ne(d.lastError, 'endpoint_off')),
+        gt(d.finishedAt, sql`(select e.updated_at from webhook_endpoints e where e.id = ${endpointId})`),
+      ),
+    )
+    .orderBy(desc(d.finishedAt), desc(d.id))
+    .limit(limit);
+  return rows as { status: 'delivered' | 'failed' }[];
+}
+
+/** Switches an address off for good measure; true only when it was on, so it is audited once. */
+export async function disableForFailures(tx: Tx, endpointId: string): Promise<boolean> {
+  const rows = await tx
+    .update(w)
+    .set({ active: false, disabledReason: 'too_many_failures', updatedAt: sql`now()` })
+    .where(and(eq(w.id, endpointId), eq(w.active, true)))
+    .returning({ id: w.id });
   return rows.length > 0;
 }

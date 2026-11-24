@@ -2503,7 +2503,7 @@ function buildRegistry(): OpenAPIRegistry {
     request: { params: ApiKeyIdParam },
     responses: { 200: json(ApiKey, 'Key'), ...errors(401, 403, 404) },
   });
-  const webhookNote = 'Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host.';
+  const webhookNote = 'Outgoing webhooks (PLT-09, capability platform.openApi). Admin only, with two-step login. HTTPS only, public hosts only (a private or local address is 400 with details.reason). The signing secret is returned once, at creation; the stored address is never shown again beyond its host. An address whose last 10 calls in a row failed for good is switched off by Absah (active false, disabledReason too_many_failures); the admin switches it on again.';
   registry.registerPath({
     method: 'get',
     path: `${API_BASE_PATH}/integrations/webhooks`,
