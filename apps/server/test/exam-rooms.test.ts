@@ -1,5 +1,5 @@
 import { schema } from '@absah/db';
-import type { ExamRoomList, RoomRoster } from '@absah/contracts';
+import type { ExamRoom, ExamRoomList, RoomRoster } from '@absah/contracts';
 import { eq } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -57,7 +57,7 @@ beforeAll(async () => {
       enroll[name] = (await tx.insert(schema.enrollments).values({ schoolId: school, studentId: st?.id ?? '', classId: cls, academicYearId: yearId, startsOn: '2026-07-13', status }).returning())[0]?.id ?? '';
     }
     const [open, closed] = await tx.insert(schema.examPeriods).values([
-      { schoolId: school, academicYearId: yearId, name: 'PTS', startsOn: '2026-12-01', endsOn: '2026-12-05' },
+      { schoolId: school, academicYearId: yearId, name: 'PTS', startsOn: '2099-12-01', endsOn: '2099-12-05' },
       { schoolId: school, academicYearId: yearId, name: 'PAS Lama', startsOn: '2026-06-01', endsOn: '2026-06-05', closedAt: new Date() },
     ]).returning();
     periodId = open?.id ?? '';
@@ -157,5 +157,25 @@ describe('exam rooms (UJN-03)', () => {
   it('are listed to those who read exams, not to a plain guru or a parent', async () => {
     for (const name of ['wakasek', 'kepsek', 'admin', 'wali']) await get(A(name), `/periods/${periodId}/rooms`).expect(200);
     for (const name of ['guru', 'ortu']) await get(A(name), `/periods/${periodId}/rooms`).expect(403);
+  });
+});
+
+describe('the rooms I supervise (UJN-03)', () => {
+  const mineRooms = (agent: Agent, schoolId = school) => agent.get(url('/my-rooms')).set('X-School-Id', schoolId);
+
+  it('lets a pengawas who is a plain guru find their room, with the exam it is for', async () => {
+    const { items } = (await mineRooms(A('pengawas')).expect(200)).body as { items: { room: ExamRoom; period: { id: string; name: string; startsOn: string; endsOn: string } }[] };
+    expect(items.map((i) => [i.room.name, i.period.name, i.room.seated])).toEqual([['R2', 'PTS', 0]]);
+    expect(items[0]?.period).toMatchObject({ id: periodId, startsOn: '2099-12-01', endsOn: '2099-12-05' });
+    expect(((await mineRooms(A('guru')).expect(200)).body as { items: unknown[] }).items).toEqual([]); // not anyone's pengawas
+  });
+
+  it('leaves out an exam that is closed, and answers staff only, behind the capability', async () => {
+    const [room] = await withTenant({ schoolId: school, userId: null }, (tx) => tx.insert(schema.examRooms).values({ schoolId: school, periodId: closedPeriodId, name: 'Lama', supervisorId: superId }).returning());
+    expect(room?.name).toBe('Lama');
+    expect(((await mineRooms(A('pengawas')).expect(200)).body as { items: unknown[] }).items).toHaveLength(1);
+    await mineRooms(A('ortu')).expect(403);
+    await mineRooms(A('pengawas'), off).expect(404);
+    await t.agent().get(url('/my-rooms')).set('X-School-Id', school).expect(401);
   });
 });

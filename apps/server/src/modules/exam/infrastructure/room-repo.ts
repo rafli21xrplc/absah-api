@@ -1,5 +1,5 @@
 import { schema, type Tx } from '@absah/db';
-import { and, asc, count, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 
 const r = schema.examRooms;
 const s = schema.examSeats;
@@ -97,4 +97,14 @@ export async function unseatedCount(tx: Tx, academicYearId: string, periodId: st
   const [active] = await tx.select({ n: count() }).from(e).where(and(eq(e.academicYearId, academicYearId), eq(e.status, 'active')));
   const [seated] = await tx.select({ n: count() }).from(s).innerJoin(e, eq(e.id, s.enrollmentId)).where(and(eq(s.periodId, periodId), eq(e.academicYearId, academicYearId), eq(e.status, 'active')));
   return (active?.n ?? 0) - (seated?.n ?? 0);
+}
+
+/** Rooms a user supervises in periods that are open and not over (by the given school date), soonest exam first. */
+export function roomsSupervisedBy(tx: Tx, userId: string, today: string) {
+  return tx
+    .select({ ...roomColumns, periodName: schema.examPeriods.name, periodStartsOn: schema.examPeriods.startsOn, periodEndsOn: schema.examPeriods.endsOn })
+    .from(r)
+    .innerJoin(schema.examPeriods, eq(schema.examPeriods.id, r.periodId))
+    .where(and(eq(r.supervisorId, userId), isNull(schema.examPeriods.closedAt), gte(schema.examPeriods.endsOn, today)))
+    .orderBy(asc(schema.examPeriods.startsOn), asc(r.name), asc(r.id));
 }

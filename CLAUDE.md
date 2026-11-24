@@ -712,6 +712,8 @@ e-Rapor / RDM = report-card systems (MoE / madrasah); yayasan = foundation ownin
   parent/student cannot be one). Reading `user` names: the app role cannot read the `user` table, use the
   school_member_directory view (as report/recap-repo memberNames). Drizzle drops the table qualifier in single-table
   selects: qualify correlated subqueries by hand (a count came out 0 until we did).
+- GET /exam/my-rooms (any staff member): the rooms the caller supervises in exams not closed and not over; how a plain guru
+  who is a pengawas finds their room (listing a period's rooms is for EXAM_VIEWERS, a guru is not one).
 - Absen ujian per ruang (UJN-03, migrations 0097-0098): exam_attendance is APPEND-ONLY (no update/delete for the app
   role), unique per period+student, composite FK to the room's period, method qr|manual, recorded_by. POST
   /exam/rooms/{id}/attendance {enrollmentId} (by hand) and POST /exam/rooms/{id}/scan {token} (card QR). The QR is the
