@@ -57,35 +57,44 @@ export function getSession(actor: Actor, sessionId: string): Promise<SessionDeta
  * all as source teacher, never over izin, UKS or a correction (teacherCanSet). Sending the same
  * list again changes nothing; attendance.absent_marked fires only when a student becomes A.
  */
-export async function submitSession(actor: Actor, sessionId: string, input: SubmitSessionRequest): Promise<SessionDetail> {
-  return withTenant(scope(actor), async (tx) => {
-    const session = await lockSessionRow(tx, sessionId);
-    const [row] = session ? await listSessions(tx, { id: sessionId }) : [];
-    if (!session || !row || !mayViewSession(actor, row)) throw new NotFoundError('Sesi tidak ditemukan.');
-    if (!mayFillSession(actor, row)) throw new ForbiddenError('Sesi ini diisi oleh guru pengampu atau wali kelas.');
-    if (session.lockedAt) throw new SessionLockedError();
-    if (input.topic && row.mode !== 'per_period') throw new ValidationError([{ path: 'topic', message: 'Topik hanya untuk sesi per jam pelajaran.' }]);
+export function submitSession(actor: Actor, sessionId: string, input: SubmitSessionRequest): Promise<SessionDetail> {
+  return withTenant(scope(actor), (tx) => submitInTx(tx, actor, sessionId, input));
+}
 
-    const students = await roster(tx, row);
-    const onRoster = new Set(students.map((st) => st.enrollmentId));
-    const exceptions = new Map(input.exceptions.map((e) => [e.enrollmentId, e.status]));
-    const issues = [];
-    if (exceptions.size !== input.exceptions.length) issues.push({ path: 'exceptions', message: 'Ada siswa yang tercantum dua kali.' });
-    if ([...exceptions.keys()].some((id) => !onRoster.has(id))) issues.push({ path: 'exceptions', message: 'Ada siswa yang tidak terdaftar di sesi ini.' });
-    if (issues.length) throw new ValidationError(issues);
+/** The "everyone H except…" list as a map, refused when a student is listed twice or is not on the roster. */
+export function exceptionMap(students: { enrollmentId: string }[], input: SubmitSessionRequest): Map<string, 'S' | 'I' | 'A' | 'T'> {
+  const onRoster = new Set(students.map((st) => st.enrollmentId));
+  const exceptions = new Map(input.exceptions.map((e) => [e.enrollmentId, e.status]));
+  const issues = [];
+  if (exceptions.size !== input.exceptions.length) issues.push({ path: 'exceptions', message: 'Ada siswa yang tercantum dua kali.' });
+  if ([...exceptions.keys()].some((id) => !onRoster.has(id))) issues.push({ path: 'exceptions', message: 'Ada siswa yang tidak terdaftar di sesi ini.' });
+  if (issues.length) throw new ValidationError(issues);
+  return exceptions;
+}
 
-    // The teacher's word is kept as a mark under higher sources too, but only students the teacher
-    // can set (nothing higher marked) are written: fixed rows were never shown as choices.
-    const existing = new Map((await recordsOf(tx, sessionId)).map((r) => [r.enrollmentId, r]));
-    const write = students.flatMap((st) => {
-      const status = exceptions.get(st.enrollmentId) ?? ('H' as const);
-      const current = existing.get(st.enrollmentId);
-      if (!teacherCanSet(current)) return [];
-      if (current?.status === status && current.source === 'teacher') return [];
-      return [{ sessionId, enrollmentId: st.enrollmentId, source: 'teacher' as const, status, recordedBy: actor.userId }];
-    });
-    await changeMarks(tx, actor.schoolId, { write, touch: students.map((st) => ({ sessionId, enrollmentId: st.enrollmentId })) });
-    await markSubmitted(tx, sessionId, actor.userId, input.topic === undefined ? undefined : input.topic || null);
-    return detail(tx, actor, sessionId);
+/** The body of submitSession inside a tenant transaction, so the offline sync can try it and fall back on a lock. */
+export async function submitInTx(tx: Tx, actor: Actor, sessionId: string, input: SubmitSessionRequest): Promise<SessionDetail> {
+  const session = await lockSessionRow(tx, sessionId);
+  const [row] = session ? await listSessions(tx, { id: sessionId }) : [];
+  if (!session || !row || !mayViewSession(actor, row)) throw new NotFoundError('Sesi tidak ditemukan.');
+  if (!mayFillSession(actor, row)) throw new ForbiddenError('Sesi ini diisi oleh guru pengampu atau wali kelas.');
+  if (session.lockedAt) throw new SessionLockedError();
+  if (input.topic && row.mode !== 'per_period') throw new ValidationError([{ path: 'topic', message: 'Topik hanya untuk sesi per jam pelajaran.' }]);
+
+  const students = await roster(tx, row);
+  const exceptions = exceptionMap(students, input);
+
+  // The teacher's word is kept as a mark under higher sources too, but only students the teacher
+  // can set (nothing higher marked) are written: fixed rows were never shown as choices.
+  const existing = new Map((await recordsOf(tx, sessionId)).map((r) => [r.enrollmentId, r]));
+  const write = students.flatMap((st) => {
+    const status = exceptions.get(st.enrollmentId) ?? ('H' as const);
+    const current = existing.get(st.enrollmentId);
+    if (!teacherCanSet(current)) return [];
+    if (current?.status === status && current.source === 'teacher') return [];
+    return [{ sessionId, enrollmentId: st.enrollmentId, source: 'teacher' as const, status, recordedBy: actor.userId }];
   });
+  await changeMarks(tx, actor.schoolId, { write, touch: students.map((st) => ({ sessionId, enrollmentId: st.enrollmentId })) });
+  await markSubmitted(tx, sessionId, actor.userId, input.topic === undefined ? undefined : input.topic || null);
+  return detail(tx, actor, sessionId);
 }

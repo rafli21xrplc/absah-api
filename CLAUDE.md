@@ -217,6 +217,13 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
   sessions only, one pending per student), GET /corrections (wakasek/kepsek all, others own),
   POST /corrections/{id}/decide (wakasek/kepsek, never their own request). Approval writes
   source manual (final), recomputes the day, audits attendance.corrected.
+- Offline sync (PRS-08, application/sync.ts): POST /sessions/{id}/sync = the submit body + `capturedAt`. Session still
+  open -> submitInTx (the same code as /submit; outcome `submitted`, `session` set). Locked meanwhile -> NOT refused: every
+  student whose answer differs from the record becomes a pending correction ("Diisi saat offline (<school clock>); sesi
+  sudah terkunci...", requested by the teacher), skipping rows the teacher could not set (izin/UKS/gate/manual above
+  teacher) and students with a pending one; outcome `correction_requested`, or `unchanged` when nothing is left (a retry
+  therefore never doubles). Same permissions and roster validation as submit (exceptionMap); a session that is not yours
+  is 404. The PWA queues the body in IndexedDB and sends it with an Idempotency-Key when online.
 - Izin (application/leave-marks.ts): consumers attendance_apply_leave (leave.approved) and
   attendance_revoke_leave (leave.cancelled) both run syncLeaveMarks: re-read the request and make
   its leave marks match (approved -> S/I in every covered class/group session, else none), so

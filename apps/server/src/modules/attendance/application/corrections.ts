@@ -12,7 +12,7 @@ import { changeMarks } from './marks';
 const scope = (actor: Actor) => ({ schoolId: actor.schoolId, userId: actor.userId });
 const ref = (id: string | null, name: string | null) => (id ? { id, name: name ?? '' } : null);
 
-function toCorrection(r: CorrectionRow): Correction {
+export function toCorrection(r: CorrectionRow): Correction {
   return {
     id: r.id,
     session: { id: r.sessionId, schoolDate: r.schoolDate, ownerName: r.ownerName, subject: r.subject, period: r.period },

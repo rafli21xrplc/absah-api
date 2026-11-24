@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AttendanceSource, AttendanceStatus, SessionMode, SessionOwnerType, SessionStatus } from './enums';
+import { Correction } from './corrections';
 import { SessionTopic } from './journal';
 
 /** Attendance sessions: Hari ini, filling a session (PRS-01 to PRS-04). */
@@ -67,3 +68,26 @@ export const SubmitSessionRequest = z
   .strict()
   .meta({ id: 'SubmitSessionRequest' });
 export type SubmitSessionRequest = z.infer<typeof SubmitSessionRequest>;
+
+/**
+ * POST /api/v1/sessions/{sessionId}/sync (PRS-08): a session filled offline on the teacher's phone. Same list as the submit,
+ * plus the moment it was taken. An open session is submitted; a session locked meanwhile is not refused: the differences become
+ * correction requests for the wakasek/kepsek to decide.
+ */
+export const SyncSessionRequest = SubmitSessionRequest.extend({ capturedAt: z.iso.datetime({ offset: true }) })
+  .strict()
+  .meta({ id: 'SyncSessionRequest' });
+export type SyncSessionRequest = z.infer<typeof SyncSessionRequest>;
+
+export const SyncSessionResult = z
+  .object({
+    outcome: z.enum(['submitted', 'correction_requested', 'unchanged']),
+    /** Set when submitted. */
+    session: SessionDetail.nullable(),
+    /** Correction requests filed because the session was already locked (outcome correction_requested). */
+    corrections: z.array(Correction),
+    /** Students whose answer matched what was recorded, or who could not be changed (izin, UKS, a pending correction). */
+    skipped: z.int(),
+  })
+  .meta({ id: 'SyncSessionResult' });
+export type SyncSessionResult = z.infer<typeof SyncSessionResult>;
