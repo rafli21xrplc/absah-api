@@ -5,6 +5,7 @@ import { phoneNumber, twoFactor } from 'better-auth/plugins';
 import { uuidv7 } from 'uuidv7';
 import type { Config } from '../../../shared/config';
 import type { MessageSender } from '../../../shared/messaging/message-sender';
+import { devTotpHook } from './dev-totp';
 
 /** Indonesian mobile numbers in E.164 (+62...). Clients normalise before sending. */
 export const PHONE_E164_ID = /^\+628\d{7,12}$/;
@@ -13,7 +14,7 @@ export interface AuthDeps {
   db: Db;
   config: Pick<
     Config,
-    'BETTER_AUTH_SECRET' | 'BETTER_AUTH_URL' | 'TRUSTED_ORIGINS' | 'AUTH_RATE_LIMIT' | 'AUTH_IP_HEADERS' | 'NODE_ENV'
+    'BETTER_AUTH_SECRET' | 'BETTER_AUTH_URL' | 'TRUSTED_ORIGINS' | 'AUTH_RATE_LIMIT' | 'AUTH_IP_HEADERS' | 'NODE_ENV' | 'DEV_TOTP_CODE'
   >;
   messageSender: MessageSender;
 }
@@ -44,6 +45,8 @@ export function createAuth({ db, config, messageSender }: AuthDeps) {
       },
     }),
     emailAndPassword: { enabled: true, disableSignUp: true, minPasswordLength: 10 },
+    // Local development only (loadConfig refuses DEV_TOTP_CODE elsewhere; checked here again).
+    ...(config.NODE_ENV === 'development' && config.DEV_TOTP_CODE ? { hooks: { before: devTotpHook(config.DEV_TOTP_CODE, config.BETTER_AUTH_SECRET) } } : {}),
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
     rateLimit: {
       enabled: config.AUTH_RATE_LIMIT,
