@@ -60,6 +60,8 @@ const ConfigSchema = z.object({
   PAYMENT_PROVIDER: z.enum(['none', 'fake']).default('none'),
   /** Verifies payment webhooks (the fake gateway signs with it). */
   PAYMENT_WEBHOOK_SECRET: z.string().min(16).optional(),
+  /** DEVELOPMENT ONLY: a fixed 6-digit code also accepted at the two-factor sign-in step (dev-totp.ts). Refused outside development. */
+  DEV_TOTP_CODE: z.string().regex(/^\d{6}$/, 'must be 6 digits').optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -78,6 +80,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }
     if (c.NODE_ENV === 'production' && c.WHATSAPP_PROVIDER === 'fake') {
       ctx.addIssue({ code: 'custom', path: ['WHATSAPP_PROVIDER'], message: 'must be a real provider in production' });
+    }
+    if (c.DEV_TOTP_CODE && c.NODE_ENV !== 'development') {
+      ctx.addIssue({ code: 'custom', path: ['DEV_TOTP_CODE'], message: 'only allowed when NODE_ENV is development' });
     }
     if (c.NODE_ENV === 'production' && c.PAYMENT_PROVIDER === 'fake') {
       ctx.addIssue({ code: 'custom', path: ['PAYMENT_PROVIDER'], message: 'fake is not allowed in production' });

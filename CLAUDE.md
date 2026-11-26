@@ -66,6 +66,8 @@ Other modules import ONLY from <module>/index.ts. Cross-module side effects go t
 - Authorization lives in use cases: authorize(actor, policy) with policies in <module>/domain/policies.ts
   built from shared/policy.ts (pure; domain/ may import it). Routes only call getActor(req).
 - Better Auth's internalAdapter.createUser drops plugin fields (phoneNumber); set them with updateUser.
+- Local only: DEV_TOTP_CODE (6 digits) is accepted at /two-factor/verify-totp when NODE_ENV=development
+  (infrastructure/dev-totp.ts swaps it for the account's real code). loadConfig refuses it in test and production.
 - New schools: `pnpm --filter @absah/server school:create --name ... --admin-name ... --admin-email ...`
 - Sessions now (ops, e2e): `pnpm --filter @absah/server attendance:generate --school <id> [--date YYYY-MM-DD] [--force]`
   (--force: also on non-school days and again after a timetable change; existing sessions kept).
